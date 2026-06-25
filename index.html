@@ -6,6 +6,7 @@
 <title>해외사업PM 포탈</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -143,24 +144,25 @@ body.is-admin .admin-only{display:flex}
   <div class="login-card">
     <div class="logo-circle"><i class="ti ti-world"></i></div>
     <h1>해외사업PM 포탈</h1>
-    <p>Global Business Management Portal</p>
-    <div class="flex bg-gray-100 p-1 rounded-xl mb-5">
-      <button id="tab-login" class="flex-1 py-2 rounded-lg text-sm font-bold bg-white shadow-sm" onclick="switchAuthTab('login')">로그인</button>
-      <button id="tab-signup" class="flex-1 py-2 rounded-lg text-sm font-bold text-gray-500" onclick="switchAuthTab('signup')">회원가입</button>
+    <p>Google 계정으로 로그인하세요</p>
+    <div id="g_id_onload"
+      data-client_id="GOOGLE_CLIENT_ID"
+      data-callback="onGoogleLogin"
+      data-auto_prompt="false">
     </div>
-    <div id="auth-login">
-      <div class="login-input"><label>이메일</label><input type="email" id="login-email" placeholder="이메일 주소"></div>
-      <div class="login-input"><label>비밀번호</label><input type="password" id="login-pw" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()"></div>
-      <button class="login-btn" onclick="doLogin()">로그인</button>
-    </div>
-    <div id="auth-signup" style="display:none">
-      <div class="login-input"><label>이름</label><input type="text" id="signup-name" placeholder="이름 (표시용)"></div>
-      <div class="login-input"><label>이메일</label><input type="email" id="signup-email" placeholder="이메일 주소"></div>
-      <div class="login-input"><label>비밀번호</label><input type="password" id="signup-pw" placeholder="비밀번호 (6자 이상)"></div>
-      <div class="login-input"><label>비밀번호 확인</label><input type="password" id="signup-pw2" placeholder="비밀번호 재입력" onkeydown="if(event.key==='Enter')doSignup()"></div>
-      <button class="login-btn" onclick="doSignup()">가입 요청</button>
+    <div style="display:flex;justify-content:center;margin:20px 0">
+      <div class="g_id_signin"
+        data-type="standard"
+        data-size="large"
+        data-theme="outline"
+        data-text="signin_with"
+        data-shape="rectangular"
+        data-logo_alignment="left"
+        data-width="320">
+      </div>
     </div>
     <div class="login-error" id="login-error"></div>
+    <p style="font-size:11px;color:#9ca3af;margin-top:16px">최초 로그인 시 관리자 승인이 필요합니다</p>
   </div>
 </div>
 
@@ -251,13 +253,13 @@ var SIDEBAR_MENU = [
 
 // 문서 페이지 URL 매핑 (preview / edit)
 var DOC_URLS = {
-  milestone:     {preview:'https://docs.google.com/spreadsheets/d/1wFr-DdDyyUu0nAGl6qGMNfyl3_ipxP_uqAw7Rs2PFX4/edit?rm=minimal&gid=1910558778',edit:'https://docs.google.com/spreadsheets/d/1wFr-DdDyyUu0nAGl6qGMNfyl3_ipxP_uqAw7Rs2PFX4/edit?gid=1910558778'},
-  event:         {preview:'https://docs.google.com/spreadsheets/d/1zf7wfWfrC_ajBPcSCg-NTZqLevnLWBNpTfI0hiUzjJE/edit?rm=minimal&gid=664837488',edit:'https://docs.google.com/spreadsheets/d/1zf7wfWfrC_ajBPcSCg-NTZqLevnLWBNpTfI0hiUzjJE/edit?gid=664837488'},
-  product:       {preview:'https://docs.google.com/spreadsheets/d/12f4V6PEwuU5Ep96J-9TLI7cJuIykCMOkxjQjI-9Ioeg/edit?rm=minimal&gid=1208981964',edit:'https://docs.google.com/spreadsheets/d/12f4V6PEwuU5Ep96J-9TLI7cJuIykCMOkxjQjI-9Ioeg/edit?gid=1208981964'},
+  milestone:     {preview:'https://docs.google.com/spreadsheets/d/1wFr-DdDyyUu0nAGl6qGMNfyl3_ipxP_uqAw7Rs2PFX4/htmlview?gid=1910558778',edit:'https://docs.google.com/spreadsheets/d/1wFr-DdDyyUu0nAGl6qGMNfyl3_ipxP_uqAw7Rs2PFX4/edit?gid=1910558778'},
+  event:         {preview:'https://docs.google.com/spreadsheets/d/1zf7wfWfrC_ajBPcSCg-NTZqLevnLWBNpTfI0hiUzjJE/htmlview?gid=664837488',edit:'https://docs.google.com/spreadsheets/d/1zf7wfWfrC_ajBPcSCg-NTZqLevnLWBNpTfI0hiUzjJE/edit?gid=664837488'},
+  product:       {preview:'https://docs.google.com/spreadsheets/d/12f4V6PEwuU5Ep96J-9TLI7cJuIykCMOkxjQjI-9Ioeg/htmlview?gid=1208981964',edit:'https://docs.google.com/spreadsheets/d/12f4V6PEwuU5Ep96J-9TLI7cJuIykCMOkxjQjI-9Ioeg/edit?gid=1208981964'},
   kpi:           {preview:null,edit:'https://drive.google.com/drive/folders/1lk_9pMhvy343Wx7J2sHbGIYRo2c-x7vQ',placeholder:true},
-  'report-kpi':  {preview:'https://docs.google.com/spreadsheets/d/1Axv-pPON-Oni82wC-EDXKxWPk1_2K_EtjWE7ymeqPPo/edit?rm=minimal&gid=1704819295',edit:'https://docs.google.com/spreadsheets/d/1Axv-pPON-Oni82wC-EDXKxWPk1_2K_EtjWE7ymeqPPo/edit?gid=1704819295'},
-  'server-migration':{preview:'https://docs.google.com/spreadsheets/d/1ngG6bARiHTitu6UF1K_b8KpIomrxrvYk8QemYJoz6jc/edit?rm=minimal&gid=1592848189',edit:'https://docs.google.com/spreadsheets/d/1ngG6bARiHTitu6UF1K_b8KpIomrxrvYk8QemYJoz6jc/edit?gid=1592848189'},
-  localization:  {preview:'https://docs.google.com/spreadsheets/d/1lUXRnwXK0ABi7ejxx_agQfAxKoMzhEzA/edit?rm=minimal&gid=97953191',edit:'https://docs.google.com/spreadsheets/d/1lUXRnwXK0ABi7ejxx_agQfAxKoMzhEzA/edit?gid=97953191',extra:[
+  'report-kpi':  {preview:'https://docs.google.com/spreadsheets/d/1Axv-pPON-Oni82wC-EDXKxWPk1_2K_EtjWE7ymeqPPo/htmlview?gid=1704819295',edit:'https://docs.google.com/spreadsheets/d/1Axv-pPON-Oni82wC-EDXKxWPk1_2K_EtjWE7ymeqPPo/edit?gid=1704819295'},
+  'server-migration':{preview:'https://docs.google.com/spreadsheets/d/1ngG6bARiHTitu6UF1K_b8KpIomrxrvYk8QemYJoz6jc/htmlview?gid=1592848189',edit:'https://docs.google.com/spreadsheets/d/1ngG6bARiHTitu6UF1K_b8KpIomrxrvYk8QemYJoz6jc/edit?gid=1592848189'},
+  localization:  {preview:'https://docs.google.com/spreadsheets/d/1lUXRnwXK0ABi7ejxx_agQfAxKoMzhEzA/htmlview?gid=97953191',edit:'https://docs.google.com/spreadsheets/d/1lUXRnwXK0ABi7ejxx_agQfAxKoMzhEzA/edit?gid=97953191',extra:[
     {url:'https://docs.google.com/spreadsheets/d/100SwdEzMEDNX3WAcLyulkarC7bBVyihpp_a69wq02Ks/edit?gid=2114670632#gid=2114670632',label:'Odin_Query (성우 녹음 대본)',icon:'ti-microphone'},
     {url:'https://wiki.daumkakao.com/display/GB/L10N+Guide',label:'번역 요청서 작성 가이드',icon:'ti-file-description'}
   ]},
@@ -426,8 +428,8 @@ var safeFallbackMilestone = {
   kr:'<div class="bg-amber-50 border border-amber-200 p-3 rounded-xl mb-3 flex items-center justify-between"><span class="text-xs font-bold text-amber-900"><i class="ti ti-star-filled text-amber-500"></i> 5주년 메이저 패치 (L255)</span><span class="text-[11px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-bold">2026-06-24 (Wed)</span></div><ul class="space-y-1.5 text-xs text-gray-700 list-disc list-inside p-3 bg-white rounded-xl border shadow-sm"><li>소서리스 신규 전직 클래스 — <b class="text-indigo-600">알케미스트</b></li><li>신서버 <b class="text-indigo-600">스카디</b> 오픈 (기간제 전설 장비 포함)</li><li>5주년 기념 이벤트 던전</li><li>신규 콘텐츠 <b class="text-gray-900">월드 거점 점령전</b></li><li>5주년 전용 외형 · 신규 고대 아바타</li><li>12차 클래스 변경 (월~월)</li><li>17차 서버 이전</li><li>다음 게임 → 카카오게임즈 이관 (07:00~)</li></ul>',
   tw:'<div class="bg-blue-50 border border-blue-200 p-3 rounded-xl mb-3 flex items-center justify-between"><span class="text-xs font-bold text-blue-900">금주 정기 패치</span><span class="text-[11px] bg-blue-200 text-blue-900 px-2 py-0.5 rounded font-bold">2026-06-25 (Thu)</span></div><ul class="space-y-1.5 text-xs text-gray-700 list-disc list-inside p-3 bg-white rounded-xl border shadow-sm"><li>공허의 제단 · 길드 공허 소환체 <b class="text-indigo-600">L234</b></li><li>진드리의 강화석 <b class="text-indigo-600">L234</b></li><li>신규 무기 형상 <b class="text-indigo-600">L234</b></li><li>(운영) 탈퇴 로직 변경 L242</li><li>페이스북 로그인 채널 제거 유예기간 공지</li><li>구글 업적 기능 추가 예정</li></ul>',
   jp:'<div class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl mb-3 flex items-center justify-between"><span class="text-xs font-bold text-emerald-900">금주 핫픽스 · 차주 예고</span><span class="text-[11px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded font-bold">2026-06-25 (Thu)</span></div><ul class="space-y-1.5 text-xs text-gray-700 list-disc list-inside p-3 bg-white rounded-xl border shadow-sm"><li>노운 이슈 3건 수정 (49084, 49268, 49195)</li><li class="border-t border-gray-100 pt-1 mt-1 text-gray-400 font-semibold">▼ 차주 (07/02) 예정</li><li>신규 유물 추가 <b class="text-indigo-600">L199</b></li><li>신규 전설 탈 것 <b class="text-indigo-600">L181</b></li></ul>',
-  global:'<div class="bg-purple-50 border border-purple-200 p-3 rounded-xl mb-3 flex items-center justify-between"><span class="text-xs font-bold text-purple-900">글로벌 서비스 권역</span><span class="text-[11px] bg-purple-200 text-purple-900 px-2 py-0.5 rounded font-bold">2026-06-25 주간</span></div><ul class="space-y-1.5 text-xs text-gray-700 list-disc list-inside p-3 bg-white rounded-xl border shadow-sm"><li>글로벌 서버 트래픽 안정 가동 중</li><li>공성전 100시즌 기념 이벤트 검토 중</li><li>차주 별도 업데이트 예정 없음 (모니터링)</li></ul>',
-  cross:'<div class="mb-2.5 flex items-center justify-between border-b border-purple-200 pb-2"><span class="font-bold text-purple-900 text-xs flex items-center gap-1"><i class="ti ti-world text-purple-600"></i> 전 권역 크로스체크</span><span class="text-[11px] bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded">2026-06-25 주간</span></div><div class="grid grid-cols-2 gap-2.5"><div class="bg-white p-3 rounded-xl border shadow-sm"><div class="font-bold text-xs text-red-600 mb-1.5 border-b border-gray-100 pb-1">🇰🇷 한국 · 6/24</div><ul class="text-[11px] text-gray-600 space-y-0.5 list-disc list-inside"><li>5주년 L255</li><li>알케미스트 전직</li><li>신서버 스카디</li><li>거점 점령전</li><li>17차 서버 이전</li></ul></div><div class="bg-white p-3 rounded-xl border shadow-sm"><div class="font-bold text-xs text-blue-600 mb-1.5 border-b border-gray-100 pb-1">🇹🇼 대만 · 6/25</div><ul class="text-[11px] text-gray-600 space-y-0.5 list-disc list-inside"><li>공허 제단 L234</li><li>진드리 강화석</li><li>무기 형상</li><li>탈퇴 로직 변경</li><li>FB 로그인 제거 예고</li></ul></div><div class="bg-white p-3 rounded-xl border shadow-sm"><div class="font-bold text-xs text-emerald-600 mb-1.5 border-b border-gray-100 pb-1">🇯🇵 일본 · 6/25</div><ul class="text-[11px] text-gray-600 space-y-0.5 list-disc list-inside"><li>핫픽스 3건</li><li>▼ 7/2: 유물 L199</li><li>▼ 7/2: 전설 탈것 L181</li></ul></div><div class="bg-white p-3 rounded-xl border shadow-sm"><div class="font-bold text-xs text-purple-600 mb-1.5 border-b border-gray-100 pb-1">🌐 글로벌</div><ul class="text-[11px] text-gray-600 space-y-0.5 list-disc list-inside"><li>트래픽 안정</li><li>100시즌 이벤트 검토</li><li>차주 업뎃 없음</li></ul></div></div>'
+  global:'<div class="bg-purple-50 border border-purple-200 p-3 rounded-xl mb-3 flex items-center justify-between"><span class="text-xs font-bold text-purple-900">글로벌 서비스 권역</span><span class="text-[11px] bg-purple-200 text-purple-900 px-2 py-0.5 rounded font-bold">2026-06-25 (Thu)</span></div><ul class="space-y-1.5 text-xs text-gray-700 list-disc list-inside p-3 bg-white rounded-xl border shadow-sm"><li><b class="text-gray-900">6/25</b> 월드컵 관련 이벤트 진행</li><li class="text-gray-400 font-semibold border-t border-gray-100 pt-1 mt-1">▼ 전주 (6/24) 완료</li><li>사전 무료 서버 이전 (전 리전 대상)</li><li>이전권 골드 판매 (무료) · 이전기간 6/22~6/24 16:00</li><li class="text-gray-400 font-semibold border-t border-gray-100 pt-1 mt-1">▼ 차주 (7/2) 예정</li><li>그림자 성채 6~8층 추가</li><li>공허/난쟁이 8층 추가</li><li>신규 전설1/영웅1 아바타</li></ul>',
+  cross:'<div class="mb-2.5 flex items-center justify-between border-b border-purple-200 pb-2"><span class="font-bold text-purple-900 text-xs flex items-center gap-1"><i class="ti ti-world text-purple-600"></i> 전 권역 크로스체크</span><span class="text-[11px] bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded">2026-06-25 주간</span></div><div class="grid grid-cols-2 gap-2.5"><div class="bg-white p-3 rounded-xl border shadow-sm"><div class="font-bold text-xs text-red-600 mb-1.5 border-b border-gray-100 pb-1">🇰🇷 한국 · 6/24</div><ul class="text-[11px] text-gray-600 space-y-0.5 list-disc list-inside"><li>5주년 L255</li><li>알케미스트 전직</li><li>신서버 스카디</li><li>거점 점령전</li><li>17차 서버 이전</li></ul></div><div class="bg-white p-3 rounded-xl border shadow-sm"><div class="font-bold text-xs text-blue-600 mb-1.5 border-b border-gray-100 pb-1">🇹🇼 대만 · 6/25</div><ul class="text-[11px] text-gray-600 space-y-0.5 list-disc list-inside"><li>공허 제단 L234</li><li>진드리 강화석</li><li>무기 형상</li><li>탈퇴 로직 변경</li><li>FB 로그인 제거 예고</li></ul></div><div class="bg-white p-3 rounded-xl border shadow-sm"><div class="font-bold text-xs text-emerald-600 mb-1.5 border-b border-gray-100 pb-1">🇯🇵 일본 · 6/25</div><ul class="text-[11px] text-gray-600 space-y-0.5 list-disc list-inside"><li>핫픽스 3건</li><li>▼ 7/2: 유물 L199</li><li>▼ 7/2: 전설 탈것 L181</li></ul></div><div class="bg-white p-3 rounded-xl border shadow-sm"><div class="font-bold text-xs text-purple-600 mb-1.5 border-b border-gray-100 pb-1">🌐 글로벌 · 6/25</div><ul class="text-[11px] text-gray-600 space-y-0.5 list-disc list-inside"><li>월드컵 이벤트</li><li>서버 이전 완료</li><li>▼ 7/2: 그림자성채 확장</li></ul></div></div>'
 };
 window.dynamicMilestone={kr:safeFallbackMilestone.kr,tw:safeFallbackMilestone.tw,jp:safeFallbackMilestone.jp,global:safeFallbackMilestone.global,cross:safeFallbackMilestone.cross};
 
@@ -450,70 +452,53 @@ var currentPage='dashboard';
 /* ═══════════════════════════════════════════
    AUTH
    ═══════════════════════════════════════════ */
-function switchAuthTab(tab){
-  document.getElementById('auth-login').style.display=tab==='login'?'block':'none';
-  document.getElementById('auth-signup').style.display=tab==='signup'?'block':'none';
-  document.getElementById('tab-login').className='flex-1 py-2 rounded-lg text-sm font-bold '+(tab==='login'?'bg-white shadow-sm text-gray-900':'text-gray-500');
-  document.getElementById('tab-signup').className='flex-1 py-2 rounded-lg text-sm font-bold '+(tab==='signup'?'bg-white shadow-sm text-gray-900':'text-gray-500');
-  document.getElementById('login-error').textContent='';
-}
-
+/* ── User DB (localStorage) ── */
 var _memUsers=null;
 function getUserDB(){
   if(_memUsers) return _memUsers;
   try{var s=localStorage.getItem('portal_users');if(s){_memUsers=JSON.parse(s);return _memUsers;}}catch(e){}
   _memUsers=[];return _memUsers;
 }
-function saveUserDB(users){
-  _memUsers=users;
-  try{localStorage.setItem('portal_users',JSON.stringify(users));}catch(e){}
-}
+function saveUserDB(users){_memUsers=users;try{localStorage.setItem('portal_users',JSON.stringify(users));}catch(e){}}
 function seedAdmin(){
   var users=getUserDB();
   var exists=false;
   for(var i=0;i<users.length;i++){if(users[i].email===SEED_ADMIN.email){exists=true;break;}}
-  if(!exists){
-    users.push({email:SEED_ADMIN.email,password:'pm2026!',name:SEED_ADMIN.name,role:'admin',status:'approved',created:new Date().toISOString()});
-    saveUserDB(users);
-  }
+  if(!exists){users.push({email:SEED_ADMIN.email,name:SEED_ADMIN.name,role:'admin',status:'approved',created:new Date().toISOString()});saveUserDB(users);}
 }
 
-function doLogin(){
+/* ── Google Sign-In callback ── */
+function decodeJwt(token){try{var b=token.split('.')[1];return JSON.parse(atob(b.replace(/-/g,'+').replace(/_/g,'/')));}catch(e){return null;}}
+
+function onGoogleLogin(response){
   var errEl=document.getElementById('login-error');
-  errEl.style.color='';
-  var email=(document.getElementById('login-email').value||'').trim().toLowerCase();
-  var pw=document.getElementById('login-pw').value;
-  if(!email||!pw){errEl.textContent='이메일과 비밀번호를 입력하세요.';return;}
+  errEl.style.color='';errEl.textContent='';
+  var payload=decodeJwt(response.credential);
+  if(!payload||!payload.email){errEl.textContent='Google 인증 실패';return;}
+  var email=payload.email.toLowerCase();
+  var name=payload.name||email;
+  var picture=payload.picture||'';
   seedAdmin();
   var users=getUserDB();
-  var u=users.find(function(x){return x.email===email&&x.password===pw;});
-  if(!u){errEl.textContent='이메일 또는 비밀번호가 올바르지 않습니다. (DB: '+users.length+'명)';return;}
-  if(u.status!=='approved'){errEl.textContent='관리자 승인 대기 중입니다.';return;}
-  loginSuccess(u.role,u.name);
+  var u=null;
+  for(var i=0;i<users.length;i++){if(users[i].email===email){u=users[i];break;}}
+  if(!u){
+    users.push({email:email,name:name,picture:picture,role:'viewer',status:'pending',created:new Date().toISOString()});
+    saveUserDB(users);
+    errEl.style.color='#f59e0b';
+    errEl.textContent='가입 요청 완료! 관리자 승인 후 이용 가능합니다.';
+    return;
+  }
+  if(u.status!=='approved'){errEl.style.color='#f59e0b';errEl.textContent='관리자 승인 대기 중입니다.';return;}
+  u.name=name;u.picture=picture;saveUserDB(users);
+  loginSuccess(u.role,u.name,u.picture);
 }
 
-function doSignup(){
-  var errEl=document.getElementById('login-error');
-  errEl.style.color='';
-  var name=(document.getElementById('signup-name').value||'').trim();
-  var email=(document.getElementById('signup-email').value||'').trim().toLowerCase();
-  var pw=document.getElementById('signup-pw').value;
-  var pw2=document.getElementById('signup-pw2').value;
-  if(!name||!email||!pw){errEl.textContent='모든 항목을 입력하세요.';return;}
-  if(pw.length<6){errEl.textContent='비밀번호는 6자 이상이어야 합니다.';return;}
-  if(pw!==pw2){errEl.textContent='비밀번호가 일치하지 않습니다.';return;}
-  var users=getUserDB();
-  if(users.find(function(x){return x.email===email;})){errEl.textContent='이미 등록된 이메일입니다.';return;}
-  users.push({email:email,password:pw,name:name,role:'viewer',status:'pending',created:new Date().toISOString()});
-  saveUserDB(users);
-  errEl.style.color='#10b981';errEl.textContent='✅ 가입 요청 완료! 관리자 승인 후 로그인할 수 있습니다.';
-  setTimeout(function(){switchAuthTab('login');errEl.style.color='';},2000);
-}
-
+/* ── Session ── */
 var _sessionAuth=null;
-function loginSuccess(role,name){
+function loginSuccess(role,name,picture){
   isAdmin=(role==='admin');
-  _sessionAuth={role:role,name:name||'',ts:Date.now()};
+  _sessionAuth={role:role,name:name||'',picture:picture||'',ts:Date.now()};
   try{sessionStorage.setItem('portal_auth',JSON.stringify(_sessionAuth));}catch(e){}
   if(isAdmin) document.body.classList.add('is-admin');
   var roleLabel=document.getElementById('user-role-label');
@@ -524,8 +509,8 @@ function loginSuccess(role,name){
 }
 function doLogout(){_sessionAuth=null;try{sessionStorage.removeItem('portal_auth');}catch(e){}location.reload();}
 function checkSession(){
-  if(_sessionAuth&&_sessionAuth.role){loginSuccess(_sessionAuth.role,_sessionAuth.name);return true;}
-  try{var s=JSON.parse(sessionStorage.getItem('portal_auth'));if(s&&s.role&&(Date.now()-s.ts)<86400000){loginSuccess(s.role,s.name);return true;}}catch(e){}
+  if(_sessionAuth&&_sessionAuth.role){loginSuccess(_sessionAuth.role,_sessionAuth.name,_sessionAuth.picture);return true;}
+  try{var s=JSON.parse(sessionStorage.getItem('portal_auth'));if(s&&s.role&&(Date.now()-s.ts)<86400000){loginSuccess(s.role,s.name,s.picture);return true;}}catch(e){}
   return false;
 }
 
