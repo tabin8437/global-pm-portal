@@ -670,7 +670,7 @@ function switchMilestoneTab(region){
 
 /* ── Schedule ── */
 function renderSchedule(){
-  document.getElementById('content-area').innerHTML='<div class="card mb-5"><div class="card-header"><span class="card-title"><i class="ti ti-bell-ringing text-amber-500"></i> 월던 시간 라이브 기준표</span></div><div id="schedule-wd"></div></div><div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-swords text-indigo-500"></i> 컨텐츠 오픈 시점 해금표</span></div><div id="schedule-ct"></div></div>';
+  document.getElementById('content-area').innerHTML='<div class="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start"><div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-bell-ringing text-amber-500"></i> 월던 시간 라이브 기준표</span></div><div id="schedule-wd"></div></div><div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-swords text-indigo-500"></i> 컨텐츠 오픈 시점 해금표</span></div><div id="schedule-ct"></div></div></div>';
   renderScheduleTable('schedule-wd',SCHEDULE_WD);
   renderScheduleTable('schedule-ct',SCHEDULE_CT);
 }
@@ -713,7 +713,7 @@ var SCHEDULE_CT=[
 function renderScheduleTable(containerId,data){
   var el=document.getElementById(containerId);if(!el||!data.length)return;
   var hdr=data[0],rows=data.slice(1);
-  el.innerHTML='<div class="overflow-x-auto max-h-[400px] overflow-y-auto border rounded-xl"><table class="w-full text-left border-collapse text-xs"><thead class="sticky top-0 bg-gray-100 z-10"><tr>'+hdr.map(function(h){return'<th class="p-2.5 font-bold text-gray-700 border-b border-r last:border-r-0">'+(h==='KST'?'<span class="bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">KST</span>':h)+'</th>';}).join('')+'</tr></thead><tbody class="divide-y">'+rows.map(function(row,ri){
+  el.innerHTML='<div class="overflow-x-auto border rounded-xl"><table class="w-full text-left border-collapse text-xs"><thead class="sticky top-0 bg-gray-100 z-10"><tr>'+hdr.map(function(h){return'<th class="p-2.5 font-bold text-gray-700 border-b border-r last:border-r-0">'+(h==='KST'?'<span class="bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">KST</span>':h)+'</th>';}).join('')+'</tr></thead><tbody class="divide-y">'+rows.map(function(row,ri){
     var isLast=ri===rows.length-1&&row[0]==='16126';
     return'<tr class="hover:bg-slate-50'+(isLast?' bg-orange-50 font-bold':'')+'">'+row.map(function(cell,ci){
       var cls='p-2.5 border-r last:border-r-0 whitespace-nowrap';
