@@ -470,7 +470,9 @@ function saveUserDB(users){
 }
 function seedAdmin(){
   var users=getUserDB();
-  if(!users.find(function(u){return u.email===SEED_ADMIN.email;})){
+  var exists=false;
+  for(var i=0;i<users.length;i++){if(users[i].email===SEED_ADMIN.email){exists=true;break;}}
+  if(!exists){
     users.push({email:SEED_ADMIN.email,password:'pm2026!',name:SEED_ADMIN.name,role:'admin',status:'approved',created:new Date().toISOString()});
     saveUserDB(users);
   }
@@ -482,9 +484,10 @@ function doLogin(){
   var email=(document.getElementById('login-email').value||'').trim().toLowerCase();
   var pw=document.getElementById('login-pw').value;
   if(!email||!pw){errEl.textContent='이메일과 비밀번호를 입력하세요.';return;}
+  seedAdmin();
   var users=getUserDB();
   var u=users.find(function(x){return x.email===email&&x.password===pw;});
-  if(!u){errEl.textContent='이메일 또는 비밀번호가 올바르지 않습니다.';return;}
+  if(!u){errEl.textContent='이메일 또는 비밀번호가 올바르지 않습니다. (DB: '+users.length+'명)';return;}
   if(u.status!=='approved'){errEl.textContent='관리자 승인 대기 중입니다.';return;}
   loginSuccess(u.role,u.name);
 }
