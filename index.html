@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>해외사업PM 포탈</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-primary:#ffffff;--bg-secondary:#f8f9fa;--bg-tertiary:#f0f1f3;
+  --text-primary:#111827;--text-secondary:#6b7280;--text-tertiary:#9ca3af;
+  --border:#e5e7eb;--border-strong:#d1d5db;
+  --accent:#10b981;--accent-light:#d1fae5;--accent-dark:#065f46;
+  --radius:10px;--radius-lg:16px;
+  --sidebar-w:250px;
+}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg-tertiary);color:var(--text-primary);font-size:14px;-webkit-font-smoothing:antialiased}
+input,select,textarea,button{font-family:inherit;font-size:13px;color:var(--text-primary)}
+input,select,textarea{width:100%;padding:8px 12px;border:1px solid var(--border-strong);border-radius:var(--radius);background:#fff;outline:none;transition:border .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(16,185,129,.12)}
+textarea{resize:vertical;min-height:80px;line-height:1.6}
+
+/* ── Login ── */
+.login-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#064e3b 0%,#065f46 30%,#047857 60%,#059669 100%);backdrop-filter:blur(20px)}
+.login-card{background:#fff;border-radius:20px;padding:48px 40px;width:380px;max-width:90vw;box-shadow:0 25px 60px rgba(0,0,0,.25);text-align:center}
+.login-card h1{font-size:22px;font-weight:800;color:#111;margin:16px 0 4px}
+.login-card p{font-size:13px;color:#6b7280;margin-bottom:28px}
+.login-card .logo-circle{width:56px;height:56px;background:var(--accent);border-radius:16px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:4px}
+.login-card .logo-circle i{color:#fff;font-size:26px}
+.login-input{position:relative;margin-bottom:16px;text-align:left}
+.login-input label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px}
+.login-input input{padding:10px 14px;font-size:14px;border-radius:12px}
+.login-btn{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s}
+.login-btn:hover{background:#059669}
+.login-error{color:#ef4444;font-size:12px;margin-top:10px;min-height:18px;font-weight:600}
+
+/* ── App Shell ── */
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:var(--sidebar-w);background:#fff;border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.sidebar-header{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.sidebar-header .logo{width:34px;height:34px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sidebar-header .logo i{color:#fff;font-size:17px}
+.sidebar-header .title{font-size:14px;font-weight:700}
+.sidebar-header .sub{font-size:10px;color:var(--text-tertiary);margin-top:1px}
+.sidebar-nav{flex:1;overflow-y:auto;padding:8px 0}
+.nav-label{padding:16px 18px 4px;font-size:10px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.8px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 18px;font-size:13px;color:var(--text-secondary);cursor:pointer;border-left:2.5px solid transparent;transition:all .12s;user-select:none}
+.nav-item:hover{background:var(--bg-secondary);color:var(--text-primary)}
+.nav-item.active{color:var(--accent-dark);border-left-color:var(--accent);background:var(--accent-light);font-weight:600}
+.nav-item i,.nav-item span.icon{font-size:16px;flex-shrink:0;width:18px;text-align:center}
+.nav-group-toggle{display:flex;align-items:center;gap:8px;padding:8px 18px;font-size:13px;color:var(--text-secondary);cursor:pointer;user-select:none;transition:background .12s}
+.nav-group-toggle:hover{background:var(--bg-secondary)}
+.nav-group-toggle .chevron{font-size:12px;transition:transform .2s;margin-left:auto}
+.nav-group-toggle.open .chevron{transform:rotate(90deg)}
+.nav-group-items{overflow:hidden;max-height:0;transition:max-height .25s ease}
+.nav-group-items.open{max-height:600px}
+.nav-group-items .nav-item{padding-left:36px;font-size:12px}
+.admin-only{display:none}
+body.is-admin .admin-only{display:flex}
+
+/* ── Main ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg-tertiary)}
+.topbar{background:#fff;border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:12px}
+.breadcrumb{font-size:12px;color:var(--text-tertiary);font-weight:500}
+.breadcrumb b{color:var(--text-primary);font-weight:700}
+.clock-bar{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;background:var(--bg-secondary);border:1px solid var(--border);padding:6px 14px;border-radius:12px}
+.clock-bar .sep{width:1px;height:14px;background:var(--border);margin:0 6px}
+.content{flex:1;overflow-y:auto;padding:24px;min-height:0}
+.page{display:none}
+.page.active{display:block}
+
+/* ── Cards ── */
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.card-title{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+
+/* ── KPI Chart Bars ── */
+.kpi-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px 18px;position:relative;overflow:hidden;transition:box-shadow .15s}
+.kpi-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.06)}
+.kpi-label{font-size:11px;font-weight:600;color:var(--text-tertiary)}
+.kpi-value{font-size:24px;font-weight:800;color:var(--text-primary);margin:4px 0 2px;letter-spacing:-.5px}
+.kpi-change{font-size:11px;font-weight:700}
+.kpi-change.up{color:#ef4444}
+.kpi-change.down{color:#3b82f6}
+.kpi-bar-track{height:6px;background:var(--bg-secondary);border-radius:3px;margin-top:10px;overflow:hidden}
+.kpi-bar-fill{height:100%;border-radius:3px;transition:width .8s ease}
+.kpi-sparkline{display:flex;align-items:flex-end;gap:2px;height:32px;margin-top:8px}
+.kpi-sparkline .bar{flex:1;border-radius:2px;transition:height .5s ease;min-width:4px}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;font-size:12px;font-weight:600;border:1px solid var(--border-strong);border-radius:var(--radius);cursor:pointer;background:#fff;transition:all .12s;white-space:nowrap}
+.btn:hover{background:var(--bg-secondary)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:#059669}
+.btn-sm{padding:5px 10px;font-size:11px}
+.btn-ghost{border:none;background:transparent;color:var(--accent-dark)}
+.btn-ghost:hover{background:var(--accent-light)}
+
+/* ── Doc Viewer ── */
+.doc-viewer{display:flex;flex-direction:column;height:calc(100vh - 61px);margin:-24px;background:#fff}
+.doc-toolbar{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:#fff;border-bottom:1px solid var(--border);flex-shrink:0}
+.doc-toolbar .title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+.doc-iframe-wrap{flex:1;position:relative;overflow:hidden}
+.doc-iframe-wrap iframe{width:100%;height:100%;border:none}
+.doc-iframe-wrap .read-overlay{position:absolute;top:0;left:0;right:0;bottom:40px;z-index:10;cursor:default}
+
+/* ── Misc ── */
+.row-item{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.row-item:last-child{border-bottom:none}
+.form-group{margin-bottom:12px}
+.form-group label{display:block;font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:5px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.link-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.link-card{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#fff;border:1px solid var(--border);border-radius:12px;text-decoration:none;color:var(--text-primary);font-size:13px;font-weight:600;transition:all .12s}
+.link-card:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(16,185,129,.1);transform:translateY(-1px)}
+.link-card i{font-size:18px;flex-shrink:0}
+.link-card.featured{background:var(--accent-light);border-color:var(--accent)}
+.detail-box{margin-top:8px;background:var(--bg-secondary);padding:10px 12px;border-radius:8px;font-size:12px;white-space:pre-wrap;color:var(--text-secondary);line-height:1.6;max-height:200px;overflow-y:auto}
+.preview-btns{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap}
+.preview-frame{display:none;margin-top:8px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;height:420px}
+.preview-frame iframe{width:100%;height:100%;border:none}
+.tag-link{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--accent-dark);margin-top:4px;text-decoration:none}
+.apple-region-box{background:var(--bg-secondary);border-radius:12px;padding:14px;transition:background .2s}
+.apple-region-box .region-label{font-size:11px;font-weight:700;color:var(--text-tertiary);margin-bottom:6px}
+.apple-region-box.approved{background:var(--accent-light)}
+.apple-region-box.approved .region-label{color:var(--accent-dark)}
+.ai-panel{display:flex;flex-direction:column;height:calc(100vh - 61px - 48px);background:#fff;border-radius:var(--radius-lg);border:1px solid var(--border);overflow:hidden;margin:-24px;margin-top:0}
+.ai-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.msg-ai{background:var(--bg-secondary);padding:12px 16px;border-radius:12px;font-size:13px;max-width:80%;align-self:flex-start;line-height:1.6}
+.msg-user{background:var(--accent);color:#fff;padding:12px 16px;border-radius:12px;font-size:13px;max-width:80%;align-self:flex-end}
+.ai-foot{padding:12px;border-top:1px solid var(--border);display:flex;gap:8px}
+.ai-foot input{flex:1}
+.user-badge{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--text-secondary);padding:4px 10px;border-radius:8px;background:var(--bg-secondary);cursor:pointer}
+.user-badge .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+</style>
+</head>
+<body>
+
+<!-- ═══════ LOGIN OVERLAY ═══════ -->
+<div class="login-overlay" id="login-overlay">
+  <div class="login-card">
+    <div class="logo-circle"><i class="ti ti-world"></i></div>
+    <h1>해외사업PM 포탈</h1>
+    <p>Global Business Management Portal</p>
+    <div class="flex bg-gray-100 p-1 rounded-xl mb-5">
+      <button id="tab-login" class="flex-1 py-2 rounded-lg text-sm font-bold bg-white shadow-sm" onclick="switchAuthTab('login')">로그인</button>
+      <button id="tab-signup" class="flex-1 py-2 rounded-lg text-sm font-bold text-gray-500" onclick="switchAuthTab('signup')">회원가입</button>
+    </div>
+    <div id="auth-login">
+      <div class="login-input"><label>이메일</label><input type="email" id="login-email" placeholder="이메일 주소"></div>
+      <div class="login-input"><label>비밀번호</label><input type="password" id="login-pw" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <button class="login-btn" onclick="doLogin()">로그인</button>
+    </div>
+    <div id="auth-signup" style="display:none">
+      <div class="login-input"><label>이름</label><input type="text" id="signup-name" placeholder="이름 (표시용)"></div>
+      <div class="login-input"><label>이메일</label><input type="email" id="signup-email" placeholder="이메일 주소"></div>
+      <div class="login-input"><label>비밀번호</label><input type="password" id="signup-pw" placeholder="비밀번호 (6자 이상)"></div>
+      <div class="login-input"><label>비밀번호 확인</label><input type="password" id="signup-pw2" placeholder="비밀번호 재입력" onkeydown="if(event.key==='Enter')doSignup()"></div>
+      <button class="login-btn" onclick="doSignup()">가입 요청</button>
+    </div>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ═══════ APP SHELL ═══════ -->
+<div class="app" id="main-app" style="display:none">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo"><i class="ti ti-world"></i></div>
+      <div><div class="title">해외사업PM 포탈</div><div class="sub">Global Business Manager</div></div>
+    </div>
+    <div class="sidebar-nav" id="sidebar-nav"></div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0">
+      <div class="user-badge" onclick="doLogout()" title="클릭하여 로그아웃">
+        <span class="dot"></span><span id="user-role-label">뷰어</span> · 로그아웃
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="breadcrumb">해외사업PM 포탈 › <b id="bc-text">종합 대시보드</b></div>
+      <div class="clock-bar">
+        🇰🇷 <b>KR</b> <span id="clock-kr">--:--:--</span>
+        <div class="sep"></div>🇹🇼 <b>TW</b> <span id="clock-tw">--:--</span>
+        <div class="sep"></div>🇹🇭 <b>TH</b> <span id="clock-th">--:--</span>
+        <div class="sep"></div>🇺🇸 <b>PDT</b> <span id="clock-us">--:--</span>
+      </div>
+    </div>
+
+    <div class="content" id="content-area"></div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   CONFIG & DATA
+   ═══════════════════════════════════════════ */
+var APPLE_API_URL='https://script.google.com/macros/s/AKfycbyBwthAUjr6jEuuBepCbpiQ513wKc6vVOqxGDL_8md4q0lHerDnh7wjtnLsKM0bASTq/exec';
+var REGION_LABEL={global:'🌐 글로벌',tw:'🇹🇼 대만',jp:'🇯🇵 일본'};
+
+// 초기 관리자 계정 (최초 1회 시드)
+var SEED_ADMIN = {email:'tabin8437@gmail.com', name:'관리자', role:'admin'};
+
+// 사이드바 메뉴 구조
+var SIDEBAR_MENU = [
+  {section:'개요'},
+  {id:'dashboard',icon:'ti-layout-dashboard',label:'종합 대시보드'},
+  {id:'milestone',icon:'ti-clock',label:'전국가 마일스톤',type:'doc'},
+  {id:'live-schedule',icon:'ti-calendar-time',label:'월던/컨텐츠 오픈시점'},
+  {section:'사업 지표'},
+  {id:'kpi',icon:'ti-trending-up',label:'KPI 현황',type:'doc'},
+  {id:'report-kpi',icon:'ti-presentation',label:'주/월간 보고용 지표',type:'doc'},
+  {id:'platform',icon:'ti-brand-apple',label:'iOS 관리'},
+  {section:'종합 링크', group:true, groupId:'links', items:[
+    {id:'links-0',label:'ZINNY & 사내 공통 툴',icon:'ti-tool'},
+    {id:'links-1',label:'마켓 배포 & 피쳐링',icon:'ti-brand-google-play'},
+    {id:'links-2',label:'빌링 & 웹상점 (GL BM)',icon:'ti-credit-card'},
+    {id:'links-3',label:'운영툴 / 런처',icon:'ti-settings'},
+    {id:'links-4',label:'커뮤니티 / 지표',icon:'ti-world'},
+    {id:'links-5',label:'정책 / 화이트키',icon:'ti-shield-lock'},
+    {id:'links-6',label:'QA 마스터 관제',icon:'ti-test-pipe'},
+    {id:'links-7',label:'사내 소통망',icon:'ti-messages'}
+  ]},
+  {section:'라이브 관리'},
+  {id:'event',icon:'ti-gift',label:'이벤트 & 보상안',type:'doc'},
+  {id:'product',icon:'ti-package',label:'상품안',type:'doc'},
+  {section:'주요 히스토리'},
+  {id:'server-migration',icon:'ti-database-share',label:'서버이전/통합',type:'doc'},
+  {section:'아카이브'},
+  {id:'weekly',icon:'ti-file-text',label:'주간회의 기록'},
+  {id:'report',icon:'ti-report',label:'보고'},
+  {id:'internal',icon:'ti-lock',label:'내부 회의'},
+  {id:'devmeeting',icon:'ti-key',label:'개발사 미팅'},
+  {section:'업무 공간'},
+  {id:'localization',icon:'ti-language',label:'현지화',type:'doc'},
+  {id:'shared-drive',icon:'ti-cloud',label:'공유 드라이브',type:'doc'},
+  {section:'도구'},
+  {id:'screenshot-spec',icon:'ti-device-mobile',label:'마켓 스샷 규격'},
+  {id:'ai',icon:'ti-robot',label:'AI 도움말'},
+  {section:'회계'},
+  {id:'settlement',icon:'ti-calculator',label:'정산 및 빌링 설계'},
+  {section:'관리자', adminOnly:true},
+  {id:'admin-settings',icon:'ti-settings-2',label:'포탈 설정',adminOnly:true}
+];
+
+// 문서 페이지 URL 매핑 (preview / edit)
+var DOC_URLS = {
+  milestone:     {preview:'https://docs.google.com/spreadsheets/d/1wFr-DdDyyUu0nAGl6qGMNfyl3_ipxP_uqAw7Rs2PFX4/edit?rm=minimal&gid=1910558778',edit:'https://docs.google.com/spreadsheets/d/1wFr-DdDyyUu0nAGl6qGMNfyl3_ipxP_uqAw7Rs2PFX4/edit?gid=1910558778'},
+  event:         {preview:'https://docs.google.com/spreadsheets/d/1zf7wfWfrC_ajBPcSCg-NTZqLevnLWBNpTfI0hiUzjJE/edit?rm=minimal&gid=664837488',edit:'https://docs.google.com/spreadsheets/d/1zf7wfWfrC_ajBPcSCg-NTZqLevnLWBNpTfI0hiUzjJE/edit?gid=664837488'},
+  product:       {preview:'https://docs.google.com/spreadsheets/d/12f4V6PEwuU5Ep96J-9TLI7cJuIykCMOkxjQjI-9Ioeg/edit?rm=minimal&gid=1208981964',edit:'https://docs.google.com/spreadsheets/d/12f4V6PEwuU5Ep96J-9TLI7cJuIykCMOkxjQjI-9Ioeg/edit?gid=1208981964'},
+  kpi:           {preview:null,edit:'https://drive.google.com/drive/folders/1lk_9pMhvy343Wx7J2sHbGIYRo2c-x7vQ',placeholder:true},
+  'report-kpi':  {preview:'https://docs.google.com/spreadsheets/d/1Axv-pPON-Oni82wC-EDXKxWPk1_2K_EtjWE7ymeqPPo/edit?rm=minimal&gid=1704819295',edit:'https://docs.google.com/spreadsheets/d/1Axv-pPON-Oni82wC-EDXKxWPk1_2K_EtjWE7ymeqPPo/edit?gid=1704819295'},
+  'server-migration':{preview:'https://docs.google.com/spreadsheets/d/1ngG6bARiHTitu6UF1K_b8KpIomrxrvYk8QemYJoz6jc/edit?rm=minimal&gid=1592848189',edit:'https://docs.google.com/spreadsheets/d/1ngG6bARiHTitu6UF1K_b8KpIomrxrvYk8QemYJoz6jc/edit?gid=1592848189'},
+  localization:  {preview:'https://docs.google.com/spreadsheets/d/1lUXRnwXK0ABi7ejxx_agQfAxKoMzhEzA/edit?rm=minimal&gid=97953191',edit:'https://docs.google.com/spreadsheets/d/1lUXRnwXK0ABi7ejxx_agQfAxKoMzhEzA/edit?gid=97953191',extra:[
+    {url:'https://docs.google.com/spreadsheets/d/100SwdEzMEDNX3WAcLyulkarC7bBVyihpp_a69wq02Ks/edit?gid=2114670632#gid=2114670632',label:'Odin_Query (성우 녹음 대본)',icon:'ti-microphone'},
+    {url:'https://wiki.daumkakao.com/display/GB/L10N+Guide',label:'번역 요청서 작성 가이드',icon:'ti-file-description'}
+  ]},
+  'shared-drive':{preview:'https://drive.google.com/drive/u/0/shared-drives',edit:'https://drive.google.com/drive/u/0/shared-drives'}
+};
+
+// 종합 링크 허브 데이터
+var LINK_HUB = [
+  {title:'ZINNY & 사내 공통 툴',links:[
+    {url:'https://zinny3.game.daumkakao.io',label:'ZINNY 통합 콘솔 어드민',icon:'ti-apps text-indigo-600'},
+    {url:'https://qa-admin-zinny3.kakaogames.io/',label:'ZINNY QA 제어 관리자',icon:'ti-apps text-orange-500'},
+    {url:'https://mail.kakaowork.com/mail/list.do',label:'KG 사내 메일 (K-Work)',icon:'ti-mail text-blue-500'},
+    {url:'https://start.kakaogames.io/',label:'사내 그룹웨어 포탈',icon:'ti-building text-emerald-600'},
+    {url:'https://mantis.kakaocorp.com',label:'Mantis 사내 이슈 트래커',icon:'ti-bug text-red-500'},
+    {url:'https://noti.daumkakao.io/dashboard/main',label:'Watch Tower 종합관제창',icon:'ti-bell text-amber-500'}
+  ]},
+  {title:'마켓 배포 & 피쳐링',links:[
+    {url:'https://appstoreconnect.apple.com',label:'App Store Connect 콘솔',icon:'ti-brand-apple text-gray-800'},
+    {url:'https://play.google.com/console',label:'Google Play 배포 콘솔',icon:'ti-brand-google-play text-blue-500'},
+    {url:'https://docs.google.com/spreadsheets/d/1woIaQZJdx0V8eoMKuOEGZC5cKaWcH26LADqVblZACaQ/edit#gid=137845725',label:'애플 피쳐링 요청 로드맵',icon:'ti-roadmap text-blue-700',featured:true},
+    {url:'https://docs.google.com/spreadsheets/d/187uyQXta52NhePVZxkvOo3lPGW-wY3xAWYABedEZj5A/edit#gid=1950071140',label:'구글 피쳐링 요청 로드맵',icon:'ti-roadmap text-blue-700',featured:true},
+    {url:'https://services.google.com/fh/files/misc/play_partner_art_specs_2021.pdf',label:'구글 피쳐드 이미지 제작가이드',icon:'ti-photo-edit text-teal-600'}
+  ]},
+  {title:'빌링 & 웹상점 (GL BM)',links:[
+    {url:'https://shop.kakaogames.com/aaw/index',label:'MyCard 웹상점 라이브몰',icon:'ti-shopping-cart text-emerald-600'},
+    {url:'https://wiki.daumkakao.com/pages/viewpage.action?pageId=1568244566',label:'오딘 GL 크레딧 상세 정책',icon:'ti-moneybag text-indigo-500'},
+    {url:'https://kas.kakaogames.io/',label:'KAS 통화 PG 결제 수집기',icon:'ti-receipt-tax text-teal-600'}
+  ]},
+  {title:'운영툴 / 런처',links:[
+    {url:'https://launcher-odinvalhallarising.kakaogames.com/?preview=true',label:'🚀 Live 런처 (웹 프리뷰)',icon:'ti-rocket text-emerald-600',featured:true},
+    {url:'https://docs.google.com/spreadsheets/d/14MfE1ZcOeV4pdCy5T6cirVQxfA1907Axud6aShrbdC4/edit?gid=1568687127',label:'운영 공지 시트 마스터',icon:'ti-file-spreadsheet text-emerald-600'},
+    {url:'https://qa1-vg-gm.gbod.kakaogames.com:10001/index.php',label:'운영툴 QA 스테이징',icon:'ti-test-pipe text-amber-600'},
+    {url:'https://qa1-sg-gm.gbod.kakaogames.com:10001/',label:'운영툴 QA_sg',icon:'ti-test-pipe text-amber-600'},
+    {url:'https://drive.google.com/file/d/1BY2MolIjfNOn5F_weNdu3QMKgGZvshXi/view',label:'이벤트 세팅 가이드',icon:'ti-book text-gray-500'}
+  ]},
+  {title:'커뮤니티 / 지표',links:[
+    {url:'https://odinvalhallarising.kakaogames.com',label:'티저 사이트 공식홈',icon:'ti-browser text-indigo-600'},
+    {url:'https://analytics.google.com/analytics/web/#/p471432240/reports/intelligenthome',label:'애널리틱스 지표',icon:'ti-chart-line text-blue-500'},
+    {url:'https://docs.google.com/spreadsheets/d/12T5WD7Pey9FVh_w1AQvmHrnxfZNtQkqVBNJY-OhPq_w/edit',label:'데일리 리포트',icon:'ti-report-analytics text-emerald-600'},
+    {url:'https://www.facebook.com/2025odinvalhallarising/',label:'Facebook 커뮤니티',icon:'ti-brand-facebook text-blue-600'},
+    {url:'https://discord.gg/fpXYKUJKpW',label:'Discord 커뮤니티',icon:'ti-brand-discord text-indigo-500'},
+    {url:'https://www.youtube.com/@ODINVALHALLARISING',label:'YouTube 채널',icon:'ti-brand-youtube text-red-600'}
+  ]},
+  {title:'정책 / 화이트키',links:[
+    {url:'https://docs.google.com/spreadsheets/d/1sitfLCTVTBOinh-lrJyYI3v_fNO-gmYvEvPA6C5An2k/edit?gid=6425432',label:'RM/운영 선점 보드',icon:'ti-pin text-red-500'},
+    {url:'https://docs.google.com/spreadsheets/d/1YQXvcVEefCl3AkRjfBr3CXp0IZy4hEd5lb7QiqsPNVk/edit?gid=1693821916',label:'론칭 준비 리스트',icon:'ti-list-check text-purple-600'},
+    {url:'https://docs.google.com/spreadsheets/d/1UJNaWgTMMwBBZ5XwMjCUE0HFetXtbbcNPqk8UuIPRsE/edit?gid=37417387',label:'화이트리스트 및 PC 루트',icon:'ti-key text-amber-600'},
+    {url:'https://docs.google.com/spreadsheets/d/1bh2J68er6k2FZEmCquDDFTQqiPv9VAN-yWkWx7P1CGA/edit',label:'화이트키 등록',icon:'ti-key text-amber-600'},
+    {url:'https://drive.google.com/drive/folders/1QaHZjlML1vC9-DHvT4riXDbT7FOZRhBz',label:'운영 배너 전달용 드라이브',icon:'ti-cloud-upload text-teal-600'},
+    {url:'https://docs.google.com/spreadsheets/d/1xqNBA7TrZb8OMSzvPy2gMnktzk2tB7S-9QeC4Rz2H2g/edit?gid=1482358855',label:'점검 보상 리스트 (로키 상자)',icon:'ti-gift text-amber-600'},
+    {url:'https://docs.google.com/spreadsheets/d/1jMC0JztnjdwMKkrDtAeYi722rPPpRd49eCbNgrR3lZg/edit',label:'GBL 점검 담당자 로테이션',icon:'ti-users text-blue-500'}
+  ]},
+  {title:'QA 마스터 관제',links:[
+    {url:'https://docs.google.com/spreadsheets/d/1OEZ4Tqb8xliAQqs3ad4jQ0J2oUoRjsPjeWRtP_DqGc4/edit?gid=2001690205',label:'현재 잔여 이슈 현황',icon:'ti-target text-red-600'},
+    {url:'https://docs.google.com/spreadsheets/d/1A59GkQY20VMxfvePRpIuamNIyl_zJdAgNe-hxw-vlfU/edit?gid=1364317423',label:'오딘 공식 패치노트 마스터',icon:'ti-file-text text-purple-600'},
+    {url:'http://mantis.lionhearts.co.kr/my_view_page.php',label:'라이언하트 Mantis',icon:'ti-bug text-red-600'},
+    {url:'https://docs.google.com/spreadsheets/d/1itMFidjUGK4P2g8uH8xQ7bEgXaV-s410LBSzdt3a6RQ/edit',label:'점검 진행 로테이션 표',icon:'ti-refresh text-blue-500'}
+  ]},
+  {title:'사내 소통망',links:[
+    {url:'https://kakaogames.agit.in/home',label:'카카오게임즈 본사 AGIT',icon:'ti-message-circle text-orange-500'},
+    {url:'https://partners.agit.io/home',label:'파트너스 아지트',icon:'ti-messages text-teal-600',featured:true},
+    {url:'https://wiki.daumkakao.com/spaces/viewspace.action?key=LaunchGuide',label:'모바일 런칭 프로세스 (위키)',icon:'ti-rocket text-purple-600',featured:true},
+    {url:'https://kakaogames.agit.in/g/300085611/wall/417799451',label:'피처링 요청의 벽',icon:'ti-speakerphone text-indigo-600'}
+  ]}
+];
+
+// 스크린샷 규격
+var SPEC_DATA = [
+  {device:'iPhone 6.7형 (최신)',res:'1290 x 2796',note:'19.5:9 필수',p:'apple'},
+  {device:'iPhone 6.5형 (Max)',res:'1242 x 2688',note:'19.5:9 필수',p:'apple'},
+  {device:'iPhone 5.5형 (Plus)',res:'1242 x 2208',note:'16:9',p:'apple'},
+  {device:'iPad Pro 12.9형 (필수)',res:'2048 x 2732',note:'4:3',p:'apple'},
+  {device:'iPad 11형 / 10.5형',res:'1668 x 2388',note:'4:3',p:'apple'},
+  {device:'Google Play 스마트폰',res:'1080 x 2400',note:'16:9 권장',p:'google'},
+  {device:'Google Play 태블릿',res:'1600 x 2560',note:'16:10',p:'google'},
+  {device:'Google Play 폴더블',res:'1768 x 2208',note:'펼친 화면',p:'google'},
+  {device:'Feature Graphic',res:'1024 x 500',note:'★ 1px 오차 불가',p:'common',warn:true},
+  {device:'App Icon',res:'512 x 512',note:'1:1 정방형',p:'common'},
+  {device:'영상 썸네일',res:'1920 x 1080',note:'16:9 유튜브',p:'common'}
+];
+
+// KPI 데이터 (주간 트렌드 포함)
+var KPI_DATA = [
+  {label:'일평균 DAU',value:'2.9만',change:'+0.2%',dir:'up',color:'#10b981',trend:[65,68,70,62,71,72,72]},
+  {label:'누적 NRU',value:'1.2만',change:'+79.9%',dir:'up',color:'#ef4444',trend:[15,18,12,22,45,68,90],alert:true},
+  {label:'주간 WAU',value:'4.3만',change:'+6.8%',dir:'up',color:'#3b82f6',trend:[80,82,78,85,88,90,93]},
+  {label:'주간 매출',value:'1.9억',change:'-35.2%',dir:'down',color:'#8b5cf6',trend:[90,88,95,85,72,60,48]}
+];
+
+// 마일스톤 폴백
+var safeFallbackMilestone = {
+  kr:'<div class="bg-amber-50 border border-amber-200 p-3 rounded-xl mb-3 flex items-center justify-between"><span class="text-xs font-bold text-amber-900"><i class="ti ti-star-filled text-amber-500"></i> 5주년 메이저 패치</span><span class="text-[11px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-bold">2026-06-24</span></div><ul class="space-y-1 text-xs text-gray-700 list-disc list-inside p-3 bg-white rounded-xl border"><li>소서리스 신규 전직 : <b class="text-indigo-600">알케미스트</b></li><li>신규 서버 <b class="text-indigo-600">스카디</b> 오픈</li><li>5주년 기념 이벤트 던전</li><li>월드 거점 점령전 개최</li></ul>',
+  tw:'<div class="bg-gray-50 border p-3 rounded-xl mb-3 flex items-center justify-between"><span class="text-xs font-bold">차주 배포 예정</span><span class="text-[11px] bg-gray-200 px-2 py-0.5 rounded font-bold">2026-06-25</span></div><ul class="space-y-1 text-xs text-gray-700 list-disc list-inside p-3 bg-white rounded-xl border"><li>공허의 제단 오픈</li><li>진드리의 강화석 추가</li><li>회원 탈퇴 로직 변경</li></ul>',
+  jp:'<div class="bg-gray-50 border p-3 rounded-xl mb-3 flex items-center justify-between"><span class="text-xs font-bold">전주 패치 완료</span><span class="text-[11px] bg-gray-200 px-2 py-0.5 rounded font-bold">2026-06-18</span></div><ul class="space-y-1 text-xs text-gray-700 list-disc list-inside p-3 bg-white rounded-xl border"><li><b class="text-indigo-600">새크리파이스</b> 전직</li><li>PiP 기능 추가</li><li>클래스 변경권 할인</li></ul>',
+  global:'<p class="text-xs text-gray-500 p-4 bg-white rounded-xl border text-center">전 권역 정상 동기화 가동 중</p>',
+  cross:'<div class="grid grid-cols-2 gap-2"><div class="bg-white p-3 rounded-xl border"><div class="font-bold text-xs text-red-600 mb-1 border-b pb-1">🇰🇷 KR</div><ul class="text-[11px] text-gray-600 space-y-0.5 list-disc list-inside"><li>5주년 패치</li><li>알케미스트</li><li>스카디</li></ul></div><div class="bg-white p-3 rounded-xl border"><div class="font-bold text-xs text-blue-600 mb-1 border-b pb-1">🇹🇼 TW</div><ul class="text-[11px] text-gray-600 space-y-0.5 list-disc list-inside"><li>공허의 제단</li><li>탈퇴 로직</li></ul></div><div class="bg-white p-3 rounded-xl border"><div class="font-bold text-xs text-emerald-600 mb-1 border-b pb-1">🇯🇵 JP</div><ul class="text-[11px] text-gray-600 space-y-0.5 list-disc list-inside"><li>새크리파이스</li><li>PiP</li></ul></div><div class="bg-white p-3 rounded-xl border"><div class="font-bold text-xs text-purple-600 mb-1 border-b pb-1">🌐 GL</div><ul class="text-[11px] text-gray-600 space-y-0.5 list-disc list-inside"><li>인입 제어</li><li>규격 검수</li></ul></div></div>'
+};
+window.dynamicMilestone={kr:safeFallbackMilestone.kr,tw:safeFallbackMilestone.tw,jp:safeFallbackMilestone.jp,global:safeFallbackMilestone.global,cross:safeFallbackMilestone.cross};
+
+// 회의록
+var backupMails={latest:{global:{version:"1.9.2",date:"2026-06-12"},tw:{version:"1.47.1",date:"2026-06-19"},jp:{version:"1.10.9",date:"2026-06-20"}},history:[{region:"jp",version:"1.10.9",date:"2026-06-20 02:14",subject:"Review 오딘:ヴァルハラ"},{region:"tw",version:"1.47.1",date:"2026-06-19 00:20",subject:"Review 오딘 대만"},{region:"global",version:"1.9.2",date:"2026-06-12 13:56",subject:"Review ODIN:Valhalla Rising"}]};
+var platformData={issues:[{title:'iOS 일부 국가 결제 딜레이',date:'2026-06-05',status:'모니터링 중',type:'warning'}]};
+var defaultMeetings={
+  weekly:[{title:'[주간회의] 글로벌 지표 리뷰',date:'2026-06-09',attendees:'해외사업 실무진',summary:'마일스톤 일정 확정',details:'- 상품안 가이드 수립\n- 애플 심의 피드백 공유',file:''}],
+  report:[{title:'6월 글로벌 사업 전략 보고',date:'2026-06-07',attendees:'본부장, 실장, PM',summary:'KPI 기반 전략 방향 승인',details:'- 목표 수치 트래킹 리뷰',file:'https://docs.google.com/spreadsheets/d/1Axv-pPON-Oni82wC-EDXKxWPk1_2K_EtjWE7ymeqPPo/edit?rm=minimal'}],
+  internal:[{title:'마켓 심사 이슈 긴급 회의',date:'2026-06-05',attendees:'사업PM, 개발팀장',summary:'iOS 결제 지연 원인 규명',details:'- SDK 연동 파악 및 핫픽스',file:''}],
+  dev:[{title:'개발사 v2.4 스케줄 조율',date:'2026-06-04',attendees:'개발사 PD, 파트장',summary:'콘텐츠 마감 기한 조율',details:'- 리소스 병목 해소 합의',file:''}]
+};
+function loadMeetings(){try{var s=localStorage.getItem('portal_meetings');if(!s)return JSON.parse(JSON.stringify(defaultMeetings));var d=JSON.parse(s);['weekly','report','internal','dev'].forEach(function(k){if(!d[k]||!d[k].length)d[k]=defaultMeetings[k];});return d;}catch(e){return JSON.parse(JSON.stringify(defaultMeetings));}}
+function saveMeetingsToStorage(){try{localStorage.setItem('portal_meetings',JSON.stringify(meetings));}catch(e){}}
+var meetings=loadMeetings();
+var editTarget={type:null,index:null};
+var isAdmin=false;
+var currentPage='dashboard';
+
+/* ═══════════════════════════════════════════
+   AUTH
+   ═══════════════════════════════════════════ */
+function switchAuthTab(tab){
+  document.getElementById('auth-login').style.display=tab==='login'?'block':'none';
+  document.getElementById('auth-signup').style.display=tab==='signup'?'block':'none';
+  document.getElementById('tab-login').className='flex-1 py-2 rounded-lg text-sm font-bold '+(tab==='login'?'bg-white shadow-sm text-gray-900':'text-gray-500');
+  document.getElementById('tab-signup').className='flex-1 py-2 rounded-lg text-sm font-bold '+(tab==='signup'?'bg-white shadow-sm text-gray-900':'text-gray-500');
+  document.getElementById('login-error').textContent='';
+}
+
+var _memUsers=null;
+function getUserDB(){
+  if(_memUsers) return _memUsers;
+  try{var s=localStorage.getItem('portal_users');if(s){_memUsers=JSON.parse(s);return _memUsers;}}catch(e){}
+  _memUsers=[];return _memUsers;
+}
+function saveUserDB(users){
+  _memUsers=users;
+  try{localStorage.setItem('portal_users',JSON.stringify(users));}catch(e){}
+}
+function seedAdmin(){
+  var users=getUserDB();
+  if(!users.find(function(u){return u.email===SEED_ADMIN.email;})){
+    users.push({email:SEED_ADMIN.email,password:'pm2026!',name:SEED_ADMIN.name,role:'admin',status:'approved',created:new Date().toISOString()});
+    saveUserDB(users);
+  }
+}
+
+function doLogin(){
+  var errEl=document.getElementById('login-error');
+  errEl.style.color='';
+  var email=(document.getElementById('login-email').value||'').trim().toLowerCase();
+  var pw=document.getElementById('login-pw').value;
+  if(!email||!pw){errEl.textContent='이메일과 비밀번호를 입력하세요.';return;}
+  var users=getUserDB();
+  var u=users.find(function(x){return x.email===email&&x.password===pw;});
+  if(!u){errEl.textContent='이메일 또는 비밀번호가 올바르지 않습니다.';return;}
+  if(u.status!=='approved'){errEl.textContent='관리자 승인 대기 중입니다.';return;}
+  loginSuccess(u.role,u.name);
+}
+
+function doSignup(){
+  var errEl=document.getElementById('login-error');
+  errEl.style.color='';
+  var name=(document.getElementById('signup-name').value||'').trim();
+  var email=(document.getElementById('signup-email').value||'').trim().toLowerCase();
+  var pw=document.getElementById('signup-pw').value;
+  var pw2=document.getElementById('signup-pw2').value;
+  if(!name||!email||!pw){errEl.textContent='모든 항목을 입력하세요.';return;}
+  if(pw.length<6){errEl.textContent='비밀번호는 6자 이상이어야 합니다.';return;}
+  if(pw!==pw2){errEl.textContent='비밀번호가 일치하지 않습니다.';return;}
+  var users=getUserDB();
+  if(users.find(function(x){return x.email===email;})){errEl.textContent='이미 등록된 이메일입니다.';return;}
+  users.push({email:email,password:pw,name:name,role:'viewer',status:'pending',created:new Date().toISOString()});
+  saveUserDB(users);
+  errEl.style.color='#10b981';errEl.textContent='✅ 가입 요청 완료! 관리자 승인 후 로그인할 수 있습니다.';
+  setTimeout(function(){switchAuthTab('login');errEl.style.color='';},2000);
+}
+
+var _sessionAuth=null;
+function loginSuccess(role,name){
+  isAdmin=(role==='admin');
+  _sessionAuth={role:role,name:name||'',ts:Date.now()};
+  try{sessionStorage.setItem('portal_auth',JSON.stringify(_sessionAuth));}catch(e){}
+  if(isAdmin) document.body.classList.add('is-admin');
+  var roleLabel=document.getElementById('user-role-label');
+  if(roleLabel) roleLabel.textContent=(name||'')+(isAdmin?' (관리자)':' (뷰어)');
+  document.getElementById('login-overlay').style.display='none';
+  document.getElementById('main-app').style.display='flex';
+  initApp();
+}
+function doLogout(){_sessionAuth=null;try{sessionStorage.removeItem('portal_auth');}catch(e){}location.reload();}
+function checkSession(){
+  if(_sessionAuth&&_sessionAuth.role){loginSuccess(_sessionAuth.role,_sessionAuth.name);return true;}
+  try{var s=JSON.parse(sessionStorage.getItem('portal_auth'));if(s&&s.role&&(Date.now()-s.ts)<86400000){loginSuccess(s.role,s.name);return true;}}catch(e){}
+  return false;
+}
+
+/* ═══════════════════════════════════════════
+   SIDEBAR BUILD
+   ═══════════════════════════════════════════ */
+function buildSidebar(){
+  var html='';
+  SIDEBAR_MENU.forEach(function(item){
+    if(item.section){
+      if(item.group){
+        html+='<div class="nav-label'+(item.adminOnly?' admin-only':'')+'">'+item.section+'</div>';
+        html+='<div class="nav-group-toggle'+(item.adminOnly?' admin-only':'')+'" onclick="toggleGroup(this)"><i class="ti ti-folder" style="font-size:16px;width:18px;text-align:center"></i> <span style="flex:1;font-weight:600">'+item.section+'</span><i class="ti ti-chevron-right chevron"></i></div>';
+        html+='<div class="nav-group-items">';
+        (item.items||[]).forEach(function(sub){
+          html+='<div class="nav-item" data-page="'+sub.id+'" onclick="nav(\''+sub.id+'\',this)"><i class="ti '+sub.icon+'"></i> '+sub.label+'</div>';
+        });
+        html+='</div>';
+      } else {
+        html+='<div class="nav-label'+(item.adminOnly?' admin-only':'')+'">'+item.section+'</div>';
+      }
+    } else {
+      html+='<div class="nav-item'+(item.id==='dashboard'?' active':'')+''+(item.adminOnly?' admin-only':'')+'" data-page="'+item.id+'" onclick="nav(\''+item.id+'\',this)"><i class="ti '+item.icon+'"></i> '+item.label+'</div>';
+    }
+  });
+  document.getElementById('sidebar-nav').innerHTML=html;
+}
+function toggleGroup(el){
+  el.classList.toggle('open');
+  var items=el.nextElementSibling;
+  if(items) items.classList.toggle('open');
+}
+
+/* ═══════════════════════════════════════════
+   PAGE NAMES & NAV
+   ═══════════════════════════════════════════ */
+var pageNames={dashboard:'종합 대시보드',milestone:'전국가 마일스톤','live-schedule':'월던/컨텐츠 오픈시점',settlement:'정산 및 빌링 설계',event:'이벤트 & 보상안',product:'상품안',kpi:'KPI 현황','report-kpi':'주/월간 보고용 지표','server-migration':'서버이전/통합',platform:'iOS 관리',weekly:'주간회의 기록',report:'보고',internal:'내부 회의',devmeeting:'개발사 미팅',localization:'현지화','shared-drive':'공유 드라이브','screenshot-spec':'마켓 스샷 규격',ai:'AI 도움말','admin-settings':'포탈 설정'};
+
+function nav(id,el){
+  currentPage=id;
+  document.querySelectorAll('.nav-item').forEach(function(i){i.classList.remove('active');});
+  if(el)el.classList.add('active');
+  else{var n=document.querySelector('[data-page="'+id+'"]');if(n)n.classList.add('active');}
+  document.getElementById('bc-text').textContent=pageNames[id]||LINK_HUB[parseInt((id||'').replace('links-',''))]&&LINK_HUB[parseInt(id.replace('links-',''))].title||id;
+  renderPage(id);
+  if(id==='platform'||id==='dashboard')loadAppleMails();
+}
+
+/* ═══════════════════════════════════════════
+   PAGE RENDERER
+   ═══════════════════════════════════════════ */
+function renderPage(id){
+  var c=document.getElementById('content-area');
+  // Link hub pages
+  if(id.indexOf('links-')===0){
+    var idx=parseInt(id.replace('links-',''));
+    var hub=LINK_HUB[idx]; if(!hub){c.innerHTML='';return;}
+    c.innerHTML='<div class="card"><div class="card-header"><span class="card-title"><i class="ti '+(SIDEBAR_MENU.find(function(m){return m.group}).items[idx]||{}).icon+' text-lg"></i> '+hub.title+'</span></div><div class="link-grid">'+hub.links.map(function(lk){return'<a href="'+lk.url+'" target="_blank" class="link-card'+(lk.featured?' featured':'')+'"><i class="ti '+lk.icon+'"></i>'+lk.label+'</a>';}).join('')+'</div></div>';
+    return;
+  }
+  // Doc viewer pages
+  if(DOC_URLS[id]){
+    var doc=DOC_URLS[id];
+    if(doc.placeholder){
+      c.innerHTML='<div class="doc-viewer"><div class="doc-toolbar"><span class="title"><i class="ti ti-table text-gray-400"></i> '+(pageNames[id]||id)+'</span><a href="'+doc.edit+'" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-external-link"></i> Google Drive에서 열기</a></div><div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px"><i class="ti ti-folder-open" style="font-size:48px;color:#d1d5db"></i><p style="font-size:13px;color:#9ca3af">폴더를 새 창에서 확인하세요</p></div></div>';
+      return;
+    }
+    var extraBtns='';
+    if(doc.extra) extraBtns=doc.extra.map(function(e){return'<a href="'+e.url+'" target="_blank" class="btn btn-sm"><i class="ti '+e.icon+'"></i> '+e.label+'</a>';}).join('');
+    c.innerHTML='<div class="doc-viewer"><div class="doc-toolbar"><span class="title"><i class="ti ti-file-spreadsheet text-emerald-600"></i> '+(pageNames[id]||id)+' <span style="font-size:11px;color:#9ca3af;font-weight:400;margin-left:8px">읽기 전용</span></span><div style="display:flex;gap:6px">'+extraBtns+'<a href="'+doc.edit+'" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-pencil"></i> 새창에서 편집</a></div></div><div class="doc-iframe-wrap"><div class="read-overlay"></div><iframe src="'+(doc.preview||doc.edit)+'"></iframe></div></div>';
+    return;
+  }
+  // Custom pages
+  var renderers={
+    dashboard:renderDashboard,
+    'live-schedule':renderSchedule,
+    platform:renderPlatform,
+    settlement:renderSettlement,
+    weekly:function(){renderArchive('weekly');},
+    report:function(){renderArchive('report');},
+    internal:function(){renderArchive('internal');},
+    devmeeting:function(){renderArchive('dev');},
+    'screenshot-spec':renderSpecs,
+    ai:renderAI,
+    'admin-settings':renderAdmin
+  };
+  if(renderers[id]) renderers[id]();
+  else c.innerHTML='<div class="card"><p style="color:#999;padding:20px;text-align:center">페이지 준비 중</p></div>';
+}
+
+/* ═══════════════════════════════════════════
+   DASHBOARD
+   ═══════════════════════════════════════════ */
+function renderDashboard(){
+  var c=document.getElementById('content-area');
+  // KPI Cards with sparklines
+  var kpiHtml=KPI_DATA.map(function(k){
+    var bars=k.trend.map(function(v,i){
+      var h=Math.round(v/100*32);
+      var opacity=i===k.trend.length-1?1:0.4+i*0.08;
+      return'<div class="bar" style="height:'+h+'px;background:'+k.color+';opacity:'+opacity+'"></div>';
+    }).join('');
+    return'<div class="kpi-card'+(k.alert?' ring-2 ring-red-200':'')+'"><div class="kpi-label">'+k.label+(k.alert?' <span class="text-red-500 font-bold">⚠ 허수 의심</span>':'')+'</div><div class="flex items-end justify-between gap-2"><div><div class="kpi-value">'+k.value+'</div><span class="kpi-change '+k.dir+'">'+k.change+'</span></div><div class="kpi-sparkline">'+bars+'</div></div></div>';
+  }).join('');
+
+  // PM 종합평
+  var analysisHtml='<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-robot text-purple-500"></i> 지표 분석 및 실무 PM 종합 평</span></div><div class="space-y-3 text-[13px] leading-relaxed text-gray-600 bg-slate-50 border border-slate-200 p-5 rounded-xl"><p><b class="text-gray-900">[트래픽]</b> DAU 2.9만(▲0.2%) 보합, NRU 1.2만(▲79.9%) 폭증으로 WAU 4.3만(▲6.8%) 상향. 외형상 강한 성장세이나 비진성 트래픽 의심.</p><p><b class="text-gray-900">[매출]</b> 주간 매출 1.9억(▼35.2%), PU 377명(▼25.8%) 감소. ARPPU 7만원 견고. 유입↑ 매출↓ 디커플링 국면.</p><p><b class="text-gray-900">[핵심 포인트]</b> 💡 비오가닉 허수 트래픽 착시에 유의. 진성 유저 리텐션 및 재화 밸런스 최우선 모니터링 필요.</p><p><b class="text-gray-900">[장기 통찰]</b> 🔍 비오가닉 장기 체류 시 거래소 시세 교란 → 고과금 유저 이탈 리스크. 선제적 질적 트래픽 제어 필수.</p></div></div>';
+
+  // Milestone widget
+  var milestoneHtml='<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-route text-blue-500"></i> 전국가 마일스톤 타임라인</span><div class="flex items-center gap-2"><span id="milestone-active-date" class="text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md">최신: 2026-06-24</span><button onclick="nav(\'milestone\')" class="btn btn-ghost btn-sm">상세 <i class="ti ti-chevron-right text-[10px]"></i></button></div></div><div class="flex bg-gray-100 p-0.5 rounded-lg text-[11px] font-bold mb-3"><button onclick="switchMilestoneTab(\'cross\')" id="m-tab-cross" class="flex-1 py-1.5 rounded-md transition-all">전권역</button><button onclick="switchMilestoneTab(\'kr\')" id="m-tab-kr" class="flex-1 py-1.5 rounded-md transition-all">KR</button><button onclick="switchMilestoneTab(\'tw\')" id="m-tab-tw" class="flex-1 py-1.5 rounded-md transition-all">TW</button><button onclick="switchMilestoneTab(\'jp\')" id="m-tab-jp" class="flex-1 py-1.5 rounded-md transition-all">JP</button><button onclick="switchMilestoneTab(\'global\')" id="m-tab-global" class="flex-1 py-1.5 rounded-md transition-all">글로벌</button></div><div id="milestone-widget-body" class="p-3 bg-blue-50/50 border border-blue-100 rounded-xl text-xs"></div></div>';
+
+  // iOS mini widget
+  var iosMini='<div class="card cursor-pointer hover:shadow-md transition-shadow" onclick="nav(\'platform\')"><div class="card-header"><span class="card-title">🍎 App Store 심의 요약</span><i class="ti ti-chevron-right text-gray-400"></i></div><div class="grid grid-cols-3 gap-2 text-center text-xs"><div class="bg-emerald-50 p-2.5 rounded-lg border border-emerald-100"><span class="block text-gray-400 text-[10px]">🌐 글로벌</span><span class="block text-emerald-700 font-bold my-0.5" id="mini-v-global">1.9.2</span><span class="text-[9px] text-emerald-600 font-bold">✅ 통과</span></div><div class="bg-emerald-50 p-2.5 rounded-lg border border-emerald-100"><span class="block text-gray-400 text-[10px]">🇹🇼 대만</span><span class="block text-emerald-700 font-bold my-0.5" id="mini-v-tw">1.47.1</span><span class="text-[9px] text-emerald-600 font-bold">✅ 통과</span></div><div class="bg-emerald-50 p-2.5 rounded-lg border border-emerald-100"><span class="block text-gray-400 text-[10px]">🇯🇵 일본</span><span class="block text-emerald-700 font-bold my-0.5" id="mini-v-jp">1.10.9</span><span class="text-[9px] text-emerald-600 font-bold">✅ 통과</span></div></div></div>';
+
+  c.innerHTML='<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">'+kpiHtml+'</div><div class="grid grid-cols-1 lg:grid-cols-3 gap-5">'+
+    '<div class="lg:col-span-2">'+analysisHtml+'</div>'+
+    '<div>'+iosMini+'</div>'+
+    '</div>'+milestoneHtml;
+  switchMilestoneTab('cross');
+}
+
+function switchMilestoneTab(region){
+  ['cross','kr','tw','jp','global'].forEach(function(r){
+    var tab=document.getElementById('m-tab-'+r);if(tab)tab.className='flex-1 py-1.5 rounded-md transition-all text-gray-500 hover:text-gray-900 font-bold';
+  });
+  var at=document.getElementById('m-tab-'+region);
+  if(at)at.className='flex-1 py-1.5 rounded-md bg-white text-gray-900 shadow-sm font-black';
+  var body=document.getElementById('milestone-widget-body');
+  if(body) body.innerHTML=window.dynamicMilestone[region]||'';
+}
+
+/* ── Schedule ── */
+function renderSchedule(){
+  document.getElementById('content-area').innerHTML='<div class="grid grid-cols-1 lg:grid-cols-2 gap-5"><div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-bell-ringing text-amber-500"></i> 월던 시간 라이브 기준표</span></div><div id="schedule-wd"></div></div><div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-swords text-indigo-500"></i> 컨텐츠 오픈 시점 해금표</span></div><div id="schedule-ct"></div></div></div>';
+  renderScheduleTable('schedule-wd',SCHEDULE_WD);
+  renderScheduleTable('schedule-ct',SCHEDULE_CT);
+}
+var SCHEDULE_WD=[
+  ['콘텐츠','주기','국내 라이브 기준','내용','UTC','KST','비고'],
+  ['발할라 대전','월 단위','매월 1일 0시','시즌 초기화','0시','9시',''],
+  ['발할라 대전','일 단위','13시 / 18시 / 21시','참가 시작','13 / 18 / 21시','22 / 03 / 06시',''],
+  ['대륙 침략자 (월드보스)','일 단위','12시 / 20시','출현 시작','12 / 20시','21 / 05시',''],
+  ['마을 의뢰 (수주 가능 횟수)','일 단위','04시','마을 의뢰 수주 가능 횟수','04시','13시',''],
+  ['캐시샵 - 골드 상품','일 단위','04시','구매 횟수 초기화','04시','13시',''],
+  ['정예 던전 - 공허의 유적','일 단위','04시','무료 이용 시간 초기화','04시','13시',''],
+  ['정예 던전 - 난쟁이 비밀 통로','일 단위','04시','무료 이용 시간 초기화','04시','13시',''],
+  ['교환 상점 - 훈장, 주화 일부','일 단위','04시','구매 횟수 초기화','04시','13시',''],
+  ['파티 던전','주 단위','월요일 04시','무료 입장 횟수 초기화','월요일 04시','월요일 13시',''],
+  ['정예 던전 - 지하감옥','주 단위','월요일 04시','무료 이용 시간 초기화','월요일 04시','월요일 13시',''],
+  ['월드 던전 - 트리니티, 다이아','주 단위','목요일 04시','참여 길드 선정','금요일 02시','금요일 11시',''],
+  ['월드 던전 - 트리니티, 다이아','주 단위','일요일 21시30분','던전 오픈','일요일 03시','일요일 12시','2시간 동안 진행']
+];
+var SCHEDULE_CT=[
+  ['QuestIndex','ContentsType','퀘스트 명칭 (Name)','해금 미션 조건'],
+  ['10196','소셜','1-11 : 만반의 준비','발할라 대전 참가 N회'],
+  ['10016','탈 것','1-15 : 와! 선물!','N 등급 장비 아이템 N개 제작'],
+  ['10041','아바타','1-41 : 난쟁이의 보은','길드 출석 N회'],
+  ['10061','길드','1-64 : 비련','공허의 유적에서 몬스터 N회 처치'],
+  ['10073','마을 의뢰','1-77 : 교섭 성공','난쟁이 비밀 통로에서 몬스터 N회 처치'],
+  ['10110','세력전','1-119 : 금의환향','지하감옥에서 몬스터 N회 처치'],
+  ['10184','봉인석','1-195 : 평원의 수호자','무기 강화시도 n회'],
+  ['13001','PK','2-1 : 요툰하임으로','방어구 강화시도 n회'],
+  ['13020','룬','2-18 : 식사 시간','장신구 강화시도 n회'],
+  ['10071','제작','1-75 : 재료 배달','각인 경험치 아이템 사용 N회 (업데이트 콘텐츠)'],
+  ['10167','던전','1-177 : 뱀들의 섬','아바타 각인 옵션 변경 N회 (업데이트 콘텐츠)'],
+  ['10011','캐쉬샵','1-9 : 마나하임','유물 강화 시도 N회 (업데이트 콘텐츠)'],
+  ['13065','각인','2-58 : 재료 이송','유물 강화 성공 N회 (업데이트 콘텐츠)'],
+  ['10014','업적','1-13 : 양들에게 죽음을','유물 강화 실패 N회 (업데이트 콘텐츠)'],
+  ['13113','유물 갬블','2-106 : 칠흑의 날개','-'],
+  ['10122','무기 형상','1-130 : 술 배달','-'],
+  ['19045','가호','4-41 : 끝 없는 준비','-'],
+  ['16126','각인 특화','3-105 : 제 3세력','제3세력 오픈 조건']
+];
+function renderScheduleTable(containerId,data){
+  var el=document.getElementById(containerId);if(!el||!data.length)return;
+  var hdr=data[0],rows=data.slice(1);
+  el.innerHTML='<div class="overflow-x-auto max-h-[400px] overflow-y-auto border rounded-xl"><table class="w-full text-left border-collapse text-xs"><thead class="sticky top-0 bg-gray-100 z-10"><tr>'+hdr.map(function(h){return'<th class="p-2.5 font-bold text-gray-700 border-b border-r last:border-r-0">'+(h==='KST'?'<span class="bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">KST</span>':h)+'</th>';}).join('')+'</tr></thead><tbody class="divide-y">'+rows.map(function(row,ri){
+    var isLast=ri===rows.length-1&&row[0]==='16126';
+    return'<tr class="hover:bg-slate-50'+(isLast?' bg-orange-50 font-bold':'')+'">'+row.map(function(cell,ci){
+      var cls='p-2.5 border-r last:border-r-0 whitespace-nowrap';
+      if(ci===0)cls+=' font-bold';
+      if(hdr[ci]==='KST')cls+=' text-red-600 font-bold bg-red-50/50 font-mono';
+      return'<td class="'+cls+'">'+cell+'</td>';
+    }).join('')+'</tr>';
+  }).join('')+'</tbody></table></div>';
+}
+
+/* ── Platform (iOS) ── */
+function renderPlatform(){
+  document.getElementById('content-area').innerHTML='<div class="card"><div class="card-header"><span class="card-title">🍎 App Store 권역별 심의 현황</span><button class="btn btn-sm btn-primary" onclick="loadAppleMails()"><i class="ti ti-refresh"></i> 새로고침</button></div><div class="grid grid-cols-3 gap-3 mb-4"><div class="apple-region-box" id="apple-box-global"><div class="region-label">🌐 글로벌</div><div class="apple-region-body text-xs text-gray-400">불러오는 중...</div></div><div class="apple-region-box" id="apple-box-tw"><div class="region-label">🇹🇼 대만</div><div class="apple-region-body text-xs text-gray-400">불러오는 중...</div></div><div class="apple-region-box" id="apple-box-jp"><div class="region-label">🇯🇵 일본</div><div class="apple-region-body text-xs text-gray-400">불러오는 중...</div></div></div><div class="text-xs font-semibold text-gray-500 mb-2">수신 히스토리</div><div id="apple-mail-history"></div></div><div class="card"><div class="card-header"><span class="card-title">플랫폼 이슈 이력</span><button class="btn btn-sm btn-primary admin-only" onclick="openPfIssueForm()"><i class="ti ti-plus"></i> 추가</button></div><div id="platform-issue-list"></div></div><div id="pf-issue-form" style="display:none" class="card"><div class="card-header"><span class="card-title">이슈 관리</span></div><div class="form-group"><label>이슈 내용</label><input type="text" id="pfi-title"></div><div class="grid2"><div class="form-group"><label>기록 일자</label><input type="date" id="pfi-date"></div><div class="form-group"><label>결과 상태</label><input type="text" id="pfi-status"></div></div><div class="form-group"><label>위험 레벨</label><select id="pfi-type"><option value="warning">Warning</option><option value="danger">Danger</option></select></div><div style="display:flex;gap:6px;justify-content:flex-end"><button class="btn btn-sm" onclick="document.getElementById(\'pf-issue-form\').style.display=\'none\'">취소</button><button class="btn btn-sm btn-primary" onclick="savePlatformIssue()">저장</button></div></div>';
+  loadAppleMails(); renderPlatformIssues();
+}
+function renderAppleUI(data){
+  var latest=data.latest||{},hist=data.history||[];
+  ['global','tw','jp'].forEach(function(r){
+    var box=document.getElementById('apple-box-'+r),m=latest[r];
+    if(box&&m){box.classList.add('approved');box.querySelector('.apple-region-body').innerHTML='<div class="text-lg font-bold text-emerald-700 my-1">'+m.version+'</div><div class="text-[11px] text-emerald-600">✅ 심의 통과</div>';if(document.getElementById('mini-v-'+r))document.getElementById('mini-v-'+r).textContent=m.version;}
+  });
+  var hc=document.getElementById('apple-mail-history');if(!hc||!hist.length)return;
+  hc.innerHTML=hist.map(function(m){return'<div class="row-item"><div style="flex:1"><div class="text-xs font-bold text-gray-800">'+(REGION_LABEL[m.region]||m.region)+' <b class="text-indigo-600">'+m.version+'</b> 심의 통과</div><div class="text-[10px] text-gray-400 mt-1">📅 '+m.date+' · '+m.subject+'</div></div></div>';}).join('');
+}
+function loadAppleMails(){renderAppleUI(backupMails);fetch(APPLE_API_URL).then(function(r){return r.json();}).then(function(d){if(d&&d.success&&d.history&&d.history.length)renderAppleUI(d);}).catch(function(){});}
+function renderPlatformIssues(){var el=document.getElementById('platform-issue-list');if(!el)return;el.innerHTML=platformData.issues.map(function(iss,i){return'<div class="row-item"><div style="flex:1"><div class="font-semibold">'+iss.title+'</div><div class="text-xs text-gray-500 mt-1">📅 '+iss.date+' · '+iss.status+'</div></div>'+(isAdmin?'<button class="btn btn-sm" onclick="editPlatformIssue('+i+')">수정</button>':'')+'</div>';}).join('');}
+function openPfIssueForm(){editTarget={type:'pf_new',index:null};document.getElementById('pf-issue-form').style.display='block';}
+function editPlatformIssue(i){editTarget={type:'pf_edit',index:i};var s=platformData.issues[i];document.getElementById('pfi-title').value=s.title;document.getElementById('pfi-date').value=s.date;document.getElementById('pfi-status').value=s.status;document.getElementById('pf-issue-form').style.display='block';}
+function savePlatformIssue(){var d={title:document.getElementById('pfi-title').value,date:document.getElementById('pfi-date').value,status:document.getElementById('pfi-status').value,type:document.getElementById('pfi-type').value};if(editTarget.type==='pf_edit')platformData.issues[editTarget.index]=d;else platformData.issues.unshift(d);document.getElementById('pf-issue-form').style.display='none';renderPlatformIssues();}
+
+/* ── Settlement ── */
+function renderSettlement(){
+  document.getElementById('content-area').innerHTML='<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-calculator text-emerald-600"></i> 정산 및 라이브 지표 설계서</span></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><a href="https://publisher.xsolla.com/270427" target="_blank" class="link-card featured" style="padding:16px"><div><div class="font-bold text-sm">엑솔라(Xsolla) 정산 콘솔</div><div class="text-xs text-gray-500 mt-1">웹상점 결제 수수료 및 국가별 PG 수익 정산</div></div></a><a href="https://docs.google.com/spreadsheets/d/110L1VMxjBnp5FHe9VFvSvKqGoTIq1hbLgidSPsQHyBM/edit" target="_blank" class="link-card" style="padding:16px"><div><div class="font-bold text-sm">라이브 지표 설계 수식 정의서</div><div class="text-xs text-gray-500 mt-1">매출 데이터 로그 적재 및 통계 산출 수식</div></div></a></div></div>';
+}
+
+/* ── Specs ── */
+function renderSpecs(){
+  var iconMap={apple:'ti-brand-apple text-gray-500',google:'ti-brand-google-play text-blue-500',common:'ti-photo text-emerald-600'};
+  var colorMap={apple:'text-indigo-600',google:'text-blue-600',common:'text-emerald-700'};
+  var rows=SPEC_DATA.map(function(s){return'<tr class="hover:bg-gray-50"><td class="py-3 pr-3 font-semibold"><i class="ti '+(iconMap[s.p]||'')+' mr-1"></i>'+s.device+'</td><td class="py-3 font-mono '+colorMap[s.p]+' font-bold text-sm">'+s.res+'</td><td class="py-3 '+(s.warn?'text-red-500 font-bold':'text-gray-500')+'">'+s.note+'</td><td class="py-3 text-right"><button onclick="navigator.clipboard.writeText(\''+s.res+'\');this.textContent=\'✓ 복사됨\';var b=this;setTimeout(function(){b.textContent=\'복사\'},1200)" class="btn btn-sm">복사</button></td></tr>';}).join('');
+  document.getElementById('content-area').innerHTML='<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-device-mobile text-purple-500"></i> 마켓 스크린샷 규격 가이드</span></div><div class="overflow-x-auto"><table class="w-full text-left text-xs"><thead><tr class="border-b-2 border-gray-200 text-gray-500 font-bold text-[11px]"><th class="pb-2">디스플레이 스펙</th><th class="pb-2">해상도 (px)</th><th class="pb-2">비고</th><th class="pb-2 text-right">퀵</th></tr></thead><tbody class="divide-y">'+rows+'</tbody></table></div></div>';
+}
+
+/* ── Archive (meetings) ── */
+function renderArchive(type){
+  var suffix=type==='dev'?'dev':type;
+  var titles={weekly:'주간회의',report:'보고',internal:'내부 회의',dev:'개발사 미팅'};
+  var list=meetings[type]||[];
+  var formHtml='<div id="mt-form-'+suffix+'" style="display:none" class="card"><div class="card-header"><span class="card-title">'+titles[type]+' 추가/수정</span></div><div class="form-group"><label>제목</label><input type="text" id="mt-title-'+suffix+'"></div><div class="grid2"><div class="form-group"><label>일자</label><input type="date" id="mt-date-'+suffix+'"></div><div class="form-group"><label>참석자</label><input type="text" id="mt-attendees-'+suffix+'"></div></div><div class="form-group"><label>요약</label><input type="text" id="mt-summary-'+suffix+'"></div>'+(type==='report'?'<div class="form-group"><label>링크</label><input type="text" id="mt-file-'+suffix+'"></div>':'')+'<div class="form-group"><label>상세</label><textarea id="mt-details-'+suffix+'"></textarea></div><div style="display:flex;gap:6px;justify-content:flex-end"><button class="btn btn-sm" onclick="document.getElementById(\'mt-form-'+suffix+'\').style.display=\'none\'">취소</button><button class="btn btn-sm btn-primary" onclick="saveMeeting(\''+type+'\')">저장</button></div></div>';
+  var listHtml=list.length?list.map(function(m,i){
+    var fileVal=m.file&&m.file.trim();
+    var linkBtn=fileVal?'<a href="'+esc(fileVal)+'" target="_blank" class="tag-link"><i class="ti ti-link"></i> 원본 문서</a>':'';
+    return'<div class="row-item"><div style="flex:1"><div class="font-bold text-sm text-gray-900">'+esc(m.title)+'</div><div class="text-xs text-gray-500 mt-1">📅 '+esc(m.date)+' · 👥 '+esc(m.attendees||'-')+'</div><div class="text-xs font-semibold text-indigo-700 mt-1">📌 '+esc(m.summary||'-')+'</div>'+linkBtn+(m.details?'<div class="detail-box mt-2">'+esc(m.details)+'</div>':'')+'</div>'+(isAdmin?'<button class="btn btn-sm" onclick="openMeetingForm(\''+type+'\','+i+')">수정</button>':'')+'</div>';
+  }).join(''):'<p class="text-sm text-gray-400 py-4 text-center">기록이 없습니다.</p>';
+  document.getElementById('content-area').innerHTML=formHtml+'<div class="card"><div class="card-header"><span class="card-title">'+titles[type]+' 목록</span>'+(isAdmin?'<div class="flex gap-2">'+(type==='report'?'<button class="btn btn-sm" style="color:#ef4444;border-color:#ef4444" onclick="if(confirm(\'초기화?\'))resetMeetings()">초기화</button>':'')+'<button class="btn btn-sm btn-primary" onclick="openMeetingForm(\''+type+'\')"><i class="ti ti-plus"></i> 추가</button></div>':'')+'</div>'+listHtml+'</div>';
+}
+function openMeetingForm(type,idx){
+  var suffix=type==='dev'?'dev':type;
+  document.getElementById('mt-form-'+suffix).style.display='block';
+  if(typeof idx==='number'){
+    editTarget={type:type,index:idx};var m=meetings[type][idx];
+    document.getElementById('mt-title-'+suffix).value=m.title||'';
+    document.getElementById('mt-date-'+suffix).value=m.date||'';
+    document.getElementById('mt-attendees-'+suffix).value=m.attendees||'';
+    document.getElementById('mt-summary-'+suffix).value=m.summary||'';
+    if(document.getElementById('mt-file-'+suffix))document.getElementById('mt-file-'+suffix).value=m.file||'';
+    document.getElementById('mt-details-'+suffix).value=m.details||'';
+  }else{editTarget={type:type,index:null};['title','date','attendees','summary','details'].forEach(function(f){var el=document.getElementById('mt-'+f+'-'+suffix);if(el)el.value='';});if(document.getElementById('mt-file-'+suffix))document.getElementById('mt-file-'+suffix).value='';}
+}
+function saveMeeting(type){
+  var suffix=type==='dev'?'dev':type;
+  var d={title:document.getElementById('mt-title-'+suffix).value,date:document.getElementById('mt-date-'+suffix).value,attendees:document.getElementById('mt-attendees-'+suffix).value,summary:document.getElementById('mt-summary-'+suffix).value,details:document.getElementById('mt-details-'+suffix).value,file:''};
+  if(document.getElementById('mt-file-'+suffix))d.file=document.getElementById('mt-file-'+suffix).value;
+  if(editTarget.index!==null)meetings[type][editTarget.index]=d;else meetings[type].unshift(d);
+  saveMeetingsToStorage();renderArchive(type);
+}
+function resetMeetings(){localStorage.removeItem('portal_meetings');meetings=loadMeetings();renderArchive('report');}
+
+/* ── AI ── */
+function renderAI(){
+  document.getElementById('content-area').innerHTML='<div class="ai-panel"><div class="ai-msgs" id="ai-msgs"><div class="msg-ai">해외사업PM 포탈 AI입니다. 무엇을 도와드릴까요?</div></div><div class="ai-foot"><input type="text" id="ai-inp" placeholder="질문을 입력하세요..." onkeydown="if(event.key===\'Enter\')sendAI()"><button class="btn btn-primary" onclick="sendAI()"><i class="ti ti-send"></i></button></div></div>';
+}
+function sendAI(){var inp=document.getElementById('ai-inp');var q=inp.value.trim();if(!q)return;var msgs=document.getElementById('ai-msgs');msgs.innerHTML+='<div class="msg-user">'+esc(q)+'</div><div class="msg-ai">처리 중입니다...</div>';inp.value='';msgs.scrollTop=msgs.scrollHeight;}
+
+/* ── Admin ── */
+function renderAdmin(){
+  var users=getUserDB();
+  var pending=users.filter(function(u){return u.status==='pending';});
+  var approved=users.filter(function(u){return u.status==='approved';});
+  var rejected=users.filter(function(u){return u.status==='rejected';});
+
+  var pendingHtml=pending.length?pending.map(function(u,i){
+    var idx=users.indexOf(u);
+    return'<div class="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-xl"><div><div class="font-bold text-sm">'+esc(u.name)+'</div><div class="text-xs text-gray-500">'+esc(u.email)+' · '+((u.created||'').slice(0,10))+'</div></div><div class="flex gap-2"><button class="btn btn-sm btn-primary" onclick="approveUser('+idx+')"><i class="ti ti-check"></i> 승인</button><button class="btn btn-sm" style="color:#ef4444;border-color:#ef4444" onclick="rejectUser('+idx+')"><i class="ti ti-x"></i> 거부</button></div></div>';
+  }).join(''):'<p class="text-sm text-gray-400 py-3 text-center">대기 중인 요청이 없습니다.</p>';
+
+  var approvedHtml=approved.map(function(u,i){
+    var idx=users.indexOf(u);
+    return'<div class="flex items-center justify-between p-3 bg-white border rounded-xl"><div><div class="font-bold text-sm">'+esc(u.name)+' <span class="text-xs font-normal text-gray-400">'+(u.role==='admin'?'👑 관리자':'뷰어')+'</span></div><div class="text-xs text-gray-500">'+esc(u.email)+'</div></div><div class="flex gap-2">'+(u.role!=='admin'?'<button class="btn btn-sm" onclick="toggleRole('+idx+')">역할 변경</button><button class="btn btn-sm" style="color:#ef4444" onclick="rejectUser('+idx+')">차단</button>':'<span class="text-xs text-emerald-600 font-bold">최고 관리자</span>')+'</div></div>';
+  }).join('');
+
+  document.getElementById('content-area').innerHTML=
+    '<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-user-plus text-amber-500"></i> 가입 승인 대기 ('+pending.length+')</span></div><div class="space-y-2">'+pendingHtml+'</div></div>'+
+    '<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-users text-emerald-600"></i> 승인된 사용자 ('+approved.length+')</span></div><div class="space-y-2">'+approvedHtml+'</div></div>'+
+    '<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-settings-2 text-gray-500"></i> 시스템 정보</span></div><div class="space-y-3"><div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs"><b class="text-emerald-800">✅ 관리자 모드 활성</b> — 회의록 편집, 이슈 관리, 사용자 승인 가능</div><div class="p-3 bg-gray-50 border rounded-xl text-xs text-gray-500">세션은 브라우저 탭을 닫으면 만료됩니다.</div></div></div>';
+}
+function approveUser(idx){var users=getUserDB();if(users[idx]){users[idx].status='approved';saveUserDB(users);renderAdmin();}}
+function rejectUser(idx){var users=getUserDB();if(users[idx]&&confirm(esc(users[idx].name)+' 사용자를 차단/거부하시겠습니까?')){users[idx].status='rejected';saveUserDB(users);renderAdmin();}}
+function toggleRole(idx){var users=getUserDB();if(users[idx]){users[idx].role=users[idx].role==='admin'?'viewer':'admin';saveUserDB(users);renderAdmin();}}
+
+/* ═══════════════════════════════════════════
+   UTILITIES
+   ═══════════════════════════════════════════ */
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function runClocks(){
+  setInterval(function(){
+    var now=new Date();
+    document.getElementById('clock-kr').textContent=now.toLocaleTimeString('ko-KR');
+    document.getElementById('clock-tw').textContent=new Date(now.getTime()-3600000).toLocaleTimeString('ko-KR',{hour12:false,hour:'2-digit',minute:'2-digit'});
+    document.getElementById('clock-th').textContent=new Date(now.getTime()-7200000).toLocaleTimeString('ko-KR',{hour12:false,hour:'2-digit',minute:'2-digit'});
+    document.getElementById('clock-us').textContent=new Date(now.getTime()-57600000).toLocaleTimeString('ko-KR',{hour12:false,hour:'2-digit',minute:'2-digit'});
+  },1000);
+}
+
+function executeLiveEngine(){
+  // GitHub Pages 정적 호스팅: 폴백 데이터 사용
+  // 향후 외부 API 연동 시 여기에 fetch 추가
+}
+
+/* ═══════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════ */
+function initApp(){
+  buildSidebar();
+  runClocks();
+  renderPage('dashboard');
+  executeLiveEngine();
+}
+
+window.addEventListener('DOMContentLoaded',function(){
+  seedAdmin();
+  if(!checkSession()){
+    document.getElementById('login-email').focus();
+  }
+});
+</script>
+</body>
+</html>
