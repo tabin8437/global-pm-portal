@@ -631,8 +631,6 @@ function renderDashboard(){
   var monthlyCards=KPI_MONTHLY.map(function(k){
     return'<div class="bg-white border rounded-xl p-3'+(k.alert?' ring-2 ring-red-200':'')+'"><div class="text-[11px] text-gray-400 font-semibold">'+k.label+'</div><div class="text-lg font-extrabold mt-1" style="color:'+k.color+'">'+k.value+'</div><span class="text-[11px] font-bold '+(k.dir==='up'?'text-red-500':'text-blue-500')+'">'+k.change+'</span></div>';
   }).join('');
-  var monthlyHtml='<div class="card mt-5"><div class="card-header"><span class="card-title"><i class="ti ti-calendar-stats text-indigo-500"></i> '+monthLabel+' 지표</span><span class="text-[11px] text-gray-400 font-medium">'+now.getMonth()+'/1 ~ '+now.getMonth()+'/'+ now.getDate()+' 기준</span></div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">'+monthlyCards+'</div></div>';
-
   // PM 종합평
   var analysisHtml='<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-robot text-purple-500"></i> 지표 분석 및 실무 PM 종합 평</span></div><div class="space-y-3 text-[13px] leading-relaxed text-gray-600 bg-slate-50 border border-slate-200 p-5 rounded-xl"><p><b class="text-gray-900">[트래픽]</b> DAU 2.9만(▲0.2%) 보합, NRU 1.2만(▲79.9%) 폭증으로 WAU 4.3만(▲6.8%) 상향. 외형상 강한 성장세이나 비진성 트래픽 의심.</p><p><b class="text-gray-900">[매출]</b> 주간 매출 1.9억(▼35.2%), PU 377명(▼25.8%) 감소. ARPPU 7만원 견고. 유입↑ 매출↓ 디커플링 국면.</p><p><b class="text-gray-900">[핵심 포인트]</b> 💡 비오가닉 허수 트래픽 착시에 유의. 진성 유저 리텐션 및 재화 밸런스 최우선 모니터링 필요.</p><p><b class="text-gray-900">[장기 통찰]</b> 🔍 비오가닉 장기 체류 시 거래소 시세 교란 → 고과금 유저 이탈 리스크. 선제적 질적 트래픽 제어 필수.</p></div></div>';
 
@@ -642,10 +640,15 @@ function renderDashboard(){
   // iOS mini widget
   var iosMini='<div class="card cursor-pointer hover:shadow-md transition-shadow" onclick="nav(\'platform\')"><div class="card-header"><span class="card-title">🍎 App Store 심의 요약</span><i class="ti ti-chevron-right text-gray-400"></i></div><div class="grid grid-cols-3 gap-2 text-center text-xs"><div class="bg-emerald-50 p-2.5 rounded-lg border border-emerald-100"><span class="block text-gray-400 text-[10px]">🌐 글로벌</span><span class="block text-emerald-700 font-bold my-0.5" id="mini-v-global">1.9.2</span><span class="text-[9px] text-emerald-600 font-bold">✅ 통과</span></div><div class="bg-emerald-50 p-2.5 rounded-lg border border-emerald-100"><span class="block text-gray-400 text-[10px]">🇹🇼 대만</span><span class="block text-emerald-700 font-bold my-0.5" id="mini-v-tw">1.47.1</span><span class="text-[9px] text-emerald-600 font-bold">✅ 통과</span></div><div class="bg-emerald-50 p-2.5 rounded-lg border border-emerald-100"><span class="block text-gray-400 text-[10px]">🇯🇵 일본</span><span class="block text-emerald-700 font-bold my-0.5" id="mini-v-jp">1.10.9</span><span class="text-[9px] text-emerald-600 font-bold">✅ 통과</span></div></div></div>';
 
-  c.innerHTML='<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">'+kpiHtml+'</div><div class="grid grid-cols-1 lg:grid-cols-3 gap-5">'+
+  var weekNum=Math.ceil(now.getDate()/7);
+  var weekLabel=now.getFullYear()+'년 '+(now.getMonth()+1)+'월 '+weekNum+'주차';
+
+  c.innerHTML='<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-chart-bar text-emerald-500"></i> '+weekLabel+' 주간 지표</span></div><div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">'+kpiHtml+'</div>'+
+    '<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-calendar-stats text-indigo-500"></i> '+monthLabel+'</span><span class="text-[11px] text-gray-400 font-medium">'+(now.getMonth()+1)+'/1 ~ '+(now.getMonth()+1)+'/'+now.getDate()+' 기준</span></div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">'+monthlyCards+'</div>'+
+    '<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">'+
     '<div class="lg:col-span-2">'+analysisHtml+'</div>'+
     '<div>'+iosMini+'</div>'+
-    '</div>'+monthlyHtml+milestoneHtml;
+    '</div>'+milestoneHtml;
   switchMilestoneTab('cross');
 }
 
