@@ -415,22 +415,24 @@ var SPEC_DATA = [
   {device:'영상 썸네일',res:'1920 x 1080',note:'16:9 유튜브',p:'common'}
 ];
 
-// KPI 데이터 (주간)
+// KPI API URL (Apps Script 웹앱 배포 후 여기에 URL 입력)
+var KPI_API_URL = '';
+
+// KPI 데이터 (시트 실제값 기본 세팅, API 연동 시 자동 갱신)
 var KPI_DATA = [
-  {label:'일평균 DAU',value:'2.9만',change:'+0.2%',dir:'up',color:'#10b981',trend:[65,68,70,62,71,72,72]},
-  {label:'누적 NRU',value:'1.2만',change:'+79.9%',dir:'up',color:'#ef4444',trend:[15,18,12,22,45,68,90],alert:true},
-  {label:'주간 WAU',value:'4.3만',change:'+6.8%',dir:'up',color:'#3b82f6',trend:[80,82,78,85,88,90,93]},
-  {label:'주간 매출',value:'1.9억',change:'-35.2%',dir:'down',color:'#8b5cf6',trend:[90,88,95,85,72,60,48]}
+  {label:'일평균 DAU',value:'29,121',change:'▲1.4%',dir:'up',color:'#10b981',trend:[28720,27666,28105,29387,30412,29900,29208,29168]},
+  {label:'누적 NRU',value:'13,557',change:'▲102.6%',dir:'up',color:'#ef4444',trend:[6691,722,1205,2782,3056,2613,1608,1571],alert:true},
+  {label:'주간 WAU',value:'42,764',change:'▲6.8%',dir:'up',color:'#3b82f6',trend:[40039,42764]},
+  {label:'주간 매출',value:'1.89억',change:'▼36.5%',dir:'down',color:'#8b5cf6',trend:[90,60]}
 ];
 
-// KPI 월간 누적 (현재 월 기준)
 var KPI_MONTHLY = [
-  {label:'월 누적 DAU 평균',value:'3.1만',change:'+2.3%',dir:'up',color:'#059669'},
-  {label:'월 누적 NRU',value:'4.8만',change:'+45.2%',dir:'up',color:'#dc2626',alert:true},
-  {label:'월 누적 MAU',value:'12.7만',change:'+8.1%',dir:'up',color:'#2563eb'},
-  {label:'월 누적 매출',value:'9.2억',change:'-12.8%',dir:'down',color:'#7c3aed'},
-  {label:'월 PU',value:'1,420명',change:'-8.5%',dir:'down',color:'#0891b2'},
-  {label:'월 ARPPU',value:'6.5만',change:'-4.7%',dir:'down',color:'#ca8a04'}
+  {label:'당월 DAU 누적',value:'30,653',change:'▼17.2%',dir:'down',color:'#059669'},
+  {label:'당월 매출 누적',value:'9.1억',change:'▼24.5%',dir:'down',color:'#7c3aed'},
+  {label:'월 MAU',value:'90,397',change:'▼44.5%',dir:'down',color:'#2563eb'},
+  {label:'월 평균 DAU',value:'29,772',change:'▼0.4%',dir:'down',color:'#059669'},
+  {label:'월 PU',value:'5,562명',change:'▲13.7%',dir:'up',color:'#0891b2'},
+  {label:'월 ARPPU',value:'83,770',change:'▼12.8%',dir:'down',color:'#ca8a04'}
 ];
 
 // 마일스톤 폴백
@@ -623,13 +625,16 @@ function renderDashboard(){
       var opacity=i===k.trend.length-1?1:0.4+i*0.08;
       return'<div class="bar" style="height:'+h+'px;background:'+k.color+';opacity:'+opacity+'"></div>';
     }).join('');
-    return'<div class="kpi-card'+(k.alert?' ring-2 ring-red-200':'')+'"><div class="kpi-label">'+k.label+(k.alert?' <span class="text-red-500 font-bold">⚠ 허수 의심</span>':'')+'</div><div class="flex items-end justify-between gap-2"><div><div class="kpi-value">'+k.value+'</div><span class="kpi-change '+k.dir+'">'+k.change+'</span></div><div class="kpi-sparkline">'+bars+'</div></div></div>';
+    var isDown=k.change.indexOf('▼')!==-1||k.change.indexOf('-')!==-1;
+    var changeColor=isDown?'text-blue-600':'text-red-500';
+    return'<div class="kpi-card'+(k.alert?' ring-2 ring-red-200':'')+'"><div class="kpi-label">'+k.label+(k.alert?' <span class="text-red-500 font-bold">⚠ 허수 의심</span>':'')+'</div><div class="flex items-end justify-between gap-2"><div><div class="kpi-value">'+k.value+'</div><span class="kpi-change '+changeColor+' font-bold">'+k.change+'</span></div><div class="kpi-sparkline">'+bars+'</div></div></div>';
   }).join('');
 
   // 월간 누적
   var now=new Date();var monthLabel=now.getFullYear()+'년 '+(now.getMonth()+1)+'월 누적';
   var monthlyCards=KPI_MONTHLY.map(function(k){
-    return'<div class="bg-white border rounded-xl p-3'+(k.alert?' ring-2 ring-red-200':'')+'"><div class="text-[11px] text-gray-400 font-semibold">'+k.label+'</div><div class="text-lg font-extrabold mt-1" style="color:'+k.color+'">'+k.value+'</div><span class="text-[11px] font-bold '+(k.dir==='up'?'text-red-500':'text-blue-500')+'">'+k.change+'</span></div>';
+    var mDown=k.change.indexOf('▼')!==-1||k.change.indexOf('-')!==-1;
+    return'<div class="bg-white border rounded-xl p-3'+(k.alert?' ring-2 ring-red-200':'')+'"><div class="text-[11px] text-gray-400 font-semibold">'+k.label+'</div><div class="text-lg font-extrabold mt-1" style="color:'+k.color+'">'+k.value+'</div><span class="text-[11px] font-bold '+(mDown?'text-blue-600':'text-red-500')+'">'+k.change+'</span></div>';
   }).join('');
   // PM 종합평
   var analysisHtml='<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-robot text-purple-500"></i> 지표 분석 및 실무 PM 종합 평</span></div><div class="space-y-3 text-[13px] leading-relaxed text-gray-600 bg-slate-50 border border-slate-200 p-5 rounded-xl"><p><b class="text-gray-900">[트래픽]</b> DAU 2.9만(▲0.2%) 보합, NRU 1.2만(▲79.9%) 폭증으로 WAU 4.3만(▲6.8%) 상향. 외형상 강한 성장세이나 비진성 트래픽 의심.</p><p><b class="text-gray-900">[매출]</b> 주간 매출 1.9억(▼35.2%), PU 377명(▼25.8%) 감소. ARPPU 7만원 견고. 유입↑ 매출↓ 디커플링 국면.</p><p><b class="text-gray-900">[핵심 포인트]</b> 💡 비오가닉 허수 트래픽 착시에 유의. 진성 유저 리텐션 및 재화 밸런스 최우선 모니터링 필요.</p><p><b class="text-gray-900">[장기 통찰]</b> 🔍 비오가닉 장기 체류 시 거래소 시세 교란 → 고과금 유저 이탈 리스크. 선제적 질적 트래픽 제어 필수.</p></div></div>';
@@ -833,9 +838,51 @@ function runClocks(){
   },1000);
 }
 
-function executeLiveEngine(){
-  // GitHub Pages 정적 호스팅: 폴백 데이터 사용
-  // 향후 외부 API 연동 시 여기에 fetch 추가
+function fmtNum(n){if(n>=100000000)return(n/100000000).toFixed(1)+'억';if(n>=10000)return(n/10000).toFixed(1)+'만';return n.toLocaleString();}
+function parseChange(s){var str=String(s||'');var isDown=str.indexOf('▼')!==-1||str.indexOf('-')!==-1;var num=str.replace(/[▲▼\s]/g,'');return{text:(isDown?'▼':'▲')+num,dir:isDown?'down':'up'};}
+
+function fetchKpiData(){
+  if(!KPI_API_URL) return;
+  var cacheKey='kpi_cache';
+  var today=new Date().toISOString().slice(0,10);
+  var hour=new Date().getHours();
+  try{
+    var cached=JSON.parse(localStorage.getItem(cacheKey)||'null');
+    if(cached&&cached.date===today&&(cached.hour>=9||hour<9)){
+      applyKpiData(cached.data);return;
+    }
+  }catch(e){}
+  fetch(KPI_API_URL).then(function(r){return r.json();}).then(function(data){
+    if(data&&data.success){
+      try{localStorage.setItem(cacheKey,JSON.stringify({date:today,hour:hour,data:data}));}catch(e){}
+      applyKpiData(data);
+    }
+  }).catch(function(){});
+}
+
+function applyKpiData(d){
+  if(!d)return;
+  var w=d.weekly||{};var c=w.change||{};
+  if(w.dau){
+    KPI_DATA=[
+      {label:'일평균 DAU',value:fmtNum(w.dau),change:parseChange(c.dau).text,dir:parseChange(c.dau).dir,color:'#10b981',trend:[]},
+      {label:'누적 NRU',value:fmtNum(w.nru),change:parseChange(c.nru).text,dir:parseChange(c.nru).dir,color:'#ef4444',trend:[],alert:parseChange(c.nru).dir==='up'&&parseFloat(String(c.nru||'').replace(/[^0-9.]/g,''))>50},
+      {label:'주간 WAU',value:fmtNum(w.wau),change:parseChange(c.wau).text,dir:parseChange(c.wau).dir,color:'#3b82f6',trend:[]},
+      {label:'주간 매출',value:fmtNum(w.revenue),change:parseChange(c.revenue).text,dir:parseChange(c.revenue).dir,color:'#8b5cf6',trend:[]}
+    ];
+  }
+  var m=d.monthly||{};var mr=d.monthlyReport||{};var mc=mr.change||{};
+  if(m.dau||mr.mau){
+    KPI_MONTHLY=[
+      {label:'당월 DAU 누적',value:fmtNum(m.dau||0),change:parseChange(m.dauChange).text,dir:parseChange(m.dauChange).dir,color:'#059669'},
+      {label:'당월 매출 누적',value:fmtNum(m.revenue||0),change:parseChange(m.revenueChange).text,dir:parseChange(m.revenueChange).dir,color:'#7c3aed'},
+      {label:'월 MAU',value:fmtNum(mr.mau||0),change:parseChange(mc.mau).text,dir:parseChange(mc.mau).dir,color:'#2563eb'},
+      {label:'월 평균 DAU',value:fmtNum(mr.dau||0),change:parseChange(mc.dau).text,dir:parseChange(mc.dau).dir,color:'#059669'},
+      {label:'월 PU',value:fmtNum(mr.pu||0)+'명',change:parseChange(mc.pu).text,dir:parseChange(mc.pu).dir,color:'#0891b2'},
+      {label:'월 ARPPU',value:fmtNum(mr.arppu||0),change:parseChange(mc.arppu).text,dir:parseChange(mc.arppu).dir,color:'#ca8a04'}
+    ];
+  }
+  if(currentPage==='dashboard') renderDashboard();
 }
 
 /* ═══════════════════════════════════════════
@@ -844,8 +891,8 @@ function executeLiveEngine(){
 function initApp(){
   buildSidebar();
   runClocks();
+  fetchKpiData();
   renderPage('dashboard');
-  executeLiveEngine();
 }
 
 window.addEventListener('DOMContentLoaded',function(){
