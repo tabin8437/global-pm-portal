@@ -628,8 +628,9 @@ function renderDashboard(){
     var mCls=mDown?'change-down':'change-up';
     return'<div class="kpi-card" style="padding:14px 16px"><div class="kpi-label">'+k.label+'</div><div class="kpi-value" style="font-size:20px;color:'+k.color+';margin:4px 0 3px">'+k.value+'</div><span class="kpi-change '+mCls+'" style="font-size:11px">'+k.change+'</span></div>';
   }).join('');
-  // PM 종합평
-  var analysisHtml='<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-robot text-purple-500"></i> 지표 분석 및 실무 PM 종합 평</span></div><div class="space-y-3 text-[13px] leading-relaxed text-gray-600 bg-slate-50 border border-slate-200 p-5 rounded-xl"><p><b class="text-gray-900">[트래픽]</b> DAU 2.9만(▲0.2%) 보합, NRU 1.2만(▲79.9%) 폭증으로 WAU 4.3만(▲6.8%) 상향. 외형상 강한 성장세이나 비진성 트래픽 의심.</p><p><b class="text-gray-900">[매출]</b> 주간 매출 1.9억(▼35.2%), PU 377명(▼25.8%) 감소. ARPPU 7만원 견고. 유입↑ 매출↓ 디커플링 국면.</p><p><b class="text-gray-900">[핵심 포인트]</b> 💡 비오가닉 허수 트래픽 착시에 유의. 진성 유저 리텐션 및 재화 밸런스 최우선 모니터링 필요.</p><p><b class="text-gray-900">[장기 통찰]</b> 🔍 비오가닉 장기 체류 시 거래소 시세 교란 → 고과금 유저 이탈 리스크. 선제적 질적 트래픽 제어 필수.</p></div></div>';
+  // 지표 분석 (마이비서 연동)
+  var analysisContent=window._analysisCache||'';
+  var analysisHtml='<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-chart-dots text-purple-500"></i> 지표 분석</span><span class="text-[10px] text-gray-400 font-medium" id="analysis-date"></span></div><div id="analysis-body" class="text-[13px] leading-relaxed text-gray-600">'+(analysisContent||'<div class="bg-slate-50 border border-slate-200 p-5 rounded-xl text-gray-400 text-center">마이비서 분석 데이터를 불러오는 중...</div>')+'</div></div>';
 
   // Milestone widget
   var milestoneHtml='<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-route text-blue-500"></i> 전국가 마일스톤 타임라인</span><div class="flex items-center gap-2"><span id="milestone-active-date" class="text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md">최신: 2026-06-25</span><button onclick="nav(\'milestone\')" class="btn btn-ghost btn-sm">상세 <i class="ti ti-chevron-right text-[10px]"></i></button></div></div><div class="flex bg-gray-100 p-0.5 rounded-lg text-[11px] font-bold mb-3"><button onclick="switchMilestoneTab(\'cross\')" id="m-tab-cross" class="flex-1 py-1.5 rounded-md transition-all">전권역</button><button onclick="switchMilestoneTab(\'kr\')" id="m-tab-kr" class="flex-1 py-1.5 rounded-md transition-all">KR</button><button onclick="switchMilestoneTab(\'tw\')" id="m-tab-tw" class="flex-1 py-1.5 rounded-md transition-all">TW</button><button onclick="switchMilestoneTab(\'jp\')" id="m-tab-jp" class="flex-1 py-1.5 rounded-md transition-all">JP</button><button onclick="switchMilestoneTab(\'global\')" id="m-tab-global" class="flex-1 py-1.5 rounded-md transition-all">글로벌</button></div><div id="milestone-widget-body" class="p-3 bg-blue-50/50 border border-blue-100 rounded-xl text-xs max-h-[420px] overflow-y-auto"></div></div>';
@@ -878,6 +879,28 @@ function applyKpiData(d){
       {label:'월 PU',value:fmtNum(mr.pu||0)+'명',change:parseChange(mc.pu).text,dir:parseChange(mc.pu).dir,color:'#0891b2'},
       {label:'월 ARPPU',value:fmtNum(mr.arppu||0),change:parseChange(mc.arppu).text,dir:parseChange(mc.arppu).dir,color:'#ca8a04'}
     ];
+  }
+  // 마이비서 분석 데이터
+  if(d.analysis&&d.analysis.content){
+    var raw=d.analysis.content;
+    // 섹션 파싱
+    var sections=[];
+    var parts=raw.split(/\[([^\]]+)\]/g);
+    var html='';
+    for(var i=0;i<parts.length;i++){
+      var t=parts[i].trim();
+      if(!t||t.indexOf('═')!==-1||t.indexOf('───')!==-1||t.indexOf('※')!==-1||t.indexOf('글로벌 주간')!==-1)continue;
+      if(t.indexOf('▶')!==-1||t.indexOf('•')!==-1||t.indexOf('ð')!==-1)continue;
+      if(i>0&&parts[i-1]&&parts[i-1].indexOf('분석')!==-1||parts[i-1]&&parts[i-1].indexOf('포인트')!==-1||parts[i-1]&&parts[i-1].indexOf('통찰')!==-1||parts[i-1]&&parts[i-1].indexOf('동향')!==-1){
+        var title=parts[i-1].trim();
+        html+='<div class="mb-3"><div class="font-bold text-gray-900 text-sm mb-1">'+esc(title)+'</div><p class="text-gray-600">'+esc(t)+'</p></div>';
+      }
+    }
+    if(!html){
+      var lines=raw.split('\n').filter(function(l){return l.trim()&&l.indexOf('═')===-1&&l.indexOf('───')===-1&&l.indexOf('※')===-1;});
+      html=lines.map(function(l){return'<p>'+esc(l.trim())+'</p>';}).join('');
+    }
+    window._analysisCache='<div class="bg-slate-50 border border-slate-200 p-5 rounded-xl space-y-1">'+html+'</div>';
   }
   if(currentPage==='dashboard') renderDashboard();
 }
