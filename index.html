@@ -881,33 +881,18 @@ function applyKpiData(d){
       {label:'월 ARPPU',value:fmtNum(mr.arppu||0),change:parseChange(mc.arppu).text,dir:parseChange(mc.arppu).dir,color:'#ca8a04'}
     ];
   }
-  // 마이비서 분석 데이터 (핵심 분석만 추출)
-  if(d.analysis&&d.analysis.content){
-    var raw=d.analysis.content;
-    var iconMap={'트래픽':'ti-chart-line text-blue-500','매출':'ti-coin text-emerald-500','핵심':'ti-bulb text-amber-500','장기':'ti-telescope text-purple-500'};
-    var colorMap={'트래픽':'blue','매출':'emerald','핵심':'amber','장기':'purple'};
-    var sections=[];
-    var matches=raw.match(/\[([^\]]*(?:분석|포인트|통찰)[^\]]*)\]\s*([\s\S]*?)(?=\[|───|═══|$)/g);
-    if(matches){
-      for(var i=0;i<matches.length;i++){
-        var m=matches[i].match(/\[([^\]]+)\]\s*([\s\S]*)/);
-        if(m){
-          var title=m[1].trim();
-          var body=m[2].trim().replace(/───[\s\S]*/,'').replace(/═══[\s\S]*/,'').trim();
-          if(!body||body.length<20)continue;
-          var key=Object.keys(iconMap).find(function(k){return title.indexOf(k)!==-1;})||'핵심';
-          sections.push({title:title,body:body,icon:iconMap[key],color:colorMap[key]});
-        }
-      }
-    }
-    if(sections.length){
-      var period=raw.match(/기간[:\s]*([^\n═]+)/);
-      var periodStr=period?period[1].trim():'';
-      var html=sections.map(function(s){
-        return'<div class="p-4 bg-'+s.color+'-50/50 border border-'+s.color+'-100 rounded-xl"><div class="flex items-center gap-2 mb-2"><i class="ti '+s.icon+'"></i><span class="font-bold text-sm text-gray-900">'+esc(s.title)+'</span></div><p class="text-[13px] text-gray-700 leading-relaxed">'+esc(s.body)+'</p></div>';
-      }).join('');
-      window._analysisCache='<div class="space-y-3">'+(periodStr?'<div class="text-[11px] text-gray-400 font-semibold mb-1">📅 '+esc(periodStr)+'</div>':'')+html+'</div>';
-    }
+  // 마이비서 분석 데이터 (서버에서 요약된 섹션)
+  if(d.analysis&&d.analysis.sections&&d.analysis.sections.length){
+    var a=d.analysis;
+    var iconMap={'트래픽':'ti-chart-line text-blue-500','매출':'ti-coin text-emerald-500','핵심':'ti-alert-circle text-amber-500','통찰':'ti-telescope text-purple-500'};
+    var colorMap={'트래픽':'blue','매출':'emerald','핵심':'amber','통찰':'purple'};
+    var html=a.sections.map(function(s){
+      var icon=iconMap[s.key]||'ti-info-circle text-gray-500';
+      var clr=colorMap[s.key]||'gray';
+      var labels={'트래픽':'트래픽','매출':'매출','핵심':'핵심 포인트','통찰':'장기 통찰'};
+      return'<div class="p-3.5 bg-'+clr+'-50/60 border border-'+clr+'-100 rounded-xl"><div class="flex items-center gap-1.5 mb-1.5"><i class="ti '+icon+' text-sm"></i><span class="font-bold text-xs text-'+clr+'-900">'+(labels[s.key]||s.key)+'</span></div><p class="text-[12px] text-gray-700 leading-relaxed">'+esc(s.summary)+'</p></div>';
+    }).join('');
+    window._analysisCache='<div class="space-y-2.5">'+(a.period?'<div class="text-[10px] text-gray-400 font-semibold">📅 '+esc(a.period)+'</div>':'')+html+'</div>';
   }
   if(currentPage==='dashboard') renderDashboard();
 }
