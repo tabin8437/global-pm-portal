@@ -664,11 +664,11 @@ function renderDashboard(){
     var qHtml=(an.quarterly||[]).map(function(q){
       var pNum=parseFloat(String(q.pct||'').replace(/[^0-9.]/g,''))||0;
       var pClr=pNum>=95?'emerald':pNum>=85?'blue':pNum>=70?'amber':'red';
-      return'<div class="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-none"><span class="text-xs text-gray-600">'+esc(q.label)+'</span><div class="flex items-center gap-2"><span class="text-xs font-bold text-gray-900">'+fmtNum(q.value*100000000)+'</span><span class="text-[10px] font-bold text-'+pClr+'-600 bg-'+pClr+'-50 px-1.5 py-0.5 rounded">'+q.pct+'</span></div></div>';
+      return'<div class="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-none"><span class="text-xs text-gray-600">'+esc(q.label)+'</span><div class="flex items-center gap-2"><span class="text-xs font-bold text-gray-900">'+fmtNum(q.value*1000000)+'</span><span class="text-[10px] font-bold text-'+pClr+'-600 bg-'+pClr+'-50 px-1.5 py-0.5 rounded">'+q.pct+'</span></div></div>';
     }).join('');
     var totHtml='';
     if(an.totalPlan){
-      totHtml='<div class="flex items-center justify-between mt-2 pt-2 border-t border-gray-200"><span class="text-xs font-bold text-gray-700">연간 합계</span><div class="text-right"><div class="text-[10px] text-gray-500">계획 '+fmtNum(an.totalPlan*100000000)+' · 추정 '+fmtNum(an.totalEstimate*100000000)+'</div><div class="text-xs font-bold '+(parseFloat(String(an.totalAchieve||'').replace(/[^0-9.]/g,''))>=90?'text-emerald-600':'text-amber-600')+'">달성률 '+an.totalAchieve+'</div></div></div>';
+      totHtml='<div class="flex items-center justify-between mt-2 pt-2 border-t border-gray-200"><span class="text-xs font-bold text-gray-700">연간 합계</span><div class="text-right"><div class="text-[10px] text-gray-500">계획 '+fmtNum(an.totalPlan*1000000)+' · 추정 '+fmtNum(an.totalEstimate*1000000)+'</div><div class="text-xs font-bold '+(parseFloat(String(an.totalAchieve||'').replace(/[^0-9.]/g,''))>=90?'text-emerald-600':'text-amber-600')+'">달성률 '+an.totalAchieve+'</div></div></div>';
     }
     aw.innerHTML='<div class="card"><div class="card-header"><span class="card-title text-sm"><i class="ti ti-coin text-amber-500"></i> 연간 매출 현황</span></div>'+qHtml+totHtml+'</div>';
   }
@@ -915,7 +915,7 @@ function applyKpiData(d){
       var mt=an.monthlyTarget;
       var achNum=parseFloat(String(mt.achieve||'').replace(/[^0-9.]/g,''))||0;
       var achColor=achNum>=100?'emerald':achNum>=90?'blue':achNum>=80?'amber':'red';
-      window._monthTargetHtml='<div class="flex items-center gap-2 flex-wrap"><span class="text-[11px] text-gray-400">계획 <b class="text-gray-700">'+fmtNum(mt.plan*100000000)+'</b></span><span class="text-[11px] text-gray-400">추정 <b class="text-gray-700">'+fmtNum(mt.estimate*100000000)+'</b></span><span class="text-[11px] font-bold text-'+achColor+'-600 bg-'+achColor+'-50 px-2 py-0.5 rounded-md">달성 '+mt.achieve+'</span></div>';
+      window._monthTargetHtml='<div class="flex items-center gap-2 flex-wrap"><span class="text-[11px] text-gray-400">계획 <b class="text-gray-700">'+fmtNum(mt.plan*1000000)+'</b></span><span class="text-[11px] text-gray-400">추정 <b class="text-gray-700">'+fmtNum(mt.estimate*1000000)+'</b></span><span class="text-[11px] font-bold text-'+achColor+'-600 bg-'+achColor+'-50 px-2 py-0.5 rounded-md">달성 '+mt.achieve+'</span></div>';
     }
   }
 
