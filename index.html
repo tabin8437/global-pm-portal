@@ -182,6 +182,7 @@ body.is-admin .admin-only{display:flex}
   <div class="main">
     <div class="topbar">
       <div class="breadcrumb">해외사업PM 포탈 › <b id="bc-text">종합 대시보드</b></div>
+      <button class="btn btn-sm" onclick="location.reload()" title="전체 새로고침 (문서 · 지표 최신화)"><i class="ti ti-refresh"></i> 새로고침</button>
       <div class="clock-bar">
         🇰🇷 <b>KR</b> <span id="clock-kr">--:--:--</span>
         <div class="sep"></div>🇹🇼 <b>TW</b> <span id="clock-tw">--:--</span>
@@ -264,7 +265,6 @@ var DOC_URLS = {
 };
 
 // 종합 링크 허브 데이터
-var LINK_HUB = [
 var LINK_HUB = [
   // 0. 사내 공통 인프라
   {title:'사내 공통 인프라',links:[
