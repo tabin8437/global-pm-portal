@@ -415,12 +415,22 @@ var SPEC_DATA = [
   {device:'영상 썸네일',res:'1920 x 1080',note:'16:9 유튜브',p:'common'}
 ];
 
-// KPI 데이터 (주간 트렌드 포함)
+// KPI 데이터 (주간)
 var KPI_DATA = [
   {label:'일평균 DAU',value:'2.9만',change:'+0.2%',dir:'up',color:'#10b981',trend:[65,68,70,62,71,72,72]},
   {label:'누적 NRU',value:'1.2만',change:'+79.9%',dir:'up',color:'#ef4444',trend:[15,18,12,22,45,68,90],alert:true},
   {label:'주간 WAU',value:'4.3만',change:'+6.8%',dir:'up',color:'#3b82f6',trend:[80,82,78,85,88,90,93]},
   {label:'주간 매출',value:'1.9억',change:'-35.2%',dir:'down',color:'#8b5cf6',trend:[90,88,95,85,72,60,48]}
+];
+
+// KPI 월간 누적 (현재 월 기준)
+var KPI_MONTHLY = [
+  {label:'월 누적 DAU 평균',value:'3.1만',change:'+2.3%',dir:'up',color:'#059669'},
+  {label:'월 누적 NRU',value:'4.8만',change:'+45.2%',dir:'up',color:'#dc2626',alert:true},
+  {label:'월 누적 MAU',value:'12.7만',change:'+8.1%',dir:'up',color:'#2563eb'},
+  {label:'월 누적 매출',value:'9.2억',change:'-12.8%',dir:'down',color:'#7c3aed'},
+  {label:'월 PU',value:'1,420명',change:'-8.5%',dir:'down',color:'#0891b2'},
+  {label:'월 ARPPU',value:'6.5만',change:'-4.7%',dir:'down',color:'#ca8a04'}
 ];
 
 // 마일스톤 폴백
@@ -616,6 +626,13 @@ function renderDashboard(){
     return'<div class="kpi-card'+(k.alert?' ring-2 ring-red-200':'')+'"><div class="kpi-label">'+k.label+(k.alert?' <span class="text-red-500 font-bold">⚠ 허수 의심</span>':'')+'</div><div class="flex items-end justify-between gap-2"><div><div class="kpi-value">'+k.value+'</div><span class="kpi-change '+k.dir+'">'+k.change+'</span></div><div class="kpi-sparkline">'+bars+'</div></div></div>';
   }).join('');
 
+  // 월간 누적
+  var now=new Date();var monthLabel=now.getFullYear()+'년 '+(now.getMonth()+1)+'월 누적';
+  var monthlyCards=KPI_MONTHLY.map(function(k){
+    return'<div class="bg-white border rounded-xl p-3'+(k.alert?' ring-2 ring-red-200':'')+'"><div class="text-[11px] text-gray-400 font-semibold">'+k.label+'</div><div class="text-lg font-extrabold mt-1" style="color:'+k.color+'">'+k.value+'</div><span class="text-[11px] font-bold '+(k.dir==='up'?'text-red-500':'text-blue-500')+'">'+k.change+'</span></div>';
+  }).join('');
+  var monthlyHtml='<div class="card mt-5"><div class="card-header"><span class="card-title"><i class="ti ti-calendar-stats text-indigo-500"></i> '+monthLabel+' 지표</span><span class="text-[11px] text-gray-400 font-medium">'+now.getMonth()+'/1 ~ '+now.getMonth()+'/'+ now.getDate()+' 기준</span></div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">'+monthlyCards+'</div></div>';
+
   // PM 종합평
   var analysisHtml='<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-robot text-purple-500"></i> 지표 분석 및 실무 PM 종합 평</span></div><div class="space-y-3 text-[13px] leading-relaxed text-gray-600 bg-slate-50 border border-slate-200 p-5 rounded-xl"><p><b class="text-gray-900">[트래픽]</b> DAU 2.9만(▲0.2%) 보합, NRU 1.2만(▲79.9%) 폭증으로 WAU 4.3만(▲6.8%) 상향. 외형상 강한 성장세이나 비진성 트래픽 의심.</p><p><b class="text-gray-900">[매출]</b> 주간 매출 1.9억(▼35.2%), PU 377명(▼25.8%) 감소. ARPPU 7만원 견고. 유입↑ 매출↓ 디커플링 국면.</p><p><b class="text-gray-900">[핵심 포인트]</b> 💡 비오가닉 허수 트래픽 착시에 유의. 진성 유저 리텐션 및 재화 밸런스 최우선 모니터링 필요.</p><p><b class="text-gray-900">[장기 통찰]</b> 🔍 비오가닉 장기 체류 시 거래소 시세 교란 → 고과금 유저 이탈 리스크. 선제적 질적 트래픽 제어 필수.</p></div></div>';
 
@@ -628,7 +645,7 @@ function renderDashboard(){
   c.innerHTML='<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">'+kpiHtml+'</div><div class="grid grid-cols-1 lg:grid-cols-3 gap-5">'+
     '<div class="lg:col-span-2">'+analysisHtml+'</div>'+
     '<div>'+iosMini+'</div>'+
-    '</div>'+milestoneHtml;
+    '</div>'+monthlyHtml+milestoneHtml;
   switchMilestoneTab('cross');
 }
 
