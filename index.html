@@ -647,9 +647,10 @@ function renderDashboard(){
 
   var weekNum=Math.ceil(now.getDate()/7);
   var weekLabel=now.getFullYear()+'년 '+(now.getMonth()+1)+'월 '+weekNum+'주차';
+  var yesterday=now.getDate()-1;if(yesterday<1)yesterday=1;
 
   c.innerHTML='<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-chart-bar text-emerald-500"></i> '+weekLabel+' 주간 지표</span></div><div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">'+kpiHtml+'</div>'+
-    '<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-calendar-stats text-indigo-500"></i> '+monthLabel+'</span><span class="text-[11px] text-gray-400 font-medium">'+(now.getMonth()+1)+'/1 ~ '+(now.getMonth()+1)+'/'+now.getDate()+' 기준</span></div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">'+monthlyCards+'</div>'+
+    '<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-calendar-stats text-indigo-500"></i> '+monthLabel+'</span><span class="text-[11px] text-gray-400 font-medium">'+(now.getMonth()+1)+'/1 ~ '+(now.getMonth()+1)+'/'+yesterday+' 기준</span></div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">'+monthlyCards+'</div>'+
     '<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">'+
     '<div class="lg:col-span-2">'+analysisHtml+'</div>'+
     '<div>'+iosMini+'</div>'+
@@ -669,7 +670,7 @@ function switchMilestoneTab(region){
 
 /* ── Schedule ── */
 function renderSchedule(){
-  document.getElementById('content-area').innerHTML='<div class="grid grid-cols-1 lg:grid-cols-2 gap-5"><div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-bell-ringing text-amber-500"></i> 월던 시간 라이브 기준표</span></div><div id="schedule-wd"></div></div><div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-swords text-indigo-500"></i> 컨텐츠 오픈 시점 해금표</span></div><div id="schedule-ct"></div></div></div>';
+  document.getElementById('content-area').innerHTML='<div class="card mb-5"><div class="card-header"><span class="card-title"><i class="ti ti-bell-ringing text-amber-500"></i> 월던 시간 라이브 기준표</span></div><div id="schedule-wd"></div></div><div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-swords text-indigo-500"></i> 컨텐츠 오픈 시점 해금표</span></div><div id="schedule-ct"></div></div>';
   renderScheduleTable('schedule-wd',SCHEDULE_WD);
   renderScheduleTable('schedule-ct',SCHEDULE_CT);
 }
