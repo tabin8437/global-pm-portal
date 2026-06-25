@@ -643,13 +643,38 @@ function renderDashboard(){
   var weekLabel=now.getFullYear()+'년 '+(now.getMonth()+1)+'월 '+weekNum+'주차';
   var yesterday=now.getDate()-1;if(yesterday<1)yesterday=1;
 
+  // 연간매출 위젯
+  var annualHtml='<div id="annual-revenue-widget"></div>';
+
+  // 월간 목표 뱃지
+  var monthTargetHtml='<span id="month-target-badge" class="text-[11px] text-gray-400 font-medium">'+(now.getMonth()+1)+'/1 ~ '+(now.getMonth()+1)+'/'+yesterday+' 기준</span>';
+
   c.innerHTML='<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-chart-bar text-emerald-500"></i> '+weekLabel+' 주간 지표</span></div><div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">'+kpiHtml+'</div>'+
-    '<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-calendar-stats text-indigo-500"></i> '+monthLabel+'</span><span class="text-[11px] text-gray-400 font-medium">'+(now.getMonth()+1)+'/1 ~ '+(now.getMonth()+1)+'/'+yesterday+' 기준</span></div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">'+monthlyCards+'</div>'+
+    '<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-calendar-stats text-indigo-500"></i> '+monthLabel+'</span>'+monthTargetHtml+'</div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">'+monthlyCards+'</div>'+
     '<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">'+
     '<div class="lg:col-span-2">'+analysisHtml+'</div>'+
-    '<div>'+iosMini+'</div>'+
+    '<div class="space-y-4">'+annualHtml+iosMini+'</div>'+
     '</div>'+milestoneHtml;
   switchMilestoneTab('cross');
+
+  // 연간매출 위젯 채우기
+  var aw=document.getElementById('annual-revenue-widget');
+  if(aw&&window._annualCache){
+    var an=window._annualCache;
+    var qHtml=(an.quarterly||[]).map(function(q){
+      var pNum=parseFloat(String(q.pct||'').replace(/[^0-9.]/g,''))||0;
+      var pClr=pNum>=95?'emerald':pNum>=85?'blue':pNum>=70?'amber':'red';
+      return'<div class="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-none"><span class="text-xs text-gray-600">'+esc(q.label)+'</span><div class="flex items-center gap-2"><span class="text-xs font-bold text-gray-900">'+fmtNum(q.value*100000000)+'</span><span class="text-[10px] font-bold text-'+pClr+'-600 bg-'+pClr+'-50 px-1.5 py-0.5 rounded">'+q.pct+'</span></div></div>';
+    }).join('');
+    var totHtml='';
+    if(an.totalPlan){
+      totHtml='<div class="flex items-center justify-between mt-2 pt-2 border-t border-gray-200"><span class="text-xs font-bold text-gray-700">연간 합계</span><div class="text-right"><div class="text-[10px] text-gray-500">계획 '+fmtNum(an.totalPlan*100000000)+' · 추정 '+fmtNum(an.totalEstimate*100000000)+'</div><div class="text-xs font-bold '+(parseFloat(String(an.totalAchieve||'').replace(/[^0-9.]/g,''))>=90?'text-emerald-600':'text-amber-600')+'">달성률 '+an.totalAchieve+'</div></div></div>';
+    }
+    aw.innerHTML='<div class="card"><div class="card-header"><span class="card-title text-sm"><i class="ti ti-coin text-amber-500"></i> 연간 매출 현황</span></div>'+qHtml+totHtml+'</div>';
+  }
+  // 월간 목표 뱃지 채우기
+  var mtb=document.getElementById('month-target-badge');
+  if(mtb&&window._monthTargetHtml) mtb.innerHTML=window._monthTargetHtml;
 }
 
 function switchMilestoneTab(region){
@@ -881,6 +906,19 @@ function applyKpiData(d){
       {label:'월 ARPPU',value:fmtNum(mr.arppu||0),change:parseChange(mc.arppu).text,dir:parseChange(mc.arppu).dir,color:'#ca8a04'}
     ];
   }
+  // 연간매출 데이터
+  if(d.annual){
+    var an=d.annual;
+    window._annualCache=an;
+    // 월간 목표 뱃지 업데이트
+    if(an.monthlyTarget&&an.monthlyTarget.plan){
+      var mt=an.monthlyTarget;
+      var achNum=parseFloat(String(mt.achieve||'').replace(/[^0-9.]/g,''))||0;
+      var achColor=achNum>=100?'emerald':achNum>=90?'blue':achNum>=80?'amber':'red';
+      window._monthTargetHtml='<div class="flex items-center gap-2 flex-wrap"><span class="text-[11px] text-gray-400">계획 <b class="text-gray-700">'+fmtNum(mt.plan*100000000)+'</b></span><span class="text-[11px] text-gray-400">추정 <b class="text-gray-700">'+fmtNum(mt.estimate*100000000)+'</b></span><span class="text-[11px] font-bold text-'+achColor+'-600 bg-'+achColor+'-50 px-2 py-0.5 rounded-md">달성 '+mt.achieve+'</span></div>';
+    }
+  }
+
   // 마이비서 분석 데이터 (서버에서 요약된 섹션)
   if(d.analysis&&d.analysis.sections&&d.analysis.sections.length){
     var a=d.analysis;
