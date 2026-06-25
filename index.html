@@ -73,22 +73,18 @@ body.is-admin .admin-only{display:flex}
 .page.active{display:block}
 
 /* ── Cards ── */
-.card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.card-title{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.card-title{font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px;color:var(--text-primary)}
 
-/* ── KPI Chart Bars ── */
-.kpi-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px 18px;position:relative;overflow:hidden;transition:box-shadow .15s}
-.kpi-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.06)}
-.kpi-label{font-size:11px;font-weight:600;color:var(--text-tertiary)}
-.kpi-value{font-size:24px;font-weight:800;color:var(--text-primary);margin:4px 0 2px;letter-spacing:-.5px}
-.kpi-change{font-size:11px;font-weight:700}
-.kpi-change.up{color:#ef4444}
-.kpi-change.down{color:#3b82f6}
-.kpi-bar-track{height:6px;background:var(--bg-secondary);border-radius:3px;margin-top:10px;overflow:hidden}
-.kpi-bar-fill{height:100%;border-radius:3px;transition:width .8s ease}
-.kpi-sparkline{display:flex;align-items:flex-end;gap:2px;height:32px;margin-top:8px}
-.kpi-sparkline .bar{flex:1;border-radius:2px;transition:height .5s ease;min-width:4px}
+/* ── KPI Cards ── */
+.kpi-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px 20px;transition:box-shadow .15s,transform .15s}
+.kpi-card:hover{box-shadow:0 6px 16px rgba(0,0,0,.07);transform:translateY(-1px)}
+.kpi-label{font-size:11px;font-weight:700;color:var(--text-tertiary);letter-spacing:.2px}
+.kpi-value{font-size:26px;font-weight:900;color:var(--text-primary);margin:6px 0 4px;letter-spacing:-.5px}
+.kpi-change{font-size:12px;font-weight:800;display:inline-flex;align-items:center;gap:2px;padding:2px 8px;border-radius:6px}
+.kpi-change.change-up{color:#dc2626;background:#fef2f2}
+.kpi-change.change-down{color:#2563eb;background:#eff6ff}
 
 /* ── Buttons ── */
 .btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;font-size:12px;font-weight:600;border:1px solid var(--border-strong);border-radius:var(--radius);cursor:pointer;background:#fff;transition:all .12s;white-space:nowrap}
@@ -114,10 +110,11 @@ body.is-admin .admin-only{display:flex}
 .form-group label{display:block;font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:5px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .link-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
-.link-card{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#fff;border:1px solid var(--border);border-radius:12px;text-decoration:none;color:var(--text-primary);font-size:13px;font-weight:600;transition:all .12s}
-.link-card:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(16,185,129,.1);transform:translateY(-1px)}
-.link-card i{font-size:18px;flex-shrink:0}
-.link-card.featured{background:var(--accent-light);border-color:var(--accent)}
+.link-card{display:flex;align-items:center;gap:10px;padding:13px 16px;background:#fff;border:1px solid var(--border);border-radius:12px;text-decoration:none;color:var(--text-primary);font-size:13px;font-weight:600;transition:all .15s}
+.link-card:hover{border-color:var(--accent);box-shadow:0 4px 12px rgba(16,185,129,.12);transform:translateY(-2px)}
+.link-card i{font-size:18px;flex-shrink:0;opacity:.8}
+.link-card:hover i{opacity:1}
+.link-card.featured{background:var(--accent-light);border-color:var(--accent);font-weight:700}
 .detail-box{margin-top:8px;background:var(--bg-secondary);padding:10px 12px;border-radius:8px;font-size:12px;white-space:pre-wrap;color:var(--text-secondary);line-height:1.6;max-height:200px;overflow-y:auto}
 .preview-btns{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap}
 .preview-frame{display:none;margin-top:8px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;height:420px}
@@ -620,21 +617,17 @@ function renderDashboard(){
   var c=document.getElementById('content-area');
   // KPI Cards with sparklines
   var kpiHtml=KPI_DATA.map(function(k){
-    var bars=k.trend.map(function(v,i){
-      var h=Math.round(v/100*32);
-      var opacity=i===k.trend.length-1?1:0.4+i*0.08;
-      return'<div class="bar" style="height:'+h+'px;background:'+k.color+';opacity:'+opacity+'"></div>';
-    }).join('');
     var isDown=k.change.indexOf('▼')!==-1||k.change.indexOf('-')!==-1;
-    var changeColor=isDown?'text-blue-600':'text-red-500';
-    return'<div class="kpi-card'+(k.alert?' ring-2 ring-red-200':'')+'"><div class="kpi-label">'+k.label+(k.alert?' <span class="text-red-500 font-bold">⚠ 허수 의심</span>':'')+'</div><div class="flex items-end justify-between gap-2"><div><div class="kpi-value">'+k.value+'</div><span class="kpi-change '+changeColor+' font-bold">'+k.change+'</span></div><div class="kpi-sparkline">'+bars+'</div></div></div>';
+    var changeCls=isDown?'change-down':'change-up';
+    return'<div class="kpi-card'+(k.alert?' ring-2 ring-red-200 bg-red-50/30':'')+'"><div class="kpi-label">'+k.label+(k.alert?' <span class="text-red-500">⚠</span>':'')+'</div><div class="kpi-value" style="color:'+k.color+'">'+k.value+'</div><span class="kpi-change '+changeCls+'">'+k.change+'</span></div>';
   }).join('');
 
   // 월간 누적
   var now=new Date();var monthLabel=now.getFullYear()+'년 '+(now.getMonth()+1)+'월 누적';
   var monthlyCards=KPI_MONTHLY.map(function(k){
     var mDown=k.change.indexOf('▼')!==-1||k.change.indexOf('-')!==-1;
-    return'<div class="bg-white border rounded-xl p-3'+(k.alert?' ring-2 ring-red-200':'')+'"><div class="text-[11px] text-gray-400 font-semibold">'+k.label+'</div><div class="text-lg font-extrabold mt-1" style="color:'+k.color+'">'+k.value+'</div><span class="text-[11px] font-bold '+(mDown?'text-blue-600':'text-red-500')+'">'+k.change+'</span></div>';
+    var mCls=mDown?'change-down':'change-up';
+    return'<div class="kpi-card" style="padding:14px 16px"><div class="kpi-label">'+k.label+'</div><div class="kpi-value" style="font-size:20px;color:'+k.color+';margin:4px 0 3px">'+k.value+'</div><span class="kpi-change '+mCls+'" style="font-size:11px">'+k.change+'</span></div>';
   }).join('');
   // PM 종합평
   var analysisHtml='<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-robot text-purple-500"></i> 지표 분석 및 실무 PM 종합 평</span></div><div class="space-y-3 text-[13px] leading-relaxed text-gray-600 bg-slate-50 border border-slate-200 p-5 rounded-xl"><p><b class="text-gray-900">[트래픽]</b> DAU 2.9만(▲0.2%) 보합, NRU 1.2만(▲79.9%) 폭증으로 WAU 4.3만(▲6.8%) 상향. 외형상 강한 성장세이나 비진성 트래픽 의심.</p><p><b class="text-gray-900">[매출]</b> 주간 매출 1.9억(▼35.2%), PU 377명(▼25.8%) 감소. ARPPU 7만원 견고. 유입↑ 매출↓ 디커플링 국면.</p><p><b class="text-gray-900">[핵심 포인트]</b> 💡 비오가닉 허수 트래픽 착시에 유의. 진성 유저 리텐션 및 재화 밸런스 최우선 모니터링 필요.</p><p><b class="text-gray-900">[장기 통찰]</b> 🔍 비오가닉 장기 체류 시 거래소 시세 교란 → 고과금 유저 이탈 리스크. 선제적 질적 트래픽 제어 필수.</p></div></div>';
