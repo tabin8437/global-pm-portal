@@ -215,16 +215,16 @@ var SIDEBAR_MENU = [
   {id:'report-kpi',icon:'ti-presentation',label:'주/월간 보고용 지표',type:'doc'},
   {id:'platform',icon:'ti-brand-apple',label:'iOS 관리'},
   {section:'종합 링크', group:true, groupId:'links', items:[
-    {id:'links-0',label:'KG 사내 공통 툴',icon:'ti-building'},
-    {id:'links-1',label:'마켓 배포 & 피쳐링',icon:'ti-brand-google-play'},
-    {id:'links-2',label:'오딘 GL 일정 & 기획',icon:'ti-calendar'},
-    {id:'links-3',label:'오딘 GL BM & 웹상점',icon:'ti-credit-card'},
-    {id:'links-4',label:'오딘 GL 운영 & 런처',icon:'ti-settings'},
-    {id:'links-5',label:'정책 / 화이트키',icon:'ti-shield-lock'},
-    {id:'links-6',label:'커뮤니티 & 마케팅',icon:'ti-world'},
-    {id:'links-7',label:'QA & 번역',icon:'ti-test-pipe'},
-    {id:'links-8',label:'리소스 & 드라이브',icon:'ti-folder'},
-    {id:'links-9',label:'사내 소통망',icon:'ti-messages'}
+    {id:'links-0',label:'사내 공통 인프라',icon:'ti-building'},
+    {id:'links-1',label:'스토어 배포 · 피쳐링',icon:'ti-brand-google-play'},
+    {id:'links-2',label:'일정 · 기획 관리',icon:'ti-calendar'},
+    {id:'links-3',label:'과금 · 웹상점',icon:'ti-credit-card'},
+    {id:'links-4',label:'라이브 운영 · 런처',icon:'ti-settings'},
+    {id:'links-5',label:'접근 권한 · 화이트키',icon:'ti-shield-lock'},
+    {id:'links-6',label:'커뮤니티 · 프로모션',icon:'ti-world'},
+    {id:'links-7',label:'QA · 현지화',icon:'ti-test-pipe'},
+    {id:'links-8',label:'공유 드라이브 · 문서',icon:'ti-folder'},
+    {id:'links-9',label:'사내 협업 채널',icon:'ti-messages'}
   ]},
   {section:'라이브 관리'},
   {id:'event',icon:'ti-gift',label:'이벤트 & 보상안',type:'doc'},
@@ -265,135 +265,136 @@ var DOC_URLS = {
 
 // 종합 링크 허브 데이터
 var LINK_HUB = [
-  // 0. KG 사내 공통 툴
-  {title:'KG 사내 공통 툴',links:[
-    {url:'https://mail.kakaowork.com/mail/list.do',label:'KG 사내 메일 (K-Work)',icon:'ti-mail text-blue-500'},
-    {url:'https://start.kakaogames.io/',label:'사내 그룹웨어 포탈',icon:'ti-building text-emerald-600'},
-    {url:'https://noti.daumkakao.io/dashboard/main',label:'Watch Tower 종합관제창',icon:'ti-bell text-amber-500'},
+var LINK_HUB = [
+  // 0. 사내 공통 인프라
+  {title:'사내 공통 인프라',links:[
+    {url:'https://mail.kakaowork.com/mail/list.do',label:'사내 메일 (카카오워크)',icon:'ti-mail text-blue-500'},
+    {url:'https://start.kakaogames.io/',label:'그룹웨어 포탈',icon:'ti-building text-emerald-600'},
+    {url:'https://noti.daumkakao.io/dashboard/main',label:'Watch Tower 관제',icon:'ti-bell text-amber-500'},
     {url:'https://bis.kakaogames.io/data/servlet/mstrWeb',label:'BIS 지표 콘솔',icon:'ti-chart-bar text-blue-600'},
-    {url:'https://wiki.daumkakao.com/',label:'Kakao Wiki (Confluence)',icon:'ti-book text-indigo-500'},
-    {url:'https://zinny3.game.daumkakao.io',label:'ZINNY 통합 콘솔 어드민',icon:'ti-apps text-indigo-600'},
-    {url:'https://qa-admin-zinny3.kakaogames.io/',label:'ZINNY QA 제어 관리자',icon:'ti-apps text-orange-500'},
-    {url:'https://admin-zinny3.kakaogames.io/',label:'ZINNY 플랫폼 (클라이언트 버전)',icon:'ti-versions text-emerald-600'},
+    {url:'https://wiki.daumkakao.com/',label:'사내 위키 (Confluence)',icon:'ti-book text-indigo-500'},
+    {url:'https://zinny3.game.daumkakao.io',label:'ZINNY 어드민',icon:'ti-apps text-indigo-600'},
+    {url:'https://qa-admin-zinny3.kakaogames.io/',label:'ZINNY QA',icon:'ti-apps text-orange-500'},
+    {url:'https://admin-zinny3.kakaogames.io/',label:'ZINNY 클라이언트 버전 관리',icon:'ti-versions text-emerald-600'},
     {url:'https://kas.kakaogames.io/admin/main',label:'KAS 결제 수집기',icon:'ti-receipt-tax text-teal-600'},
     {url:'https://kosmos.kakaogames.io/',label:'KOSMOS',icon:'ti-atom text-purple-500'},
-    {url:'https://isd.kakaogames.io/',label:'KG 시스템 (ISD)',icon:'ti-server text-gray-600'},
-    {url:'https://app.snowflake.com/rlpfjsg/is42076/worksheets',label:'Snowflake 쿼리 실행 툴',icon:'ti-snowflake text-blue-400'},
-    {url:'https://admin-gamecenter.kakao.com/',label:'게임센터 (빌드 APK 다운)',icon:'ti-download text-green-600'},
-    {url:'https://kars.kakaogames.io/log/dashboard?appid=1019947',label:'KARS 모니터링 툴',icon:'ti-activity text-red-500'},
-    {url:'https://infrasec.daumkakao.io/',label:'KAYA 인터넷 허용 신청',icon:'ti-shield text-amber-600'},
-    {url:'https://ims.kakaogames.io/',label:'MJS 정산 (계정 초기화)',icon:'ti-refresh text-gray-500'}
+    {url:'https://isd.kakaogames.io/',label:'ISD 시스템',icon:'ti-server text-gray-600'},
+    {url:'https://app.snowflake.com/rlpfjsg/is42076/worksheets',label:'Snowflake 쿼리 툴',icon:'ti-snowflake text-blue-400'},
+    {url:'https://admin-gamecenter.kakao.com/',label:'게임센터 빌드 다운로드',icon:'ti-download text-green-600'},
+    {url:'https://kars.kakaogames.io/log/dashboard?appid=1019947',label:'KARS 모니터링',icon:'ti-activity text-red-500'},
+    {url:'https://infrasec.daumkakao.io/',label:'KAYA 외부 인터넷 허용 신청',icon:'ti-shield text-amber-600'},
+    {url:'https://ims.kakaogames.io/',label:'MJS 정산 계정 관리',icon:'ti-refresh text-gray-500'}
   ]},
-  // 1. 마켓 배포 & 피쳐링
-  {title:'마켓 배포 & 피쳐링',links:[
-    {url:'https://appstoreconnect.apple.com',label:'App Store Connect 콘솔',icon:'ti-brand-apple text-gray-800'},
-    {url:'https://play.google.com/console',label:'Google Play 배포 콘솔',icon:'ti-brand-google-play text-blue-500'},
-    {url:'https://kakaogames.agit.in/g/300085611/wall/417799451',label:'피처링 요청의 벽 (사업개발실)',icon:'ti-speakerphone text-indigo-600',featured:true},
-    {url:'https://docs.google.com/spreadsheets/d/1tTo9YPhjQ421sifjZ4IMMIkeuuiSRSQ6NpTJXSuXj60/edit?gid=137845725',label:'애플 피쳐링 로드맵',icon:'ti-roadmap text-blue-700'},
-    {url:'https://docs.google.com/spreadsheets/d/187uyQXta52NhePVZxkvOo3lPGW-wY3xAWYABedEZj5A/edit?gid=1950071140',label:'구글 피쳐링 로드맵',icon:'ti-roadmap text-blue-700'},
-    {url:'https://services.google.com/fh/files/misc/play_partner_art_specs_2021.pdf',label:'구글 피쳐드 이미지 제작가이드',icon:'ti-photo-edit text-teal-600'},
-    {url:'https://docs.google.com/presentation/d/1cBQk3bwDwMG2IY6QvC6WhQjrLaociSiCXSAeqs1whQw/edit#slide=id.p37',label:'점검/마켓등록/배포 가이드',icon:'ti-presentation text-purple-500'}
+  // 1. 스토어 배포 · 피쳐링
+  {title:'스토어 배포 · 피쳐링',links:[
+    {url:'https://appstoreconnect.apple.com',label:'App Store Connect',icon:'ti-brand-apple text-gray-800'},
+    {url:'https://play.google.com/console',label:'Google Play Console',icon:'ti-brand-google-play text-blue-500'},
+    {url:'https://kakaogames.agit.in/g/300085611/wall/417799451',label:'피쳐링 요청 게시판 (사업개발실)',icon:'ti-speakerphone text-indigo-600',featured:true},
+    {url:'https://docs.google.com/spreadsheets/d/1tTo9YPhjQ421sifjZ4IMMIkeuuiSRSQ6NpTJXSuXj60/edit?gid=137845725',label:'Apple 피쳐링 로드맵',icon:'ti-roadmap text-blue-700'},
+    {url:'https://docs.google.com/spreadsheets/d/187uyQXta52NhePVZxkvOo3lPGW-wY3xAWYABedEZj5A/edit?gid=1950071140',label:'Google 피쳐링 로드맵',icon:'ti-roadmap text-blue-700'},
+    {url:'https://services.google.com/fh/files/misc/play_partner_art_specs_2021.pdf',label:'Google 피쳐드 이미지 가이드',icon:'ti-photo-edit text-teal-600'},
+    {url:'https://docs.google.com/presentation/d/1cBQk3bwDwMG2IY6QvC6WhQjrLaociSiCXSAeqs1whQw/edit#slide=id.p37',label:'점검 · 마켓등록 · 배포 가이드',icon:'ti-presentation text-purple-500'}
   ]},
-  // 2. 오딘 GL 일정 & 기획
-  {title:'오딘 GL 일정 & 기획',links:[
-    {url:'https://docs.google.com/spreadsheets/d/1PgqMju9ITG0yo9r10uuDhjjgRainfnoPYw5d6PL9xgc/edit',label:'글로벌 타임라인 / 마일스톤',icon:'ti-timeline-event text-indigo-600',featured:true},
-    {url:'https://docs.google.com/spreadsheets/d/1y6Wrdu5VHbCDEFpwpwzRAiaCaTDxsCGnZoG3ltXUJQA/edit?gid=536936580',label:'글로벌 오픈 스펙',icon:'ti-list-details text-blue-600'},
-    {url:'https://docs.google.com/document/d/1uw_7qfxJ9v2TcZth2rzTS0eUWHI_-0iEp46JIOzMKRI/edit',label:'ODIN 주간 보고',icon:'ti-report text-emerald-600'},
-    {url:'https://docs.google.com/spreadsheets/d/1Ez5v4E_r-R8r6mZ9rUaSr--6_oshIy-9mXLzUXu9u10/edit',label:'일정 독스 (KR)',icon:'ti-flag text-red-500'},
-    {url:'https://docs.google.com/spreadsheets/d/1ElA6-ht0cBLeHyx658oheqDOpfuudU2A2-fmBXXAlHY/edit?gid=377120203',label:'일정 독스 (TW)',icon:'ti-flag text-blue-500'},
-    {url:'https://docs.google.com/spreadsheets/d/1VUPZUpxOAEmIoLhBbTkJCN0WUSImc7xOCp3xMdC_dAI/edit?gid=2048284009',label:'일정 독스 (JP)',icon:'ti-flag text-green-500'},
-    {url:'https://docs.google.com/spreadsheets/d/1kIyHffPDu0tIpiM3cGDR58xMOEIwjAdNU_FciU-PvFA/edit?gid=1694333199',label:'이벤트 기획 (KR)',icon:'ti-gift text-red-500'},
-    {url:'https://docs.google.com/spreadsheets/d/1MpGXZUdDPzqJuwBuMm8ZDIif-Rqyog_MxX8rsOzwYNc/edit?gid=925293889',label:'이벤트 기획 (TW)',icon:'ti-gift text-blue-500'},
-    {url:'https://docs.google.com/spreadsheets/d/1w1eLLoD8mX_EjYbKaat5QLmmXoOvC8swi7vm3OFrGcE/edit?gid=1661651144',label:'이벤트 기획 (JP)',icon:'ti-gift text-green-500'},
-    {url:'https://docs.google.com/spreadsheets/d/1zf7wfWfrC_ajBPcSCg-NTZqLevnLWBNpTfI0hiUzjJE/edit?gid=384133325',label:'이벤트 기획 (GL)',icon:'ti-gift text-purple-500'},
+  // 2. 일정 · 기획 관리
+  {title:'일정 · 기획 관리',links:[
+    {url:'https://docs.google.com/spreadsheets/d/1PgqMju9ITG0yo9r10uuDhjjgRainfnoPYw5d6PL9xgc/edit',label:'전국가 타임라인 · 마일스톤',icon:'ti-timeline-event text-indigo-600',featured:true},
+    {url:'https://docs.google.com/spreadsheets/d/1y6Wrdu5VHbCDEFpwpwzRAiaCaTDxsCGnZoG3ltXUJQA/edit?gid=536936580',label:'글로벌 오픈 스펙 정의',icon:'ti-list-details text-blue-600'},
+    {url:'https://docs.google.com/document/d/1uw_7qfxJ9v2TcZth2rzTS0eUWHI_-0iEp46JIOzMKRI/edit',label:'주간 보고 문서',icon:'ti-report text-emerald-600'},
+    {url:'https://docs.google.com/spreadsheets/d/1Ez5v4E_r-R8r6mZ9rUaSr--6_oshIy-9mXLzUXu9u10/edit',label:'🇰🇷 한국 일정',icon:'ti-flag text-red-500'},
+    {url:'https://docs.google.com/spreadsheets/d/1ElA6-ht0cBLeHyx658oheqDOpfuudU2A2-fmBXXAlHY/edit?gid=377120203',label:'🇹🇼 대만 일정',icon:'ti-flag text-blue-500'},
+    {url:'https://docs.google.com/spreadsheets/d/1VUPZUpxOAEmIoLhBbTkJCN0WUSImc7xOCp3xMdC_dAI/edit?gid=2048284009',label:'🇯🇵 일본 일정',icon:'ti-flag text-green-500'},
+    {url:'https://docs.google.com/spreadsheets/d/1kIyHffPDu0tIpiM3cGDR58xMOEIwjAdNU_FciU-PvFA/edit?gid=1694333199',label:'🇰🇷 이벤트 기획',icon:'ti-gift text-red-500'},
+    {url:'https://docs.google.com/spreadsheets/d/1MpGXZUdDPzqJuwBuMm8ZDIif-Rqyog_MxX8rsOzwYNc/edit?gid=925293889',label:'🇹🇼 이벤트 기획',icon:'ti-gift text-blue-500'},
+    {url:'https://docs.google.com/spreadsheets/d/1w1eLLoD8mX_EjYbKaat5QLmmXoOvC8swi7vm3OFrGcE/edit?gid=1661651144',label:'🇯🇵 이벤트 기획',icon:'ti-gift text-green-500'},
+    {url:'https://docs.google.com/spreadsheets/d/1zf7wfWfrC_ajBPcSCg-NTZqLevnLWBNpTfI0hiUzjJE/edit?gid=384133325',label:'🌐 글로벌 이벤트 기획',icon:'ti-gift text-purple-500'},
     {url:'https://docs.google.com/spreadsheets/d/1QZ4o5VQDyCJGswhyM-7Jwqx7DfCPFrKINV7OEAakRzI/edit',label:'서버 선점 시나리오',icon:'ti-server text-gray-600'},
     {url:'https://docs.google.com/spreadsheets/d/1JvOfFWcvssvFZP91OFvtd66SThG1XxKAJSf3hJ6FEVw/edit?gid=1146934928',label:'정례 회의록',icon:'ti-notes text-gray-500'}
   ]},
-  // 3. 오딘 GL BM & 웹상점
-  {title:'오딘 GL BM & 웹상점',links:[
-    {url:'https://publisher.xsolla.com/270427',label:'엑솔라(Xsolla) 정산 콘솔',icon:'ti-receipt text-emerald-600',featured:true},
-    {url:'https://wiki.daumkakao.com/pages/viewpage.action?pageId=1568244566',label:'오딘 크레딧 상세 정책',icon:'ti-moneybag text-indigo-500'},
-    {url:'https://admin-shop.kakaogames.io/categories',label:'웹상점 어드민 (Live)',icon:'ti-shopping-cart text-emerald-700'},
-    {url:'https://qa-admin-shop.kakaogames.io/admin/log',label:'웹상점 어드민 (QA)',icon:'ti-shopping-cart text-orange-500'},
-    {url:'https://shop.kakaogames.com/odinvalhallarising/index',label:'웹상점 GL (Live)',icon:'ti-basket text-emerald-600'},
-    {url:'https://qa-shop.kakaogames.com/odinvalhallarising/index',label:'웹상점 GL (QA)',icon:'ti-basket text-orange-500'},
-    {url:'https://qa-shop.kakaogames.com/odin/index',label:'웹상점 TW (QA)',icon:'ti-basket text-blue-500'},
-    {url:'https://docs.google.com/spreadsheets/d/1nSS2nKnO7Wg_QoQpaXMWdalubHdK4nYswTVzPlgwY5U/edit?gid=365337539',label:'BM 기획 (TW)',icon:'ti-file-spreadsheet text-blue-600'},
-    {url:'https://docs.google.com/spreadsheets/d/1zWLfv4IohIMWjLoCV30vSJKGEj2G9DAfqh2IP2I4tHY/edit',label:'BM 기획 (JP)',icon:'ti-file-spreadsheet text-green-600'},
-    {url:'https://docs.google.com/spreadsheets/d/1Ns1sK0EfSdTmxYfpIrXjkq95mwSjIbVP8P1OErny40w/edit?gid=476798883',label:'BM 기획 (GL)',icon:'ti-file-spreadsheet text-purple-600'},
-    {url:'https://docs.google.com/spreadsheets/d/1K5zFIPxoXFGqsfLC8Mq5k8FBGcNVnjRTNlBxxVmovKk/edit',label:'웹상점 사용 가이드',icon:'ti-book text-gray-500'},
+  // 3. 과금 · 웹상점
+  {title:'과금 · 웹상점',links:[
+    {url:'https://publisher.xsolla.com/270427',label:'Xsolla 정산 대시보드',icon:'ti-receipt text-emerald-600',featured:true},
+    {url:'https://wiki.daumkakao.com/pages/viewpage.action?pageId=1568244566',label:'오딘 크레딧 정책 문서',icon:'ti-moneybag text-indigo-500'},
+    {url:'https://admin-shop.kakaogames.io/categories',label:'웹상점 어드민 Live',icon:'ti-shopping-cart text-emerald-700'},
+    {url:'https://qa-admin-shop.kakaogames.io/admin/log',label:'웹상점 어드민 QA',icon:'ti-shopping-cart text-orange-500'},
+    {url:'https://shop.kakaogames.com/odinvalhallarising/index',label:'글로벌 웹상점 Live',icon:'ti-basket text-emerald-600'},
+    {url:'https://qa-shop.kakaogames.com/odinvalhallarising/index',label:'글로벌 웹상점 QA',icon:'ti-basket text-orange-500'},
+    {url:'https://qa-shop.kakaogames.com/odin/index',label:'대만 웹상점 QA',icon:'ti-basket text-blue-500'},
+    {url:'https://docs.google.com/spreadsheets/d/1nSS2nKnO7Wg_QoQpaXMWdalubHdK4nYswTVzPlgwY5U/edit?gid=365337539',label:'🇹🇼 상품 기획 (BM)',icon:'ti-file-spreadsheet text-blue-600'},
+    {url:'https://docs.google.com/spreadsheets/d/1zWLfv4IohIMWjLoCV30vSJKGEj2G9DAfqh2IP2I4tHY/edit',label:'🇯🇵 상품 기획 (BM)',icon:'ti-file-spreadsheet text-green-600'},
+    {url:'https://docs.google.com/spreadsheets/d/1Ns1sK0EfSdTmxYfpIrXjkq95mwSjIbVP8P1OErny40w/edit?gid=476798883',label:'🌐 상품 기획 (BM)',icon:'ti-file-spreadsheet text-purple-600'},
+    {url:'https://docs.google.com/spreadsheets/d/1K5zFIPxoXFGqsfLC8Mq5k8FBGcNVnjRTNlBxxVmovKk/edit',label:'웹상점 운영 가이드',icon:'ti-book text-gray-500'},
     {url:'https://admin-shop.kakaogames.io/',label:'AMS 패키지 세팅',icon:'ti-package text-gray-600'},
-    {url:'https://kars.kakaogames.io/log/dashboard/3213?appid=1139316',label:'통화코드 PG 결제금액 (KAS)',icon:'ti-currency-won text-emerald-600'}
+    {url:'https://kars.kakaogames.io/log/dashboard/3213?appid=1139316',label:'통화별 PG 결제 현황 (KAS)',icon:'ti-currency-won text-emerald-600'}
   ]},
-  // 4. 오딘 GL 운영 & 런처
-  {title:'오딘 GL 운영 & 런처',links:[
-    {url:'https://launcher-odinvalhallarising.kakaogames.com/?preview=true',label:'🚀 Live 런처 (웹 프리뷰)',icon:'ti-rocket text-emerald-600',featured:true},
-    {url:'https://wcorn-admin.pcpf.kakaogames.com/odin/gbod/brandsite/brandingBanner/index.html',label:'W-CORN 배너/런처 관리',icon:'ti-layout text-indigo-600'},
-    {url:'https://qa-wcorn-admin.pcpf.kakaogames.com/',label:'W-CORN QA 버전',icon:'ti-layout text-orange-500'},
-    {url:'https://docs.google.com/spreadsheets/d/14MfE1ZcOeV4pdCy5T6cirVQxfA1907Axud6aShrbdC4/edit?gid=1568687127',label:'운영 공지 시트 마스터',icon:'ti-file-spreadsheet text-emerald-600'},
+  // 4. 라이브 운영 · 런처
+  {title:'라이브 운영 · 런처',links:[
+    {url:'https://launcher-odinvalhallarising.kakaogames.com/?preview=true',label:'런처 웹 프리뷰',icon:'ti-rocket text-emerald-600',featured:true},
+    {url:'https://wcorn-admin.pcpf.kakaogames.com/odin/gbod/brandsite/brandingBanner/index.html',label:'W-CORN 배너 · 런처 관리',icon:'ti-layout text-indigo-600'},
+    {url:'https://qa-wcorn-admin.pcpf.kakaogames.com/',label:'W-CORN QA',icon:'ti-layout text-orange-500'},
+    {url:'https://docs.google.com/spreadsheets/d/14MfE1ZcOeV4pdCy5T6cirVQxfA1907Axud6aShrbdC4/edit?gid=1568687127',label:'인게임 공지 마스터 시트',icon:'ti-file-spreadsheet text-emerald-600'},
     {url:'https://qa1-vg-gm.gbod.kakaogames.com:10001/index.php',label:'운영툴 QA (VG)',icon:'ti-test-pipe text-amber-600'},
     {url:'https://qa1-sg-gm.gbod.kakaogames.com:10001/',label:'운영툴 QA (SG)',icon:'ti-test-pipe text-amber-600'},
     {url:'https://qa1-gm.odin.kakaogames.com:10001/login.html',label:'운영툴 QA (KR)',icon:'ti-test-pipe text-red-500'},
     {url:'https://gm.odin.kakaogames.com:10001/login.html',label:'운영툴 Live (KR)',icon:'ti-settings text-red-600'},
-    {url:'https://drive.google.com/file/d/1BY2MolIjfNOn5F_weNdu3QMKgGZvshXi/view',label:'이벤트 세팅 가이드',icon:'ti-book text-gray-500'},
-    {url:'https://docs.google.com/spreadsheets/d/1ugeHbgqcMG0MH_btka2NE4Ufp77EexZJk-zuVDvkp8Y/edit',label:'컨텐츠 초기화 시간 (글로벌)',icon:'ti-clock text-blue-500'},
+    {url:'https://drive.google.com/file/d/1BY2MolIjfNOn5F_weNdu3QMKgGZvshXi/view',label:'이벤트 세팅 매뉴얼',icon:'ti-book text-gray-500'},
+    {url:'https://docs.google.com/spreadsheets/d/1ugeHbgqcMG0MH_btka2NE4Ufp77EexZJk-zuVDvkp8Y/edit',label:'컨텐츠 초기화 시간표',icon:'ti-clock text-blue-500'},
     {url:'https://dn.game.kakao.com/acl/form',label:'외부 IP 접근 허용 (지니)',icon:'ti-shield-check text-amber-500'}
   ]},
-  // 5. 정책 / 화이트키
-  {title:'정책 / 화이트키',links:[
-    {url:'https://docs.google.com/spreadsheets/d/1sitfLCTVTBOinh-lrJyYI3v_fNO-gmYvEvPA6C5An2k/edit?gid=6425432',label:'RM/운영 선점 보드',icon:'ti-pin text-red-500'},
-    {url:'https://docs.google.com/spreadsheets/d/1YQXvcVEefCl3AkRjfBr3CXp0IZy4hEd5lb7QiqsPNVk/edit?gid=1693821916',label:'론칭 준비 리스트 (운영)',icon:'ti-list-check text-purple-600'},
-    {url:'https://docs.google.com/spreadsheets/d/1UJNaWgTMMwBBZ5XwMjCUE0HFetXtbbcNPqk8UuIPRsE/edit?gid=37417387',label:'화이트리스트 및 PC 설치 루트',icon:'ti-key text-amber-600'},
-    {url:'https://docs.google.com/spreadsheets/d/1jghmHuIMyUHxymCcThpC3lmsOCoYXs6De7N2t-WMM7s/edit?gid=1037608677',label:'글로벌 화이트리스트 등록',icon:'ti-key text-amber-600'},
-    {url:'https://docs.google.com/spreadsheets/d/1bh2J68er6k2FZEmCquDDFTQqiPv9VAN-yWkWx7P1CGA/edit',label:'화이트키 등록',icon:'ti-key text-amber-600'},
-    {url:'https://docs.google.com/spreadsheets/d/1jghmHuIMyUHxymCcThpC3lmsOCoYXs6De7N2t-WMM7s/edit',label:'내부 실무자 화이트키 등록',icon:'ti-key text-gray-500'},
-    {url:'https://docs.google.com/spreadsheets/d/1xqNBA7TrZb8OMSzvPy2gMnktzk2tB7S-9QeC4Rz2H2g/edit?gid=1482358855',label:'점검 보상 리스트 (로키 상자)',icon:'ti-gift text-amber-600'},
-    {url:'https://docs.google.com/spreadsheets/d/1_569NYUUedQbGtgx-tWz5MTXr6pU2HP3X31j89q1Jt0/edit',label:'점검 보상 지급 기준 (시간)',icon:'ti-clock text-gray-500'},
-    {url:'https://docs.google.com/spreadsheets/d/1jMC0JztnjdwMKkrDtAeYi722rPPpRd49eCbNgrR3lZg/edit',label:'GBL 점검 담당자 로테이션',icon:'ti-users text-blue-500'},
-    {url:'https://drive.google.com/drive/folders/1QaHZjlML1vC9-DHvT4riXDbT7FOZRhBz',label:'운영측 배너 전달용 드라이브',icon:'ti-cloud-upload text-teal-600'}
+  // 5. 접근 권한 · 화이트키
+  {title:'접근 권한 · 화이트키',links:[
+    {url:'https://docs.google.com/spreadsheets/d/1sitfLCTVTBOinh-lrJyYI3v_fNO-gmYvEvPA6C5An2k/edit?gid=6425432',label:'RM · 운영 선점 보드',icon:'ti-pin text-red-500'},
+    {url:'https://docs.google.com/spreadsheets/d/1YQXvcVEefCl3AkRjfBr3CXp0IZy4hEd5lb7QiqsPNVk/edit?gid=1693821916',label:'론칭 준비 체크리스트',icon:'ti-list-check text-purple-600'},
+    {url:'https://docs.google.com/spreadsheets/d/1UJNaWgTMMwBBZ5XwMjCUE0HFetXtbbcNPqk8UuIPRsE/edit?gid=37417387',label:'화이트리스트 · PC 설치 루트',icon:'ti-key text-amber-600'},
+    {url:'https://docs.google.com/spreadsheets/d/1jghmHuIMyUHxymCcThpC3lmsOCoYXs6De7N2t-WMM7s/edit?gid=1037608677',label:'글로벌 화이트리스트',icon:'ti-key text-amber-600'},
+    {url:'https://docs.google.com/spreadsheets/d/1bh2J68er6k2FZEmCquDDFTQqiPv9VAN-yWkWx7P1CGA/edit',label:'화이트키 발급',icon:'ti-key text-amber-600'},
+    {url:'https://docs.google.com/spreadsheets/d/1jghmHuIMyUHxymCcThpC3lmsOCoYXs6De7N2t-WMM7s/edit',label:'내부 실무자 화이트키',icon:'ti-key text-gray-500'},
+    {url:'https://docs.google.com/spreadsheets/d/1xqNBA7TrZb8OMSzvPy2gMnktzk2tB7S-9QeC4Rz2H2g/edit?gid=1482358855',label:'점검 보상 구성 (로키 상자)',icon:'ti-gift text-amber-600'},
+    {url:'https://docs.google.com/spreadsheets/d/1_569NYUUedQbGtgx-tWz5MTXr6pU2HP3X31j89q1Jt0/edit',label:'점검 시간별 보상 기준',icon:'ti-clock text-gray-500'},
+    {url:'https://docs.google.com/spreadsheets/d/1jMC0JztnjdwMKkrDtAeYi722rPPpRd49eCbNgrR3lZg/edit',label:'점검 담당자 로테이션',icon:'ti-users text-blue-500'},
+    {url:'https://drive.google.com/drive/folders/1QaHZjlML1vC9-DHvT4riXDbT7FOZRhBz',label:'운영 배너 전달 드라이브',icon:'ti-cloud-upload text-teal-600'}
   ]},
-  // 6. 커뮤니티 & 마케팅
-  {title:'커뮤니티 & 마케팅',links:[
-    {url:'https://odinvalhallarising.kakaogames.com',label:'공식 홈페이지 (Live)',icon:'ti-browser text-indigo-600',featured:true},
-    {url:'https://qa-odinvalhallarising.kakaogames.com/',label:'공식 홈페이지 (QA)',icon:'ti-browser text-orange-500'},
-    {url:'https://analytics.google.com/analytics/web/#/p471432240/reports/intelligenthome',label:'홈페이지 애널리틱스 지표',icon:'ti-chart-line text-blue-500'},
-    {url:'https://docs.google.com/spreadsheets/d/12T5WD7Pey9FVh_w1AQvmHrnxfZNtQkqVBNJY-OhPq_w/edit',label:'데일리 리포트',icon:'ti-report-analytics text-emerald-600'},
-    {url:'https://www.facebook.com/2025odinvalhallarising/',label:'Facebook 커뮤니티',icon:'ti-brand-facebook text-blue-600'},
-    {url:'https://discord.gg/fpXYKUJKpW',label:'Discord 커뮤니티',icon:'ti-brand-discord text-indigo-500'},
-    {url:'https://www.youtube.com/@ODINVALHALLARISING',label:'YouTube 채널',icon:'ti-brand-youtube text-red-600'},
-    {url:'https://docs.google.com/spreadsheets/d/1zJJdIjzpeObOVuPcwv0g2YgjYx7kiZNNQ80478OhhOU/edit?gid=2017127748',label:'마켓 메타데이터 (마케팅팀)',icon:'ti-tags text-purple-500'},
-    {url:'https://docs.google.com/spreadsheets/d/1kSxw_zOiVjAf0n_9EegKf2TUFVHztYvrxkKA97nhh78/edit?gid=60939211',label:'앱이벤트 / 프로모션 문구',icon:'ti-ad text-blue-600'},
+  // 6. 커뮤니티 · 프로모션
+  {title:'커뮤니티 · 프로모션',links:[
+    {url:'https://odinvalhallarising.kakaogames.com',label:'공식 홈페이지',icon:'ti-browser text-indigo-600',featured:true},
+    {url:'https://qa-odinvalhallarising.kakaogames.com/',label:'공식 홈페이지 QA',icon:'ti-browser text-orange-500'},
+    {url:'https://analytics.google.com/analytics/web/#/p471432240/reports/intelligenthome',label:'홈페이지 트래픽 (GA)',icon:'ti-chart-line text-blue-500'},
+    {url:'https://docs.google.com/spreadsheets/d/12T5WD7Pey9FVh_w1AQvmHrnxfZNtQkqVBNJY-OhPq_w/edit',label:'데일리 유입 리포트',icon:'ti-report-analytics text-emerald-600'},
+    {url:'https://www.facebook.com/2025odinvalhallarising/',label:'Facebook',icon:'ti-brand-facebook text-blue-600'},
+    {url:'https://discord.gg/fpXYKUJKpW',label:'Discord',icon:'ti-brand-discord text-indigo-500'},
+    {url:'https://www.youtube.com/@ODINVALHALLARISING',label:'YouTube',icon:'ti-brand-youtube text-red-600'},
+    {url:'https://docs.google.com/spreadsheets/d/1zJJdIjzpeObOVuPcwv0g2YgjYx7kiZNNQ80478OhhOU/edit?gid=2017127748',label:'스토어 메타데이터 관리',icon:'ti-tags text-purple-500'},
+    {url:'https://docs.google.com/spreadsheets/d/1kSxw_zOiVjAf0n_9EegKf2TUFVHztYvrxkKA97nhh78/edit?gid=60939211',label:'프로모션 문구 아카이브',icon:'ti-ad text-blue-600'},
     {url:'https://docs.google.com/spreadsheets/d/1USTBuJWKUxLlGm5rwNSx-yGnIn1hcijlp043U9TbE1o/edit?gid=1493491693',label:'배너 제작 요청 시트',icon:'ti-photo text-amber-600'},
-    {url:'https://docs.google.com/spreadsheets/d/1mm8CW2K1Do-espSj8FyZZLkTWf8kEXoS9etiUUomOGQ/edit?gid=1429527218',label:'오딘 글로벌 사전예약 지표',icon:'ti-chart-dots text-emerald-600'}
+    {url:'https://docs.google.com/spreadsheets/d/1mm8CW2K1Do-espSj8FyZZLkTWf8kEXoS9etiUUomOGQ/edit?gid=1429527218',label:'사전예약 지표 대시보드',icon:'ti-chart-dots text-emerald-600'}
   ]},
-  // 7. QA & 번역
-  {title:'QA & 번역',links:[
-    {url:'https://docs.google.com/spreadsheets/d/1OEZ4Tqb8xliAQqs3ad4jQ0J2oUoRjsPjeWRtP_DqGc4/edit?gid=2001690205',label:'현재 잔여 이슈 현황',icon:'ti-target text-red-600',featured:true},
-    {url:'https://docs.google.com/spreadsheets/d/1A59GkQY20VMxfvePRpIuamNIyl_zJdAgNe-hxw-vlfU/edit?gid=1364317423',label:'오딘 공식 패치노트 마스터',icon:'ti-file-text text-purple-600'},
-    {url:'http://mantis.lionhearts.co.kr/my_view_page.php',label:'라이언하트 Mantis',icon:'ti-bug text-red-600'},
-    {url:'https://docs.google.com/spreadsheets/d/1itMFidjUGK4P2g8uH8xQ7bEgXaV-s410LBSzdt3a6RQ/edit',label:'점검 진행 로테이션 표',icon:'ti-refresh text-blue-500'},
-    {url:'https://docs.google.com/spreadsheets/d/100SwdEzMEDNX3WAcLyulkarC7bBVyihpp_a69wq02Ks/edit?gid=2114670632',label:'Odin_Query (성우 녹음 대본)',icon:'ti-microphone text-purple-500'},
-    {url:'https://docs.google.com/document/d/1Zf5JFwcAV9OKCC3q34xchTqq2gHLEBrNsfoUk_B5qLA/edit',label:'번역 요청서 작성 프로세스',icon:'ti-language text-blue-600'},
-    {url:'https://console.cloud.google.com/vertex-ai/studio/saved-prompts/locations/us-central1/4840783009969864704',label:'Gemini Vertex AI 번역 학습',icon:'ti-robot text-blue-500'}
+  // 7. QA · 현지화
+  {title:'QA · 현지화',links:[
+    {url:'https://docs.google.com/spreadsheets/d/1OEZ4Tqb8xliAQqs3ad4jQ0J2oUoRjsPjeWRtP_DqGc4/edit?gid=2001690205',label:'잔여 이슈 트래커',icon:'ti-target text-red-600',featured:true},
+    {url:'https://docs.google.com/spreadsheets/d/1A59GkQY20VMxfvePRpIuamNIyl_zJdAgNe-hxw-vlfU/edit?gid=1364317423',label:'패치노트 마스터',icon:'ti-file-text text-purple-600'},
+    {url:'http://mantis.lionhearts.co.kr/my_view_page.php',label:'개발사 Mantis (이슈 트래커)',icon:'ti-bug text-red-600'},
+    {url:'https://docs.google.com/spreadsheets/d/1itMFidjUGK4P2g8uH8xQ7bEgXaV-s410LBSzdt3a6RQ/edit',label:'점검 로테이션 표',icon:'ti-refresh text-blue-500'},
+    {url:'https://docs.google.com/spreadsheets/d/100SwdEzMEDNX3WAcLyulkarC7bBVyihpp_a69wq02Ks/edit?gid=2114670632',label:'성우 녹음 대본 (Odin_Query)',icon:'ti-microphone text-purple-500'},
+    {url:'https://docs.google.com/document/d/1Zf5JFwcAV9OKCC3q34xchTqq2gHLEBrNsfoUk_B5qLA/edit',label:'번역 요청 프로세스 가이드',icon:'ti-language text-blue-600'},
+    {url:'https://console.cloud.google.com/vertex-ai/studio/saved-prompts/locations/us-central1/4840783009969864704',label:'Vertex AI 번역 모델',icon:'ti-robot text-blue-500'}
   ]},
-  // 8. 리소스 & 드라이브
-  {title:'리소스 & 드라이브',links:[
-    {url:'https://drive.google.com/drive/folders/1jk3yCoz6hl-Z7tysAc-faEwQXzu2HLzu',label:'사업팀 리소스 드라이브',icon:'ti-folder text-blue-600'},
-    {url:'https://drive.google.com/drive/folders/1umw4ytYwNfQTxbYTOL_u9YO_hwX5sB_1',label:'마케팅팀 리소스 드라이브',icon:'ti-folder text-purple-600'},
-    {url:'https://drive.google.com/drive/folders/13Wf8u4bKZa5YQDyQSqzED1Gx_w6Vz9Y_',label:'마케팅 관리 어셋 드라이브',icon:'ti-folder text-amber-600'},
-    {url:'https://drive.google.com/drive/my-drive',label:'내 Google Drive',icon:'ti-cloud text-blue-500'},
-    {url:'https://docs.google.com/spreadsheets/d/1HMOcx_IrpLnEFioxuwnStEYX2nefVbP6keDqhVF2X4w/edit?gid=1386834576',label:'담당 업무 리스트',icon:'ti-clipboard-list text-gray-600'},
-    {url:'https://docs.google.com/spreadsheets/d/15ELZE5XXdpCgsCcaupA8zTV6pHoetr0n8YnLyWeGPrg/edit?gid=1315722872',label:'지표 설계서',icon:'ti-chart-dots-2 text-emerald-600'},
-    {url:'https://docs.google.com/spreadsheets/d/1Axv-pPON-Oni82wC-EDXKxWPk1_2K_EtjWE7ymeqPPo/edit?gid=1704819295',label:'주간보고 보고용 지표 시트',icon:'ti-presentation text-indigo-600'}
+  // 8. 공유 드라이브 · 문서
+  {title:'공유 드라이브 · 문서',links:[
+    {url:'https://drive.google.com/drive/folders/1jk3yCoz6hl-Z7tysAc-faEwQXzu2HLzu',label:'사업팀 리소스',icon:'ti-folder text-blue-600'},
+    {url:'https://drive.google.com/drive/folders/1umw4ytYwNfQTxbYTOL_u9YO_hwX5sB_1',label:'마케팅팀 리소스',icon:'ti-folder text-purple-600'},
+    {url:'https://drive.google.com/drive/folders/13Wf8u4bKZa5YQDyQSqzED1Gx_w6Vz9Y_',label:'마케팅 어셋 관리',icon:'ti-folder text-amber-600'},
+    {url:'https://drive.google.com/drive/my-drive',label:'내 드라이브',icon:'ti-cloud text-blue-500'},
+    {url:'https://docs.google.com/spreadsheets/d/1HMOcx_IrpLnEFioxuwnStEYX2nefVbP6keDqhVF2X4w/edit?gid=1386834576',label:'담당 업무 현황표',icon:'ti-clipboard-list text-gray-600'},
+    {url:'https://docs.google.com/spreadsheets/d/15ELZE5XXdpCgsCcaupA8zTV6pHoetr0n8YnLyWeGPrg/edit?gid=1315722872',label:'라이브 지표 설계서',icon:'ti-chart-dots-2 text-emerald-600'},
+    {url:'https://docs.google.com/spreadsheets/d/1Axv-pPON-Oni82wC-EDXKxWPk1_2K_EtjWE7ymeqPPo/edit?gid=1704819295',label:'주간보고용 지표 시트',icon:'ti-presentation text-indigo-600'}
   ]},
-  // 9. 사내 소통망
-  {title:'사내 소통망',links:[
-    {url:'https://kakaogames.agit.in/home',label:'카카오게임즈 본사 AGIT',icon:'ti-message-circle text-orange-500'},
+  // 9. 사내 협업 채널
+  {title:'사내 협업 채널',links:[
+    {url:'https://kakaogames.agit.in/home',label:'카카오게임즈 AGIT',icon:'ti-message-circle text-orange-500'},
     {url:'https://partners.agit.io/home',label:'파트너스 아지트',icon:'ti-messages text-teal-600',featured:true},
-    {url:'https://kakaogames.agit.in/g/300073320/wall/416360096',label:'오딘GL 런쳐 관련 아지트',icon:'ti-message-dots text-blue-600'},
-    {url:'https://wiki.daumkakao.com/spaces/viewspace.action?key=LaunchGuide',label:'모바일 런칭 프로세스 (위키)',icon:'ti-rocket text-purple-600',featured:true},
-    {url:'https://docs.google.com/document/d/1cncvbB9vd6WbROrPrkrwmf4gtJ1R6NgIF8AOIrW-IcE/edit',label:'빌드 서밋 (유관부서 커뮤니케이션)',icon:'ti-send text-blue-500'},
-    {url:'https://docs.google.com/document/d/12VwRuW13mnlKhS233b4dhA_sesScd56xIs1jX4_-3pM/edit',label:'신규 입사자 권한 신청',icon:'ti-user-plus text-green-600'}
+    {url:'https://kakaogames.agit.in/g/300073320/wall/416360096',label:'오딘 런처 관련 채널',icon:'ti-message-dots text-blue-600'},
+    {url:'https://wiki.daumkakao.com/spaces/viewspace.action?key=LaunchGuide',label:'모바일 런칭 프로세스 위키',icon:'ti-rocket text-purple-600',featured:true},
+    {url:'https://docs.google.com/document/d/1cncvbB9vd6WbROrPrkrwmf4gtJ1R6NgIF8AOIrW-IcE/edit',label:'빌드 서밋 커뮤니케이션',icon:'ti-send text-blue-500'},
+    {url:'https://docs.google.com/document/d/12VwRuW13mnlKhS233b4dhA_sesScd56xIs1jX4_-3pM/edit',label:'신규 입사자 권한 신청서',icon:'ti-user-plus text-green-600'}
   ]}
 ];
 
