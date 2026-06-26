@@ -886,8 +886,7 @@ function renderKpiPage(){
   }
   var cardsHtml=defs.map(rCard).join('');
   c.innerHTML='<div class="card-header" style="padding:0;margin-bottom:12px"><span class="card-title"><i class="ti ti-trending-up text-emerald-500"></i> 전권역 주간 매출 추이</span><a href="https://drive.google.com/drive/folders/1lk_9pMhvy343Wx7J2sHbGIYRo2c-x7vQ" target="_blank" class="btn btn-sm"><i class="ti ti-folder"></i> 보고 폴더</a></div>'+
-    '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">'+cardsHtml+'</div>'+
-    '<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">'+targetHtml+annualHtml+'</div>';
+    '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">'+cardsHtml+'</div>';
 }
 
 function renderDevMeeting(){
