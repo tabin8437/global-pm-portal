@@ -906,6 +906,27 @@ function applyKpiData(d){
       {label:'월 ARPPU',value:fmtNum(mr.arppu||0),change:parseChange(mc.arppu).text,dir:parseChange(mc.arppu).dir,color:'#ca8a04'}
     ];
   }
+  // 마일스톤 동기화
+  if(d.milestone&&d.milestone.date){
+    var ms=d.milestone;
+    function buildList(items,clr){
+      if(!items||!items.length) return'<li class="text-gray-400">내역 없음</li>';
+      return items.map(function(s){
+        return'<li>'+esc(s).replace(/(신규|오픈|업데이트|전직|이벤트|5주년|점령전|알케미스트|스카디|새크리파이스)/g,'<b class="text-indigo-600">$1</b>')+'</li>';
+      }).join('');
+    }
+    function card(title,clr,items){return'<div class="bg-white p-3 rounded-xl border shadow-sm"><div class="font-bold text-xs text-'+clr+'-600 mb-1.5 border-b border-gray-100 pb-1">'+title+'</div><ul class="text-[11px] text-gray-600 space-y-0.5 list-disc list-inside">'+buildList(items)+'</ul></div>';}
+    window.dynamicMilestone={
+      kr:'<div class="bg-amber-50 border border-amber-200 p-3 rounded-xl mb-3 flex items-center justify-between"><span class="text-xs font-bold text-amber-900">최신 패치</span><span class="text-[11px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-bold">'+esc(ms.date)+'</span></div><ul class="space-y-1 text-xs text-gray-700 list-disc list-inside p-3 bg-white rounded-xl border shadow-sm">'+buildList(ms.kr)+'</ul>',
+      tw:'<div class="bg-blue-50 border border-blue-200 p-3 rounded-xl mb-3 flex items-center justify-between"><span class="text-xs font-bold text-blue-900">최신 패치</span><span class="text-[11px] bg-blue-200 text-blue-900 px-2 py-0.5 rounded font-bold">'+esc(ms.date)+'</span></div><ul class="space-y-1 text-xs text-gray-700 list-disc list-inside p-3 bg-white rounded-xl border shadow-sm">'+buildList(ms.tw)+'</ul>',
+      jp:'<div class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl mb-3 flex items-center justify-between"><span class="text-xs font-bold text-emerald-900">최신 패치</span><span class="text-[11px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded font-bold">'+esc(ms.date)+'</span></div><ul class="space-y-1 text-xs text-gray-700 list-disc list-inside p-3 bg-white rounded-xl border shadow-sm">'+buildList(ms.jp)+'</ul>',
+      global:'<div class="bg-purple-50 border border-purple-200 p-3 rounded-xl mb-3 flex items-center justify-between"><span class="text-xs font-bold text-purple-900">글로벌 서비스</span><span class="text-[11px] bg-purple-200 text-purple-900 px-2 py-0.5 rounded font-bold">'+esc(ms.date)+'</span></div><ul class="space-y-1 text-xs text-gray-700 list-disc list-inside p-3 bg-white rounded-xl border shadow-sm">'+buildList(ms.gl)+'</ul>',
+      cross:'<div class="mb-2.5 flex items-center justify-between border-b border-purple-200 pb-2"><span class="font-bold text-purple-900 text-xs"><i class="ti ti-world text-purple-600"></i> 전 권역 크로스체크</span><span class="text-[11px] bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded">'+esc(ms.date)+'</span></div><div class="grid grid-cols-2 gap-2.5">'+card('🇰🇷 한국','red',ms.kr)+card('🇹🇼 대만','blue',ms.tw)+card('🇯🇵 일본','emerald',ms.jp)+card('🌐 글로벌','purple',ms.gl)+'</div>'
+    };
+    var mdEl=document.getElementById('milestone-active-date');
+    if(mdEl) mdEl.textContent='최신: '+ms.date;
+  }
+
   // 연간매출 데이터
   if(d.annual){
     var an=d.annual;
