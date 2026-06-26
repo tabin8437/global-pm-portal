@@ -918,11 +918,24 @@ function renderAdmin(){
   document.getElementById('content-area').innerHTML=
     '<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-user-plus text-amber-500"></i> 가입 승인 대기 ('+pending.length+')</span></div><div class="space-y-2">'+pendingHtml+'</div></div>'+
     '<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-users text-emerald-600"></i> 승인된 사용자 ('+approved.length+')</span></div><div class="space-y-2">'+approvedHtml+'</div></div>'+
+    '<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-user-plus text-blue-500"></i> 뷰어 수동 추가</span></div><div class="flex gap-2"><input type="email" id="add-viewer-email" placeholder="이메일 주소" style="flex:1"><input type="text" id="add-viewer-name" placeholder="이름" style="width:120px"><button class="btn btn-sm btn-primary" onclick="addViewer()"><i class="ti ti-plus"></i> 추가</button></div><p class="text-[11px] text-gray-400 mt-2">⚠ 사용자 DB는 이 브라우저의 localStorage에 저장됩니다. 다른 기기에서 가입한 사용자는 여기서 직접 추가해야 합니다.</p></div>'+
     '<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-settings-2 text-gray-500"></i> 시스템 정보</span></div><div class="space-y-3"><div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs"><b class="text-emerald-800">✅ 관리자 모드 활성</b> — 회의록 편집, 이슈 관리, 사용자 승인 가능</div><div class="p-3 bg-gray-50 border rounded-xl text-xs text-gray-500">세션은 브라우저 탭을 닫으면 만료됩니다.</div></div></div>';
 }
 function approveUser(idx){var users=getUserDB();if(users[idx]){users[idx].status='approved';saveUserDB(users);renderAdmin();}}
 function rejectUser(idx){var users=getUserDB();if(users[idx]&&confirm(esc(users[idx].name)+' 사용자를 차단/거부하시겠습니까?')){users[idx].status='rejected';saveUserDB(users);renderAdmin();}}
 function toggleRole(idx){var users=getUserDB();if(users[idx]){users[idx].role=users[idx].role==='admin'?'viewer':'admin';saveUserDB(users);renderAdmin();}}
+function addViewer(){
+  var email=(document.getElementById('add-viewer-email').value||'').trim().toLowerCase();
+  var name=(document.getElementById('add-viewer-name').value||'').trim();
+  if(!email){alert('이메일을 입력하세요.');return;}
+  var users=getUserDB();
+  for(var i=0;i<users.length;i++){if(users[i].email===email){alert('이미 등록된 이메일입니다.');return;}}
+  users.push({email:email,name:name||email,role:'viewer',status:'approved',created:new Date().toISOString()});
+  saveUserDB(users);
+  document.getElementById('add-viewer-email').value='';
+  document.getElementById('add-viewer-name').value='';
+  renderAdmin();
+}
 
 /* ═══════════════════════════════════════════
    UTILITIES
