@@ -619,7 +619,7 @@ function renderDashboard(){
   var kpiHtml=KPI_DATA.map(function(k){
     var isDown=k.change.indexOf('▼')!==-1||k.change.indexOf('-')!==-1;
     var changeCls=isDown?'change-down':'change-up';
-    return'<div class="kpi-card'+(k.alert?' ring-2 ring-red-200 bg-red-50/30':'')+'"><div class="kpi-label">'+k.label+(k.alert?' <span class="text-red-500">⚠</span>':'')+'</div><div class="kpi-value" style="color:'+k.color+'">'+k.value+'</div><span class="kpi-change '+changeCls+'">'+k.change+'</span></div>';
+    return'<div class="kpi-card'+(k.alert?' ring-2 ring-red-200 bg-red-50/30':'')+'"><div class="kpi-label">'+k.label+(k.alert?' <span class="text-red-500">⚠</span>':'')+'</div><div class="kpi-value" style="color:'+k.color+'">'+k.value+'</div><span class="kpi-change '+changeCls+'"><span class="text-[9px] opacity-60">전주비</span> '+k.change+'</span></div>';
   }).join('');
 
   // 월간 누적
@@ -627,7 +627,7 @@ function renderDashboard(){
   var monthlyCards=KPI_MONTHLY.map(function(k){
     var mDown=k.change.indexOf('▼')!==-1||k.change.indexOf('-')!==-1;
     var mCls=mDown?'change-down':'change-up';
-    return'<div class="kpi-card" style="padding:14px 16px"><div class="kpi-label">'+k.label+'</div><div class="kpi-value" style="font-size:20px;color:'+k.color+';margin:4px 0 3px">'+k.value+'</div><span class="kpi-change '+mCls+'" style="font-size:11px">'+k.change+'</span></div>';
+    return'<div class="kpi-card" style="padding:14px 16px"><div class="kpi-label">'+k.label+'</div><div class="kpi-value" style="font-size:20px;color:'+k.color+';margin:4px 0 3px">'+k.value+'</div><span class="kpi-change '+mCls+'" style="font-size:11px"><span class="text-[9px] opacity-60">전월비</span> '+k.change+'</span></div>';
   }).join('');
   // 지표 분석 (마이비서 연동)
   var analysisContent=window._analysisCache||'';
