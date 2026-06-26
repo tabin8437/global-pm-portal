@@ -827,7 +827,29 @@ function resetMeetings(){localStorage.removeItem('portal_meetings');meetings=loa
 
 /* ── AI ── */
 function renderKpiPage(){
-  document.getElementById('content-area').innerHTML='<div class="doc-viewer"><div class="doc-toolbar"><span class="title"><i class="ti ti-trending-up text-emerald-500"></i> 전권역 주간 매출 추이 (유료화팀) <span style="font-size:11px;color:#9ca3af;font-weight:400;margin-left:8px">읽기 전용 · 탭으로 권역 전환</span></span><div style="display:flex;gap:6px"><a href="https://drive.google.com/drive/folders/1lk_9pMhvy343Wx7J2sHbGIYRo2c-x7vQ" target="_blank" class="btn btn-sm"><i class="ti ti-folder"></i> 보고 폴더</a><a href="https://docs.google.com/spreadsheets/d/1Axv-pPON-Oni82wC-EDXKxWPk1_2K_EtjWE7ymeqPPo/edit?gid=1704819295" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-pencil"></i> 새창에서 편집</a></div></div><div class="doc-iframe-wrap"><iframe src="https://docs.google.com/spreadsheets/d/1Axv-pPON-Oni82wC-EDXKxWPk1_2K_EtjWE7ymeqPPo/htmlview?gid=1704819295"></iframe></div></div>';
+  var c=document.getElementById('content-area');
+  var regions=window._regionsCache||{};
+  var defs=[
+    {key:'kr',label:'🇰🇷 한국',color:'red'},
+    {key:'tw',label:'🇹🇼 대만',color:'blue'},
+    {key:'jp',label:'🇯🇵 일본',color:'emerald'},
+    {key:'gl',label:'🌐 글로벌',color:'purple'}
+  ];
+  function rCard(def){
+    var d=regions[def.key];
+    if(!d||!d.weekly||!d.weekly.dau) return'<div class="card border-'+def.color+'-200"><div class="card-header"><span class="card-title text-sm">'+def.label+'</span></div><p class="text-xs text-gray-400 text-center py-4">데이터 로딩 중</p></div>';
+    var w=d.weekly,ch=w.change||{},m=d.monthly||{};
+    function mk(label,val,change){
+      var isD=(change||'').indexOf('▼')!==-1;
+      return'<div class="py-1.5 flex items-center justify-between"><span class="text-[11px] text-gray-500">'+label+'</span><div class="flex items-center gap-2"><span class="text-xs font-bold text-gray-900">'+fmtNum(val)+'</span>'+(change?'<span class="text-[10px] font-bold '+(isD?'text-blue-600':'text-red-500')+'">'+change+'</span>':'')+'</div></div>';
+    }
+    var weeklyHtml=mk('DAU',w.dau,ch.dau)+mk('NRU',w.nru,ch.nru)+mk('WAU',w.wau,ch.wau)+mk('매출',w.revenue,ch.revenue)+mk('PU',w.pu,ch.pu)+mk('ARPPU',w.arppu,ch.arppu);
+    var monthlyHtml='';
+    if(m.dau) monthlyHtml='<div class="mt-3 pt-3 border-t border-gray-100"><div class="text-[10px] font-bold text-gray-400 mb-1">당월 누적</div>'+mk('DAU',m.dau,m.dauChange)+mk('매출',m.revenue,m.revenueChange)+'</div>';
+    return'<div class="card border-'+def.color+'-200 hover:shadow-md transition-all"><div class="flex items-center justify-between mb-3"><span class="font-bold text-sm text-'+def.color+'-700">'+def.label+'</span><span class="text-[10px] font-bold bg-'+def.color+'-50 text-'+def.color+'-600 px-2 py-0.5 rounded">주간</span></div><div class="divide-y divide-gray-100">'+weeklyHtml+'</div>'+monthlyHtml+'</div>';
+  }
+  var cardsHtml=defs.map(rCard).join('');
+  c.innerHTML='<div class="card-header" style="padding:0;margin-bottom:12px"><span class="card-title"><i class="ti ti-trending-up text-emerald-500"></i> 전권역 주간 매출 추이 (유료화팀)</span><div class="flex gap-2"><a href="https://drive.google.com/drive/folders/1lk_9pMhvy343Wx7J2sHbGIYRo2c-x7vQ" target="_blank" class="btn btn-sm"><i class="ti ti-folder"></i> 보고 폴더</a><a href="https://docs.google.com/spreadsheets/d/1Axv-pPON-Oni82wC-EDXKxWPk1_2K_EtjWE7ymeqPPo/edit?gid=1704819295" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-pencil"></i> 원본 시트</a></div></div><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">'+cardsHtml+'</div>';
 }
 
 function renderDevMeeting(){
@@ -924,6 +946,9 @@ function applyKpiData(d){
       {label:'월 ARPPU',value:fmtNum(mr.arppu||0),change:parseChange(mc.arppu).text,dir:parseChange(mc.arppu).dir,color:'#ca8a04'}
     ];
   }
+  // 전권역 데이터 캐시
+  if(d.regions) window._regionsCache=d.regions;
+
   // 마일스톤 동기화
   if(d.milestone&&d.milestone.date){
     var ms=d.milestone;
