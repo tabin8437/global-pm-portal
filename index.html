@@ -208,7 +208,7 @@ var SEED_ADMIN = {email:'tabin8437@gmail.com', name:'관리자', role:'admin'};
 var SIDEBAR_MENU = [
   {section:'개요'},
   {id:'dashboard',icon:'ti-layout-dashboard',label:'종합 대시보드'},
-  {id:'milestone',icon:'ti-clock',label:'전국가 마일스톤',type:'doc'},
+  {id:'milestone',icon:'ti-clock',label:'통합 마일스톤',type:'doc'},
   {id:'live-schedule',icon:'ti-calendar-time',label:'월던/컨텐츠 오픈시점'},
   {section:'사업 지표'},
   {id:'kpi',icon:'ti-trending-up',label:'전권역 주간 매출 추이'},
@@ -217,15 +217,15 @@ var SIDEBAR_MENU = [
   {section:'종합 링크', group:true, groupId:'links', items:[
     {id:'links-0',label:'사내 공통 인프라',icon:'ti-building'},
     {id:'links-1',label:'스토어 배포 · 피쳐링',icon:'ti-brand-google-play'},
-    {id:'links-2',label:'전국가 일정',icon:'ti-calendar'},
-    {id:'links-10',label:'이벤트',icon:'ti-gift'},
-    {id:'links-3',label:'BM',icon:'ti-credit-card'},
-    {id:'links-4',label:'내부툴 · 운영툴',icon:'ti-settings'},
-    {id:'links-5',label:'접근 권한 · 화이트키',icon:'ti-shield-lock'},
-    {id:'links-6',label:'커뮤니티 · 프로모션',icon:'ti-world'},
-    {id:'links-7',label:'QA · 현지화',icon:'ti-test-pipe'},
-    {id:'links-8',label:'공유 드라이브 · 문서',icon:'ti-folder'},
-    {id:'links-9',label:'사내 협업 채널',icon:'ti-messages'}
+    {id:'links-2',label:'권역별 일정',icon:'ti-calendar'},
+    {id:'links-3',label:'이벤트',icon:'ti-gift'},
+    {id:'links-4',label:'BM',icon:'ti-credit-card'},
+    {id:'links-5',label:'내부툴 · 운영툴',icon:'ti-settings'},
+    {id:'links-6',label:'접근 권한 · 화이트키',icon:'ti-shield-lock'},
+    {id:'links-7',label:'커뮤니티 · 프로모션',icon:'ti-world'},
+    {id:'links-8',label:'QA · 현지화',icon:'ti-test-pipe'},
+    {id:'links-9',label:'공유 드라이브 · 문서',icon:'ti-folder'},
+    {id:'links-10',label:'사내 협업 채널',icon:'ti-messages'}
   ]},
   {section:'라이브 관리'},
   {id:'event',icon:'ti-gift',label:'이벤트 & 보상안',type:'doc'},
@@ -293,8 +293,8 @@ var LINK_HUB = [
     {url:'https://services.google.com/fh/files/misc/play_partner_art_specs_2021.pdf',label:'Google 피쳐드 이미지 가이드',icon:'ti-photo-edit text-teal-600'},
     {url:'https://docs.google.com/presentation/d/1cBQk3bwDwMG2IY6QvC6WhQjrLaociSiCXSAeqs1whQw/edit#slide=id.p37',label:'점검 · 마켓등록 · 배포 가이드',icon:'ti-presentation text-purple-500'}
   ]},
-  // 2. 전국가 일정
-  {title:'전국가 일정',links:[
+  // 2. 권역별 일정
+  {title:'권역별 일정',links:[
     {url:'https://docs.google.com/spreadsheets/d/1PgqMju9ITG0yo9r10uuDhjjgRainfnoPYw5d6PL9xgc/edit',label:'통합 마일스톤',icon:'ti-timeline-event text-indigo-600',featured:true},
     {url:'https://docs.google.com/spreadsheets/d/1y6Wrdu5VHbCDEFpwpwzRAiaCaTDxsCGnZoG3ltXUJQA/edit?gid=536936580',label:'글로벌 오픈 스펙 정의',icon:'ti-list-details text-blue-600'},
     {url:'https://docs.google.com/document/d/1uw_7qfxJ9v2TcZth2rzTS0eUWHI_-0iEp46JIOzMKRI/edit',label:'주간 보고 문서',icon:'ti-report text-emerald-600'},
@@ -558,7 +558,7 @@ function toggleGroup(el){
 /* ═══════════════════════════════════════════
    PAGE NAMES & NAV
    ═══════════════════════════════════════════ */
-var pageNames={dashboard:'종합 대시보드',milestone:'전국가 마일스톤','live-schedule':'월던/컨텐츠 오픈시점',settlement:'정산 및 빌링 설계',event:'이벤트 & 보상안',product:'상품안',kpi:'전권역 주간 매출 추이 ','report-kpi':'주/월간 보고용 지표','server-migration':'서버이전/통합',platform:'iOS 관리',weekly:'주간회의 기록',report:'보고',internal:'내부 회의',devmeeting:'개발사 미팅',localization:'현지화','shared-drive':'공유 드라이브','screenshot-spec':'마켓 스샷 규격',ai:'AI 도움말','admin-settings':'포탈 설정'};
+var pageNames={dashboard:'종합 대시보드',milestone:'통합 마일스톤','live-schedule':'월던/컨텐츠 오픈시점',settlement:'정산 및 빌링 설계',event:'이벤트 & 보상안',product:'상품안',kpi:'전권역 주간 매출 추이 ','report-kpi':'주/월간 보고용 지표','server-migration':'서버이전/통합',platform:'iOS 관리',weekly:'주간회의 기록',report:'보고',internal:'내부 회의',devmeeting:'개발사 미팅',localization:'현지화','shared-drive':'공유 드라이브','screenshot-spec':'마켓 스샷 규격',ai:'AI 도움말','admin-settings':'포탈 설정'};
 
 function nav(id,el){
   currentPage=id;
@@ -637,7 +637,7 @@ function renderDashboard(){
   var analysisHtml='<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-chart-dots text-purple-500"></i> 지표 분석</span><span class="text-[10px] text-gray-400 font-medium" id="analysis-date"></span></div><div id="analysis-body" class="text-[13px] leading-relaxed text-gray-600">'+(analysisContent||'<div class="bg-slate-50 border border-slate-200 p-5 rounded-xl text-gray-400 text-center">마이비서 분석 데이터를 불러오는 중...</div>')+'</div></div>';
 
   // Milestone widget
-  var milestoneHtml='<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-route text-blue-500"></i> 전국가 마일스톤 타임라인</span><div class="flex items-center gap-2"><span id="milestone-active-date" class="text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md">최신: 2026-06-25</span><button onclick="nav(\'milestone\')" class="btn btn-ghost btn-sm">상세 <i class="ti ti-chevron-right text-[10px]"></i></button></div></div><div class="flex bg-gray-100 p-0.5 rounded-lg text-[11px] font-bold mb-3"><button onclick="switchMilestoneTab(\'cross\')" id="m-tab-cross" class="flex-1 py-1.5 rounded-md transition-all">전권역</button><button onclick="switchMilestoneTab(\'kr\')" id="m-tab-kr" class="flex-1 py-1.5 rounded-md transition-all">KR</button><button onclick="switchMilestoneTab(\'tw\')" id="m-tab-tw" class="flex-1 py-1.5 rounded-md transition-all">TW</button><button onclick="switchMilestoneTab(\'jp\')" id="m-tab-jp" class="flex-1 py-1.5 rounded-md transition-all">JP</button><button onclick="switchMilestoneTab(\'global\')" id="m-tab-global" class="flex-1 py-1.5 rounded-md transition-all">글로벌</button></div><div id="milestone-widget-body" class="p-3 bg-blue-50/50 border border-blue-100 rounded-xl text-xs max-h-[420px] overflow-y-auto"></div></div>';
+  var milestoneHtml='<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-route text-blue-500"></i> 통합 마일스톤 타임라인</span><div class="flex items-center gap-2"><span id="milestone-active-date" class="text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md">최신: 2026-06-25</span><button onclick="nav(\'milestone\')" class="btn btn-ghost btn-sm">상세 <i class="ti ti-chevron-right text-[10px]"></i></button></div></div><div class="flex bg-gray-100 p-0.5 rounded-lg text-[11px] font-bold mb-3"><button onclick="switchMilestoneTab(\'cross\')" id="m-tab-cross" class="flex-1 py-1.5 rounded-md transition-all">전권역</button><button onclick="switchMilestoneTab(\'kr\')" id="m-tab-kr" class="flex-1 py-1.5 rounded-md transition-all">KR</button><button onclick="switchMilestoneTab(\'tw\')" id="m-tab-tw" class="flex-1 py-1.5 rounded-md transition-all">TW</button><button onclick="switchMilestoneTab(\'jp\')" id="m-tab-jp" class="flex-1 py-1.5 rounded-md transition-all">JP</button><button onclick="switchMilestoneTab(\'global\')" id="m-tab-global" class="flex-1 py-1.5 rounded-md transition-all">글로벌</button></div><div id="milestone-widget-body" class="p-3 bg-blue-50/50 border border-blue-100 rounded-xl text-xs max-h-[420px] overflow-y-auto"></div></div>';
 
   // iOS mini widget
   var iosMini='<div class="card cursor-pointer hover:shadow-md transition-shadow" onclick="nav(\'platform\')"><div class="card-header"><span class="card-title">🍎 App Store 심의 요약</span><i class="ti ti-chevron-right text-gray-400"></i></div><div class="grid grid-cols-3 gap-2 text-center text-xs"><div class="bg-emerald-50 p-2.5 rounded-lg border border-emerald-100"><span class="block text-gray-400 text-[10px]">🌐 글로벌</span><span class="block text-emerald-700 font-bold my-0.5" id="mini-v-global">1.9.2</span><span class="text-[9px] text-emerald-600 font-bold">✅ 통과</span></div><div class="bg-emerald-50 p-2.5 rounded-lg border border-emerald-100"><span class="block text-gray-400 text-[10px]">🇹🇼 대만</span><span class="block text-emerald-700 font-bold my-0.5" id="mini-v-tw">1.47.1</span><span class="text-[9px] text-emerald-600 font-bold">✅ 통과</span></div><div class="bg-emerald-50 p-2.5 rounded-lg border border-emerald-100"><span class="block text-gray-400 text-[10px]">🇯🇵 일본</span><span class="block text-emerald-700 font-bold my-0.5" id="mini-v-jp">1.10.9</span><span class="text-[9px] text-emerald-600 font-bold">✅ 통과</span></div></div></div>';
