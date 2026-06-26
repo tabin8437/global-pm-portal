@@ -848,7 +848,20 @@ function renderKpiPage(){
     var weeklyHtml=mk('DAU',w.dau,ch.dau)+mk('NRU',w.nru,ch.nru)+mk('WAU',w.wau,ch.wau)+mk('매출',w.revenue,ch.revenue)+mk('PU',w.pu,ch.pu)+mk('ARPPU',w.arppu,ch.arppu);
     var monthlyHtml='';
     if(m.dau) monthlyHtml='<div class="mt-2.5 pt-2.5 border-t border-'+def.color+'-100"><div class="text-[10px] font-bold text-'+def.color+'-400 mb-1">📊 당월 누적</div>'+mk('DAU',m.dau,m.dauChange)+mk('매출',m.revenue,m.revenueChange)+'</div>';
-    return'<div class="card border-'+def.color+'-200 hover:shadow-md transition-all"><div class="flex items-center justify-between mb-2"><span class="font-bold text-sm text-'+def.color+'-700">'+def.label+'</span><span class="text-[10px] font-bold bg-'+def.color+'-50 text-'+def.color+'-600 px-2 py-0.5 rounded">전주비</span></div><div class="divide-y divide-gray-50">'+weeklyHtml+'</div>'+monthlyHtml+'</div>';
+    var tgt=d.target||{},ann=d.annual||{};
+    var targetHtml2='';
+    if(tgt.plan){
+      var aN=parseFloat(String(tgt.achieve||'').replace(/[^0-9.]/g,''))||0;
+      var aC=aN>=100?'emerald':aN>=90?'blue':aN>=80?'amber':'red';
+      targetHtml2='<div class="mt-2.5 pt-2.5 border-t border-'+def.color+'-100"><div class="text-[10px] font-bold text-'+def.color+'-400 mb-1">🎯 '+mon+'월 목표</div><div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">계획/추정</span><span class="text-[10px] font-bold text-gray-700">'+fmtNum(tgt.plan*1000000)+' / '+fmtNum(tgt.estimate*1000000)+'</span></div><div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">달성률</span><span class="text-[10px] font-bold text-'+aC+'-600">'+tgt.achieve+'</span></div></div>';
+    }
+    var annualHtml2='';
+    if(ann.plan){
+      var bN=parseFloat(String(ann.achieve||'').replace(/[^0-9.]/g,''))||0;
+      var bC=bN>=90?'emerald':bN>=80?'blue':'amber';
+      annualHtml2='<div class="mt-2.5 pt-2.5 border-t border-'+def.color+'-100"><div class="text-[10px] font-bold text-'+def.color+'-400 mb-1">📅 연간</div><div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">계획/추정</span><span class="text-[10px] font-bold text-gray-700">'+fmtNum(ann.plan*1000000)+' / '+fmtNum(ann.estimate*1000000)+'</span></div><div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">달성률</span><span class="text-[10px] font-bold text-'+bC+'-600">'+ann.achieve+'</span></div></div>';
+    }
+    return'<div class="card border-'+def.color+'-200 hover:shadow-md transition-all"><div class="flex items-center justify-between mb-2"><span class="font-bold text-sm text-'+def.color+'-700">'+def.label+'</span><span class="text-[10px] font-bold bg-'+def.color+'-50 text-'+def.color+'-600 px-2 py-0.5 rounded">전주비</span></div><div class="divide-y divide-gray-50">'+weeklyHtml+'</div>'+monthlyHtml+targetHtml2+annualHtml2+'</div>';
   }
   var targetHtml='';
   if(an.monthlyTarget&&an.monthlyTarget.plan){
