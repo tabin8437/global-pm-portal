@@ -604,7 +604,7 @@ function renderPage(id){
     weekly:function(){renderArchive('weekly');},
     report:function(){renderArchive('report');},
     internal:function(){renderArchive('internal');},
-    devmeeting:function(){renderArchive('dev');},
+    devmeeting:renderDevMeeting,
     'screenshot-spec':renderSpecs,
     ai:renderAI,
     'admin-settings':renderAdmin
@@ -820,6 +820,10 @@ function saveMeeting(type){
 function resetMeetings(){localStorage.removeItem('portal_meetings');meetings=loadMeetings();renderArchive('report');}
 
 /* ── AI ── */
+function renderDevMeeting(){
+  document.getElementById('content-area').innerHTML='<div class="doc-viewer"><div class="doc-toolbar"><span class="title"><i class="ti ti-code text-purple-500"></i> 개발사 회의록 <span style="font-size:11px;color:#9ca3af;font-weight:400;margin-left:8px">읽기 전용 · 탭 이동 가능</span></span><a href="https://docs.google.com/spreadsheets/d/1JvOfFWcvssvFZP91OFvtd66SThG1XxKAJSf3hJ6FEVw/edit?gid=1146934928" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-pencil"></i> 새창에서 편집</a></div><div class="doc-iframe-wrap"><iframe src="https://docs.google.com/spreadsheets/d/1JvOfFWcvssvFZP91OFvtd66SThG1XxKAJSf3hJ6FEVw/htmlview?gid=1146934928"></iframe></div></div>';
+}
+
 function renderAI(){
   document.getElementById('content-area').innerHTML='<div class="ai-panel"><div class="ai-msgs" id="ai-msgs"><div class="msg-ai">해외사업PM 포탈 AI입니다. 무엇을 도와드릴까요?</div></div><div class="ai-foot"><input type="text" id="ai-inp" placeholder="질문을 입력하세요..." onkeydown="if(event.key===\'Enter\')sendAI()"><button class="btn btn-primary" onclick="sendAI()"><i class="ti ti-send"></i></button></div></div>';
 }
