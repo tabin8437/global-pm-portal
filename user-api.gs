@@ -106,22 +106,29 @@ function doGet(e) {
     var email = (p.email || "").toLowerCase();
     var name = p.name || email;
     var device = p.device || "";
+    var key = email || name;
     var hbSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("online");
     if (!hbSheet) {
       hbSheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet("online");
     }
-    var data = hbSheet.getDataRange().getValues();
-    var found = false;
-    for (var i = 0; i < data.length; i++) {
-      if (data[i][0] && data[i][0].toString().toLowerCase() === email) {
-        hbSheet.getRange(i+1, 2).setValue(name);
-        hbSheet.getRange(i+1, 3).setValue(device);
-        hbSheet.getRange(i+1, 4).setValue(new Date().toISOString());
-        found = true;
-        break;
+    if (hbSheet.getLastRow() > 0) {
+      var data = hbSheet.getDataRange().getValues();
+      var found = false;
+      for (var i = 0; i < data.length; i++) {
+        var rowKey = (data[i][0] || data[i][1] || "").toString().toLowerCase();
+        if (rowKey && (rowKey === email || rowKey === name.toLowerCase())) {
+          hbSheet.getRange(i+1, 1).setValue(email);
+          hbSheet.getRange(i+1, 2).setValue(name);
+          hbSheet.getRange(i+1, 3).setValue(device);
+          hbSheet.getRange(i+1, 4).setValue(new Date().toISOString());
+          found = true;
+          break;
+        }
       }
-    }
-    if (!found) {
+      if (!found) {
+        hbSheet.appendRow([email, name, device, new Date().toISOString()]);
+      }
+    } else {
       hbSheet.appendRow([email, name, device, new Date().toISOString()]);
     }
     result = { ok: true };
@@ -133,10 +140,10 @@ function doGet(e) {
       var data = hbSheet.getDataRange().getValues();
       var now = new Date().getTime();
       for (var i = 0; i < data.length; i++) {
-        if (!data[i][0]) continue;
+        if (!data[i][1]) continue;
         var lastSeen = new Date(data[i][3]).getTime();
         if (now - lastSeen < 300000) {
-          online.push({email: data[i][0], name: data[i][1], device: data[i][2]});
+          online.push({email: data[i][0] || "", name: data[i][1], device: data[i][2]});
         }
       }
     }
