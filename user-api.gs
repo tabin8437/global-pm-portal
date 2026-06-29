@@ -101,6 +101,17 @@ function doGet(e) {
       sheet.appendRow([email, p.name || email, "", p.role || "viewer", "approved", new Date().toISOString()]);
       result = { ok: true };
     }
+
+  } else if (action === "delete") {
+    var email = (p.email || "").toLowerCase();
+    var row = findUserRow(email);
+    if (row < 0) {
+      result = { ok: false, msg: "not_found" };
+    } else {
+      var sheet = getSheet();
+      sheet.deleteRow(row);
+      result = { ok: true };
+    }
   }
 
   var json = JSON.stringify(result);
