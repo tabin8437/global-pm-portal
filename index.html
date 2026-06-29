@@ -1094,7 +1094,7 @@ function fetchKpiData(){
   var hour=new Date().getHours();
   try{
     var cached=JSON.parse(localStorage.getItem(cacheKey)||'null');
-    if(cached&&cached.date===today&&(cached.hour>=9||hour<9)){
+    if(cached&&cached.date===today&&Math.abs(hour-cached.hour)<1){
       applyKpiData(cached.data);return;
     }
   }catch(e){}
