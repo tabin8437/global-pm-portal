@@ -180,6 +180,58 @@ function doGet(e) {
       sheet.deleteRow(row);
       result = { ok: true };
     }
+
+  } else if (action === "cal_list") {
+    var cs = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("calendar");
+    var evts = [];
+    if (cs && cs.getLastRow() > 1) {
+      var data = cs.getRange(2, 1, cs.getLastRow() - 1, 7).getValues();
+      for (var i = 0; i < data.length; i++) {
+        if (!data[i][0]) continue;
+        evts.push({id:data[i][0], date:data[i][1], time:data[i][2], title:data[i][3], memo:data[i][4], color:data[i][5], author:data[i][6]});
+      }
+    }
+    result = { ok: true, events: evts };
+
+  } else if (action === "cal_save") {
+    var cs = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("calendar");
+    if (!cs) {
+      cs = SpreadsheetApp.getActiveSpreadsheet().insertSheet("calendar");
+      cs.appendRow(["id","date","time","title","memo","color","author"]);
+    }
+    var evId = p.id || "";
+    var title = decB64(p.title || "");
+    var memo = decB64(p.memo || "");
+    var author = decB64(p.author || "");
+    var found = false;
+    if (cs.getLastRow() > 1) {
+      var ids = cs.getRange(2, 1, cs.getLastRow() - 1, 1).getValues();
+      for (var i = 0; i < ids.length; i++) {
+        if (ids[i][0] === evId) {
+          var row = i + 2;
+          cs.getRange(row, 2, 1, 6).setValues([[p.date, p.time || "", title, memo, p.color || "indigo", author]]);
+          found = true;
+          break;
+        }
+      }
+    }
+    if (!found) {
+      cs.appendRow([evId, p.date, p.time || "", title, memo, p.color || "indigo", author]);
+    }
+    result = { ok: true };
+
+  } else if (action === "cal_delete") {
+    var cs = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("calendar");
+    if (cs && cs.getLastRow() > 1) {
+      var ids = cs.getRange(2, 1, cs.getLastRow() - 1, 1).getValues();
+      for (var i = 0; i < ids.length; i++) {
+        if (ids[i][0] === p.id) {
+          cs.deleteRow(i + 2);
+          break;
+        }
+      }
+    }
+    result = { ok: true };
   }
 
   var json = JSON.stringify(result);
