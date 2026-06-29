@@ -228,10 +228,10 @@ function doGet(e) {
     var ms = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("members");
     var members = [];
     if (ms && ms.getLastRow() > 1) {
-      var data = ms.getRange(2, 1, ms.getLastRow() - 1, 4).getValues();
+      var data = ms.getRange(2, 1, ms.getLastRow() - 1, 5).getValues();
       for (var i = 0; i < data.length; i++) {
         if (!data[i][0]) continue;
-        members.push({email:String(data[i][0]),name:String(data[i][1]||""),mascot:String(data[i][2]||""),color:String(data[i][3]||"")});
+        members.push({email:String(data[i][0]),name:String(data[i][1]||""),mascot:String(data[i][2]||""),color:String(data[i][3]||""),status:String(data[i][4]||"approved")});
       }
     }
     result = { ok: true, members: members };
@@ -240,26 +240,27 @@ function doGet(e) {
     var ms = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("members");
     if (!ms) {
       ms = SpreadsheetApp.getActiveSpreadsheet().insertSheet("members");
-      ms.appendRow(["email","name","mascot","color"]);
+      ms.appendRow(["email","name","mascot","color","status"]);
     }
     var email = (p.email || "").toLowerCase();
     var name = decB64(p.name || "");
     var mascot = p.mascot || "";
     var color = p.color || "";
+    var status = p.status || "pending";
     var found = false;
     if (ms.getLastRow() > 1) {
       var data = ms.getRange(2, 1, ms.getLastRow() - 1, 1).getValues();
       for (var i = 0; i < data.length; i++) {
         if (String(data[i][0]).toLowerCase() === email) {
           var row = i + 2;
-          ms.getRange(row, 1, 1, 4).setValues([[email, name, mascot, color]]);
+          ms.getRange(row, 1, 1, 5).setValues([[email, name, mascot, color, status]]);
           found = true;
           break;
         }
       }
     }
     if (!found) {
-      ms.appendRow([email, name, mascot, color]);
+      ms.appendRow([email, name, mascot, color, status]);
     }
     result = { ok: true };
 
