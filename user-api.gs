@@ -46,63 +46,55 @@ function findUserRow(email) {
 }
 
 function doGet(e) {
-  var action = (e.parameter.action || "list");
+  var p = e.parameter;
+  var action = (p.action || "list");
   var result = {};
 
   if (action === "list") {
     result = { ok: true, users: getAllUsers() };
+
   } else if (action === "check") {
-    var email = (e.parameter.email || "").toLowerCase();
+    var email = (p.email || "").toLowerCase();
     var users = getAllUsers();
     var found = null;
     for (var i = 0; i < users.length; i++) {
       if (users[i].email.toLowerCase() === email) { found = users[i]; break; }
     }
     result = { ok: true, user: found };
-  }
 
-  return ContentService.createTextOutput(JSON.stringify(result))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-function doPost(e) {
-  var body = JSON.parse(e.postData.contents);
-  var action = body.action;
-  var result = {};
-
-  if (action === "register") {
-    var email = (body.email || "").toLowerCase();
+  } else if (action === "register") {
+    var email = (p.email || "").toLowerCase();
     var row = findUserRow(email);
     if (row > 0) {
       result = { ok: false, msg: "already_exists" };
     } else {
       var sheet = getSheet();
-      sheet.appendRow([email, body.name || email, body.picture || "", "viewer", "pending", new Date().toISOString()]);
+      sheet.appendRow([email, p.name || email, p.picture || "", "viewer", "pending", new Date().toISOString()]);
       result = { ok: true, status: "pending" };
     }
 
   } else if (action === "update") {
-    var email = (body.email || "").toLowerCase();
+    var email = (p.email || "").toLowerCase();
     var row = findUserRow(email);
     if (row < 0) {
       result = { ok: false, msg: "not_found" };
     } else {
       var sheet = getSheet();
-      if (body.name !== undefined) sheet.getRange(row, 2).setValue(body.name);
-      if (body.picture !== undefined) sheet.getRange(row, 3).setValue(body.picture);
-      if (body.role !== undefined) sheet.getRange(row, 4).setValue(body.role);
-      if (body.status !== undefined) sheet.getRange(row, 5).setValue(body.status);
+      if (p.name) sheet.getRange(row, 2).setValue(p.name);
+      if (p.picture) sheet.getRange(row, 3).setValue(p.picture);
+      if (p.role) sheet.getRange(row, 4).setValue(p.role);
+      if (p.status) sheet.getRange(row, 5).setValue(p.status);
       result = { ok: true };
     }
 
   } else if (action === "add") {
-    var email = (body.email || "").toLowerCase();
+    var email = (p.email || "").toLowerCase();
     var row = findUserRow(email);
     if (row > 0) {
       result = { ok: false, msg: "already_exists" };
     } else {
       var sheet = getSheet();
-      sheet.appendRow([email, body.name || email, "", body.role || "viewer", "approved", new Date().toISOString()]);
+      sheet.appendRow([email, p.name || email, "", p.role || "viewer", "approved", new Date().toISOString()]);
       result = { ok: true };
     }
   }

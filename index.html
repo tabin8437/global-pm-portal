@@ -472,14 +472,15 @@ function getUserDB(){
 }
 function saveUserDB(users){_memUsers=users;}
 function fetchUsersFromAPI(callback){
-  fetch(USER_API_URL+'?action=list')
-    .then(function(r){return r.json();})
-    .then(function(d){if(d.ok){_memUsers=d.users;if(callback)callback(d.users);}})
+  var url=USER_API_URL+'?action=list&t='+Date.now();
+  fetch(url,{redirect:'follow'}).then(function(r){return r.json();})
+    .then(function(d){if(d.ok){_memUsers=d.users;if(callback)callback(d.users);}else{console.error('API 응답 오류',d);}})
     .catch(function(e){console.error('사용자 API 오류:',e);});
 }
 function apiPost(body,callback){
-  fetch(USER_API_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(body)})
-    .then(function(r){return r.json();})
+  var params='action='+encodeURIComponent(body.action);
+  Object.keys(body).forEach(function(k){if(k!=='action')params+='&'+encodeURIComponent(k)+'='+encodeURIComponent(body[k]||'');});
+  fetch(USER_API_URL+'?'+params+'&t='+Date.now(),{redirect:'follow'}).then(function(r){return r.json();})
     .then(function(d){if(callback)callback(d);})
     .catch(function(e){console.error('API 오류:',e);});
 }
