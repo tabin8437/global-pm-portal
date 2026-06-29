@@ -935,7 +935,7 @@ function renderKpiPage(){
     var w=d.weekly,ch=w.change||{},m=d.monthly||{};
     var weeklyHtml=mk('DAU',w.dau,ch.dau)+mk('NRU',w.nru,ch.nru)+mk('WAU',w.wau,ch.wau)+mk('매출',w.revenue,ch.revenue)+mk('PU',w.pu,ch.pu)+mk('ARPPU',w.arppu,ch.arppu);
     var monthlyHtml='';
-    if(m.dau) monthlyHtml='<div class="mt-2.5 pt-2.5 border-t border-'+def.color+'-100"><div class="text-[10px] font-bold text-'+def.color+'-400 mb-1">📊 당월 누적</div>'+mk('DAU',m.dau,m.dauChange)+mk('매출',m.revenue,m.revenueChange)+'</div>';
+    if(Object.keys(m).length>0) monthlyHtml='<div class="mt-2.5 pt-2.5 border-t border-'+def.color+'-100"><div class="text-[10px] font-bold text-'+def.color+'-400 mb-1">📊 당월 누적</div>'+mk('DAU',m.dau,m.dauChange)+mk('매출',m.revenue,m.revenueChange)+'</div>';
     var tgt=d.target||{},ann=d.annual||{};
     var targetHtml2='';
     if(tgt.plan){
@@ -949,7 +949,7 @@ function renderKpiPage(){
       var bC=bN>=90?'emerald':bN>=80?'blue':'amber';
       annualHtml2='<div class="mt-2.5 pt-2.5 border-t border-'+def.color+'-100"><div class="text-[10px] font-bold text-'+def.color+'-400 mb-1">📅 연간</div><div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">계획/추정</span><span class="text-[10px] font-bold text-gray-700">'+fmtNum(ann.plan*1000000)+' / '+fmtNum(ann.estimate*1000000)+'</span></div><div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">달성률</span><span class="text-[10px] font-bold text-'+bC+'-600">'+ann.achieve+'</span></div></div>';
     }
-    return'<div class="card border-'+def.color+'-200 hover:shadow-md transition-all"><div class="flex items-center justify-between mb-2"><span class="font-bold text-sm text-'+def.color+'-700">'+def.label+'</span><span class="text-[10px] font-bold bg-'+def.color+'-50 text-'+def.color+'-600 px-2 py-0.5 rounded">전주비</span></div><div class="divide-y divide-gray-50">'+weeklyHtml+'</div>'+monthlyHtml+targetHtml2+annualHtml2+'</div>';
+    return'<div class="card border-'+def.color+'-200 hover:shadow-md transition-all"><div class="flex items-center justify-between mb-2"><span class="font-bold text-sm text-'+def.color+'-700">'+def.label+'</span><span class="text-[10px] font-bold bg-'+def.color+'-50 text-'+def.color+'-600 px-2 py-0.5 rounded">전주비</span></div><div class="divide-y divide-gray-50">'+weeklyHtml+'</div>'+targetHtml2+monthlyHtml+annualHtml2+'</div>';
   }
   var targetHtml='';
   if(an.monthlyTarget&&an.monthlyTarget.plan){
@@ -1118,7 +1118,7 @@ function applyKpiData(d){
     ];
   }
   var m=d.monthly||{};var mr=d.monthlyReport||{};var mc=mr.change||{};
-  if(m.dau||mr.mau){
+  if(Object.keys(m).length>0||Object.keys(mr).length>0){
     KPI_MONTHLY=[
       {label:'당월 DAU 누적',value:fmtNum(m.dau||0),change:parseChange(m.dauChange).text,dir:parseChange(m.dauChange).dir,color:'#059669'},
       {label:'당월 매출 누적',value:fmtNum(m.revenue||0),change:parseChange(m.revenueChange).text,dir:parseChange(m.revenueChange).dir,color:'#7c3aed'},
