@@ -1030,10 +1030,17 @@ function loadAccessLogs(){
     var el=document.getElementById('access-logs');
     if(!el)return;
     if(!d.ok||!d.logs||!d.logs.length){el.innerHTML='<p class="text-sm text-gray-400 py-2 text-center">접속 기록이 없습니다.</p>';return;}
-    var html='<table style="width:100%;font-size:12px;border-collapse:collapse"><tr style="border-bottom:1px solid #e5e7eb"><th style="text-align:left;padding:6px;color:#9ca3af">시간</th><th style="text-align:left;padding:6px;color:#9ca3af">이름</th><th style="text-align:left;padding:6px;color:#9ca3af">이메일</th><th style="text-align:left;padding:6px;color:#9ca3af">기기</th></tr>';
+    var byDate={};
     d.logs.forEach(function(l){
-      var t=l.time?new Date(l.time).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'';
-      html+='<tr style="border-bottom:1px solid #f3f4f6"><td style="padding:6px;color:#6b7280">'+esc(t)+'</td><td style="padding:6px">'+esc(l.name)+'</td><td style="padding:6px;color:#6b7280">'+esc(l.email)+'</td><td style="padding:6px">'+esc(l.device||'')+'</td></tr>';
+      var day=l.time?(new Date(l.time).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'})):'알 수 없음';
+      var key=l.email+'|'+day;
+      if(!byDate[key])byDate[key]={name:l.name,email:l.email,date:day,device:l.device,count:0};
+      byDate[key].count++;
+    });
+    var rows=Object.values(byDate);
+    var html='<table style="width:100%;font-size:12px;border-collapse:collapse"><tr style="border-bottom:1px solid #e5e7eb"><th style="text-align:left;padding:6px;color:#9ca3af">날짜</th><th style="text-align:left;padding:6px;color:#9ca3af">이름</th><th style="text-align:left;padding:6px;color:#9ca3af">이메일</th><th style="text-align:left;padding:6px;color:#9ca3af">기기</th><th style="text-align:left;padding:6px;color:#9ca3af">접속 횟수</th></tr>';
+    rows.forEach(function(r){
+      html+='<tr style="border-bottom:1px solid #f3f4f6"><td style="padding:6px;color:#6b7280">'+esc(r.date)+'</td><td style="padding:6px">'+esc(r.name)+'</td><td style="padding:6px;color:#6b7280">'+esc(r.email)+'</td><td style="padding:6px">'+esc(r.device||'')+'</td><td style="padding:6px">'+r.count+'회</td></tr>';
     });
     html+='</table>';
     el.innerHTML=html;
