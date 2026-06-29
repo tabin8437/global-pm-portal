@@ -1022,6 +1022,8 @@ function loadOnlineUsers(){
     .then(function(r){return r.json();})
     .then(function(d){
       if(!d.ok||!d.online||!d.online.length){el.innerHTML='<p class="text-sm text-gray-400 py-2 text-center">현재 접속자가 없습니다.</p>';return;}
+      var seen={};
+      d.online=d.online.filter(function(u){var k=u.email||u.name;if(seen[k])return false;seen[k]=true;return true;});
       var html=d.online.map(function(u){
         var icon=u.device==='mobile'?'ti-device-mobile':'ti-device-desktop';
         return'<div class="flex items-center gap-3 p-2"><span style="width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0"></span><i class="ti '+icon+'" style="color:#9ca3af"></i><span class="text-sm font-bold">'+esc(u.name)+'</span><span class="text-xs text-gray-400">'+esc(u.email)+'</span></div>';
