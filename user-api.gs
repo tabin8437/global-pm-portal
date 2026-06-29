@@ -224,6 +224,58 @@ function doGet(e) {
     }
     result = { ok: true };
 
+  } else if (action === "member_list") {
+    var ms = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("members");
+    var members = [];
+    if (ms && ms.getLastRow() > 1) {
+      var data = ms.getRange(2, 1, ms.getLastRow() - 1, 4).getValues();
+      for (var i = 0; i < data.length; i++) {
+        if (!data[i][0]) continue;
+        members.push({email:String(data[i][0]),name:String(data[i][1]||""),mascot:String(data[i][2]||""),color:String(data[i][3]||"")});
+      }
+    }
+    result = { ok: true, members: members };
+
+  } else if (action === "member_save") {
+    var ms = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("members");
+    if (!ms) {
+      ms = SpreadsheetApp.getActiveSpreadsheet().insertSheet("members");
+      ms.appendRow(["email","name","mascot","color"]);
+    }
+    var email = (p.email || "").toLowerCase();
+    var name = decB64(p.name || "");
+    var mascot = p.mascot || "";
+    var color = p.color || "";
+    var found = false;
+    if (ms.getLastRow() > 1) {
+      var data = ms.getRange(2, 1, ms.getLastRow() - 1, 1).getValues();
+      for (var i = 0; i < data.length; i++) {
+        if (String(data[i][0]).toLowerCase() === email) {
+          var row = i + 2;
+          ms.getRange(row, 1, 1, 4).setValues([[email, name, mascot, color]]);
+          found = true;
+          break;
+        }
+      }
+    }
+    if (!found) {
+      ms.appendRow([email, name, mascot, color]);
+    }
+    result = { ok: true };
+
+  } else if (action === "member_delete") {
+    var ms = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("members");
+    if (ms && ms.getLastRow() > 1) {
+      var data = ms.getRange(2, 1, ms.getLastRow() - 1, 1).getValues();
+      for (var i = 0; i < data.length; i++) {
+        if (String(data[i][0]).toLowerCase() === (p.email || "").toLowerCase()) {
+          ms.deleteRow(i + 2);
+          break;
+        }
+      }
+    }
+    result = { ok: true };
+
   } else if (action === "cal_delete") {
     var cs = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("calendar");
     if (cs && cs.getLastRow() > 1) {
