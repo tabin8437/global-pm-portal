@@ -556,8 +556,7 @@ function onGoogleLogin(response){
       return;
     }
     if(u.status!=='approved'){errEl.style.color='#f59e0b';errEl.textContent='관리자 승인 대기 중입니다.';return;}
-    apiCall({action:'update',email:email,name:name,picture:picture},function(){});
-    loginSuccess(u.role,u.name,u.picture,email);
+    loginSuccess(u.role,u.name||name,u.picture||picture,email);
   });
 }
 
@@ -574,6 +573,8 @@ function loginSuccess(role,name,picture,email){
   if(roleLabelM) roleLabelM.textContent=(name||'')+(isAdmin?' (관리자)':' (뷰어)');
   var device=/Mobi|Android/i.test(navigator.userAgent)?'mobile':'desktop';
   apiCall({action:'log',email:email||'',name:name||'',device:device,page:'login'},function(){});
+  apiCall({action:'heartbeat',email:email||'',name:name||'',device:device},function(){});
+  setInterval(function(){apiCall({action:'heartbeat',email:_sessionAuth.email||'',name:_sessionAuth.name||'',device:device},function(){});},180000);
   document.getElementById('login-overlay').style.display='none';
   document.getElementById('main-app').style.display='flex';
   initApp();
@@ -1006,9 +1007,23 @@ function renderAdmin(){
       '<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-users text-emerald-600"></i> 승인된 사용자 ('+approved.length+')</span></div><div class="space-y-2">'+approvedHtml+'</div></div>'+
       (rejected.length?'<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-ban text-red-400"></i> 차단된 사용자 ('+rejected.length+')</span></div><div class="space-y-2">'+rejected.map(function(u){return'<div class="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-xl"><div><div class="font-bold text-sm text-gray-500">'+esc(u.name)+'</div><div class="text-xs text-gray-400">'+esc(u.email)+' · '+((u.created||'').slice(0,10))+'</div></div><div class="flex gap-2"><button class="btn btn-sm btn-primary" onclick="approveUser(\''+esc(u.email)+'\')">복원</button><button class="btn btn-sm" style="color:#9ca3af" onclick="deleteUser(\''+esc(u.email)+'\',\''+esc(u.name)+'\')"><i class="ti ti-trash"></i></button></div></div>';}).join('')+'</div></div>':'')+
       '<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-user-plus text-blue-500"></i> 뷰어 수동 추가</span></div><div class="flex gap-2"><input type="email" id="add-viewer-email" placeholder="이메일 주소" style="flex:1"><input type="text" id="add-viewer-name" placeholder="이름" style="width:120px"><button class="btn btn-sm btn-primary" onclick="addViewer()"><i class="ti ti-plus"></i> 추가</button></div><p class="text-[11px] text-gray-400 mt-2">☁ 사용자 DB는 Google Sheets에 저장됩니다. 모든 기기에서 동기화됩니다.</p></div>'+
+      '<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-broadcast text-green-500"></i> 실시간 접속 현황</span></div><div id="online-users"><p class="text-sm text-gray-400 py-2 text-center">로딩 중...</p></div></div>'+
       '<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-history text-blue-500"></i> 최근 접속 로그</span></div><div id="access-logs"><p class="text-sm text-gray-400 py-2 text-center">로딩 중...</p></div></div>'+
       '<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-settings-2 text-gray-500"></i> 시스템 정보</span></div><div class="space-y-3"><div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs"><b class="text-emerald-800">✅ 관리자 모드 활성</b> — 회의록 편집, 이슈 관리, 사용자 승인 가능</div><div class="p-3 bg-gray-50 border rounded-xl text-xs text-gray-500">세션은 브라우저 탭을 닫으면 만료됩니다.</div></div></div>';
+    loadOnlineUsers();
     loadAccessLogs();
+  });
+}
+function loadOnlineUsers(){
+  apiGet('action=online',function(d){
+    var el=document.getElementById('online-users');
+    if(!el)return;
+    if(!d.ok||!d.online||!d.online.length){el.innerHTML='<p class="text-sm text-gray-400 py-2 text-center">현재 접속자가 없습니다.</p>';return;}
+    var html=d.online.map(function(u){
+      var icon=u.device==='mobile'?'ti-device-mobile':'ti-device-desktop';
+      return'<div class="flex items-center gap-3 p-2"><span style="width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0"></span><i class="ti '+icon+'" style="color:#9ca3af"></i><span class="text-sm font-bold">'+esc(u.name)+'</span><span class="text-xs text-gray-400">'+esc(u.email)+'</span></div>';
+    }).join('');
+    el.innerHTML=html;
   });
 }
 function loadAccessLogs(){

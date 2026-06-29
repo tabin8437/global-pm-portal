@@ -102,6 +102,46 @@ function doGet(e) {
       result = { ok: true };
     }
 
+  } else if (action === "heartbeat") {
+    var email = (p.email || "").toLowerCase();
+    var name = p.name || email;
+    var device = p.device || "";
+    var hbSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("online");
+    if (!hbSheet) {
+      hbSheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet("online");
+    }
+    var data = hbSheet.getDataRange().getValues();
+    var found = false;
+    for (var i = 0; i < data.length; i++) {
+      if (data[i][0] && data[i][0].toString().toLowerCase() === email) {
+        hbSheet.getRange(i+1, 2).setValue(name);
+        hbSheet.getRange(i+1, 3).setValue(device);
+        hbSheet.getRange(i+1, 4).setValue(new Date().toISOString());
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      hbSheet.appendRow([email, name, device, new Date().toISOString()]);
+    }
+    result = { ok: true };
+
+  } else if (action === "online") {
+    var hbSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("online");
+    var online = [];
+    if (hbSheet && hbSheet.getLastRow() > 0) {
+      var data = hbSheet.getDataRange().getValues();
+      var now = new Date().getTime();
+      for (var i = 0; i < data.length; i++) {
+        if (!data[i][0]) continue;
+        var lastSeen = new Date(data[i][3]).getTime();
+        if (now - lastSeen < 300000) {
+          online.push({email: data[i][0], name: data[i][1], device: data[i][2]});
+        }
+      }
+    }
+    result = { ok: true, online: online };
+
   } else if (action === "log") {
     var email = (p.email || "").toLowerCase();
     var name = p.name || email;
