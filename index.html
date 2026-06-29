@@ -132,6 +132,22 @@ body.is-admin .admin-only{display:flex}
 .ai-foot input{flex:1}
 .user-badge{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--text-secondary);padding:4px 10px;border-radius:8px;background:var(--bg-secondary);cursor:pointer}
 .user-badge .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+.mobile-menu-btn{display:none;background:none;border:none;font-size:22px;cursor:pointer;padding:4px 8px;color:var(--text-secondary)}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99}
+@media(max-width:768px){
+  .sidebar{position:fixed;left:-260px;top:0;bottom:0;z-index:100;width:250px;transition:left .25s ease;box-shadow:4px 0 20px rgba(0,0,0,.15)}
+  .sidebar.open{left:0}
+  .sidebar-overlay.open{display:block}
+  .mobile-menu-btn{display:block}
+  .topbar{padding:8px 12px}
+  .content{padding:12px}
+  .breadcrumb{font-size:11px}
+  .clock-bar{font-size:9px;padding:4px 8px;gap:2px}
+  .clock-bar .sep{margin:0 3px}
+  .card{padding:14px}
+  .login-card{padding:32px 24px;width:320px}
+  .doc-viewer{margin:0}
+}
 </style>
 </head>
 <body>
@@ -178,9 +194,11 @@ body.is-admin .admin-only{display:flex}
       </div>
     </div>
   </div>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMobileMenu()"></div>
 
   <div class="main">
     <div class="topbar">
+      <button class="mobile-menu-btn" onclick="toggleMobileMenu()"><i class="ti ti-menu-2"></i></button>
       <div class="breadcrumb">해외사업PM 포탈 › <b id="bc-text">종합 대시보드</b></div>
       <button class="btn btn-sm" onclick="try{localStorage.removeItem('kpi_cache')}catch(e){};location.reload()" title="전체 새로고침 (문서 · 지표 최신화)"><i class="ti ti-refresh"></i> 새로고침</button>
       <div class="clock-bar">
@@ -537,6 +555,14 @@ function loginSuccess(role,name,picture){
   document.getElementById('main-app').style.display='flex';
   initApp();
 }
+function toggleMobileMenu(){
+  document.querySelector('.sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+function closeMobileMenu(){
+  document.querySelector('.sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+}
 function doLogout(){_sessionAuth=null;try{sessionStorage.removeItem('portal_auth');}catch(e){}location.reload();}
 function checkSession(){
   if(_sessionAuth&&_sessionAuth.role){loginSuccess(_sessionAuth.role,_sessionAuth.name,_sessionAuth.picture);return true;}
@@ -580,6 +606,7 @@ function toggleGroup(el){
 var pageNames={dashboard:'종합 대시보드',milestone:'통합 마일스톤','live-schedule':'월던/컨텐츠 오픈시점',settlement:'정산 및 빌링 설계',event:'이벤트 & 보상안',product:'상품안',kpi:'전권역 주간 매출 추이 ','report-kpi':'주/월간 보고용 지표','server-migration':'서버이전/통합',platform:'iOS 관리',weekly:'주간회의 기록',report:'보고',internal:'내부 회의',devmeeting:'개발사 미팅',localization:'현지화','shared-drive':'공유 드라이브','screenshot-spec':'마켓 스샷 규격',ai:'AI 도움말','admin-settings':'포탈 설정'};
 
 function nav(id,el){
+  closeMobileMenu();
   currentPage=id;
   document.querySelectorAll('.nav-item').forEach(function(i){i.classList.remove('active');});
   if(el)el.classList.add('active');
