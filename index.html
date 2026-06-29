@@ -1016,16 +1016,19 @@ function renderAdmin(){
   });
 }
 function loadOnlineUsers(){
-  apiGet('action=online',function(d){
-    var el=document.getElementById('online-users');
-    if(!el)return;
-    if(!d.ok||!d.online||!d.online.length){el.innerHTML='<p class="text-sm text-gray-400 py-2 text-center">현재 접속자가 없습니다.</p>';return;}
-    var html=d.online.map(function(u){
-      var icon=u.device==='mobile'?'ti-device-mobile':'ti-device-desktop';
-      return'<div class="flex items-center gap-3 p-2"><span style="width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0"></span><i class="ti '+icon+'" style="color:#9ca3af"></i><span class="text-sm font-bold">'+esc(u.name)+'</span><span class="text-xs text-gray-400">'+esc(u.email)+'</span></div>';
-    }).join('');
-    el.innerHTML=html;
-  });
+  var el=document.getElementById('online-users');
+  if(!el)return;
+  fetch(USER_API_URL+'?action=online&t='+Date.now())
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok||!d.online||!d.online.length){el.innerHTML='<p class="text-sm text-gray-400 py-2 text-center">현재 접속자가 없습니다.</p>';return;}
+      var html=d.online.map(function(u){
+        var icon=u.device==='mobile'?'ti-device-mobile':'ti-device-desktop';
+        return'<div class="flex items-center gap-3 p-2"><span style="width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0"></span><i class="ti '+icon+'" style="color:#9ca3af"></i><span class="text-sm font-bold">'+esc(u.name)+'</span><span class="text-xs text-gray-400">'+esc(u.email)+'</span></div>';
+      }).join('');
+      el.innerHTML=html;
+    })
+    .catch(function(e){el.innerHTML='<p class="text-sm text-gray-400 py-2 text-center">접속 현황을 불러올 수 없습니다.</p>';});
 }
 function loadAccessLogs(){
   apiGet('action=logs',function(d){
