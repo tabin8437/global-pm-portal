@@ -133,15 +133,23 @@ body.is-admin .admin-only{display:flex}
 .user-badge{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--text-secondary);padding:4px 10px;border-radius:8px;background:var(--bg-secondary);cursor:pointer}
 .user-badge .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
 .mobile-menu-btn{display:none;background:none;border:none;font-size:22px;cursor:pointer;padding:4px 8px;color:var(--text-secondary)}
-.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99}
+.mobile-menu{display:none;position:fixed;inset:0;z-index:200;background:#fff;flex-direction:column;overflow-y:auto}
+.mobile-menu.open{display:flex}
+.mobile-menu-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.mobile-menu-header .title{font-size:16px;font-weight:700}
+.mobile-menu-close{background:none;border:none;font-size:24px;cursor:pointer;color:var(--text-secondary);padding:4px}
+.mobile-menu .mobile-nav{flex:1;padding:8px 0}
+.mobile-menu .mobile-nav-label{padding:12px 20px 4px;font-size:11px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase}
+.mobile-menu .mobile-nav-item{display:flex;align-items:center;gap:12px;padding:14px 20px;font-size:15px;font-weight:500;color:var(--text-primary);cursor:pointer;border-bottom:1px solid #f3f4f6}
+.mobile-menu .mobile-nav-item:active{background:var(--bg-secondary)}
+.mobile-menu .mobile-nav-item i{font-size:18px;width:24px;text-align:center;color:var(--text-tertiary)}
+.mobile-menu-footer{padding:16px 20px;border-top:1px solid var(--border);font-size:13px;color:var(--text-tertiary)}
 @media(max-width:768px){
-  .sidebar{position:fixed;left:-260px;top:0;bottom:0;z-index:100;width:250px;transition:left .25s ease;box-shadow:4px 0 20px rgba(0,0,0,.15)}
-  .sidebar.open{left:0}
-  .sidebar-overlay.open{display:block}
+  .sidebar{display:none}
   .mobile-menu-btn{display:block}
-  .topbar{padding:8px 12px}
-  .content{padding:12px}
-  .breadcrumb{font-size:11px}
+  .topbar{padding:10px 14px}
+  .topbar .breadcrumb{font-size:13px;font-weight:600}
+  .content{padding:14px}
   .clock-bar{font-size:9px;padding:4px 8px;gap:2px}
   .clock-bar .sep{margin:0 3px}
   .card{padding:14px}
@@ -194,7 +202,18 @@ body.is-admin .admin-only{display:flex}
       </div>
     </div>
   </div>
-  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMobileMenu()"></div>
+  <div class="mobile-menu" id="mobile-menu">
+    <div class="mobile-menu-header">
+      <div class="title">메뉴</div>
+      <button class="mobile-menu-close" onclick="closeMobileMenu()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="mobile-nav" id="mobile-nav"></div>
+    <div class="mobile-menu-footer">
+      <div class="user-badge" onclick="doLogout()" style="justify-content:center">
+        <span class="dot"></span><span id="user-role-label-m">뷰어</span> · 로그아웃
+      </div>
+    </div>
+  </div>
 
   <div class="main">
     <div class="topbar">
@@ -551,6 +570,8 @@ function loginSuccess(role,name,picture,email){
   if(isAdmin) document.body.classList.add('is-admin');
   var roleLabel=document.getElementById('user-role-label');
   if(roleLabel) roleLabel.textContent=(name||'')+(isAdmin?' (관리자)':' (뷰어)');
+  var roleLabelM=document.getElementById('user-role-label-m');
+  if(roleLabelM) roleLabelM.textContent=(name||'')+(isAdmin?' (관리자)':' (뷰어)');
   var device=/Mobi|Android/i.test(navigator.userAgent)?'mobile':'desktop';
   apiCall({action:'log',email:email||'',name:name||'',device:device,page:'login'},function(){});
   document.getElementById('login-overlay').style.display='none';
@@ -558,12 +579,30 @@ function loginSuccess(role,name,picture,email){
   initApp();
 }
 function toggleMobileMenu(){
-  document.querySelector('.sidebar').classList.toggle('open');
-  document.getElementById('sidebar-overlay').classList.toggle('open');
+  document.getElementById('mobile-menu').classList.toggle('open');
 }
 function closeMobileMenu(){
-  document.querySelector('.sidebar').classList.remove('open');
-  document.getElementById('sidebar-overlay').classList.remove('open');
+  document.getElementById('mobile-menu').classList.remove('open');
+}
+function buildMobileNav(){
+  var html='';
+  SIDEBAR_MENU.forEach(function(item){
+    if(item.section){
+      if(item.adminOnly&&!isAdmin)return;
+      html+='<div class="mobile-nav-label">'+item.section+'</div>';
+      if(item.items){
+        item.items.forEach(function(sub){
+          if(sub.adminOnly&&!isAdmin)return;
+          html+='<div class="mobile-nav-item" onclick="nav(\''+sub.id+'\');closeMobileMenu()"><i class="ti '+sub.icon+'"></i>'+sub.label+'</div>';
+        });
+      }
+    }else{
+      if(item.adminOnly&&!isAdmin)return;
+      html+='<div class="mobile-nav-item" onclick="nav(\''+item.id+'\');closeMobileMenu()"><i class="ti '+item.icon+'"></i>'+item.label+'</div>';
+    }
+  });
+  var mNav=document.getElementById('mobile-nav');
+  if(mNav)mNav.innerHTML=html;
 }
 function doLogout(){_sessionAuth=null;try{sessionStorage.removeItem('portal_auth');}catch(e){}location.reload();}
 function checkSession(){
@@ -1119,6 +1158,7 @@ function applyKpiData(d){
    ═══════════════════════════════════════════ */
 function initApp(){
   buildSidebar();
+  buildMobileNav();
   runClocks();
   fetchKpiData();
   renderPage('dashboard');
