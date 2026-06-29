@@ -46,8 +46,9 @@ function findUserRow(email) {
 }
 
 function doGet(e) {
-  var p = e.parameter;
+  var p = (e && e.parameter) ? e.parameter : {};
   var action = (p.action || "list");
+  var callback = p.callback || "";
   var result = {};
 
   if (action === "list") {
@@ -99,6 +100,11 @@ function doGet(e) {
     }
   }
 
-  return ContentService.createTextOutput(JSON.stringify(result))
+  var json = JSON.stringify(result);
+  if (callback) {
+    return ContentService.createTextOutput(callback + '(' + json + ')')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return ContentService.createTextOutput(json)
     .setMimeType(ContentService.MimeType.JSON);
 }
