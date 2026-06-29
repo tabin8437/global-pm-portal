@@ -471,29 +471,21 @@ function getUserDB(){
   _memUsers=[];return _memUsers;
 }
 function saveUserDB(users){_memUsers=users;}
-var _jsonpId=0;
-function jsonpCall(params,callback){
-  var cbName='_jsonp_cb_'+(++_jsonpId)+'_'+Date.now();
-  window[cbName]=function(data){
-    delete window[cbName];
-    if(script.parentNode)script.parentNode.removeChild(script);
-    if(callback)callback(data);
-  };
-  var qs=params+'&callback='+cbName+'&t='+Date.now();
-  var script=document.createElement('script');
-  script.src=USER_API_URL+'?'+qs;
-  script.onerror=function(){delete window[cbName];if(script.parentNode)script.parentNode.removeChild(script);console.error('API 호출 실패');};
-  document.body.appendChild(script);
+function apiGet(params,callback){
+  fetch(USER_API_URL+'?'+params+'&t='+Date.now())
+    .then(function(r){return r.json();})
+    .then(function(d){if(callback)callback(d);})
+    .catch(function(e){console.error('API 오류:',e);});
 }
 function fetchUsersFromAPI(callback){
-  jsonpCall('action=list',function(d){
+  apiGet('action=list',function(d){
     if(d.ok){_memUsers=d.users;if(callback)callback(d.users);}
   });
 }
 function apiCall(body,callback){
   var params='action='+encodeURIComponent(body.action);
   Object.keys(body).forEach(function(k){if(k!=='action')params+='&'+encodeURIComponent(k)+'='+encodeURIComponent(body[k]||'');});
-  jsonpCall(params,callback);
+  apiGet(params,callback);
 }
 function seedAdmin(){}
 
@@ -509,7 +501,7 @@ function onGoogleLogin(response){
   var name=payload.name||email;
   var picture=payload.picture||'';
   errEl.style.color='#6b7280';errEl.textContent='확인 중...';
-  jsonpCall('action=check&email='+encodeURIComponent(email),function(d){
+  apiGet('action=check&email='+encodeURIComponent(email),function(d){
     if(!d.ok){errEl.style.color='#ef4444';errEl.textContent='서버 오류';return;}
     var u=d.user;
     if(!u){
