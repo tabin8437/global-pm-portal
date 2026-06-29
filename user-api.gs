@@ -185,12 +185,14 @@ function doGet(e) {
     var cs = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("calendar");
     var evts = [];
     if (cs && cs.getLastRow() > 1) {
-      var data = cs.getRange(2, 1, cs.getLastRow() - 1, 7).getValues();
+      var data = cs.getRange(2, 1, cs.getLastRow() - 1, 8).getValues();
       for (var i = 0; i < data.length; i++) {
         if (!data[i][0]) continue;
         var d = data[i][1];
         var dateStr = (d instanceof Date) ? Utilities.formatDate(d, "GMT+9", "yyyy-MM-dd") : String(d);
-        evts.push({id:data[i][0], date:dateStr, time:String(data[i][2]||""), title:String(data[i][3]||""), memo:String(data[i][4]||""), color:String(data[i][5]||"indigo"), author:String(data[i][6]||"")});
+        var ed = data[i][2];
+        var endStr = (ed instanceof Date) ? Utilities.formatDate(ed, "GMT+9", "yyyy-MM-dd") : String(ed || dateStr);
+        evts.push({id:data[i][0], date:dateStr, endDate:endStr, time:String(data[i][3]||""), title:String(data[i][4]||""), memo:String(data[i][5]||""), color:String(data[i][6]||"indigo"), author:String(data[i][7]||"")});
       }
     }
     result = { ok: true, events: evts };
@@ -199,7 +201,7 @@ function doGet(e) {
     var cs = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("calendar");
     if (!cs) {
       cs = SpreadsheetApp.getActiveSpreadsheet().insertSheet("calendar");
-      cs.appendRow(["id","date","time","title","memo","color","author"]);
+      cs.appendRow(["id","date","endDate","time","title","memo","color","author"]);
     }
     var evId = p.id || "";
     var title = decB64(p.title || "");
@@ -211,14 +213,14 @@ function doGet(e) {
       for (var i = 0; i < ids.length; i++) {
         if (ids[i][0] === evId) {
           var row = i + 2;
-          cs.getRange(row, 2, 1, 6).setValues([[p.date, p.time || "", title, memo, p.color || "indigo", author]]);
+          cs.getRange(row, 2, 1, 7).setValues([[p.date, p.endDate || p.date, p.time || "", title, memo, p.color || "indigo", author]]);
           found = true;
           break;
         }
       }
     }
     if (!found) {
-      cs.appendRow([evId, p.date, p.time || "", title, memo, p.color || "indigo", author]);
+      cs.appendRow([evId, p.date, p.endDate || p.date, p.time || "", title, memo, p.color || "indigo", author]);
     }
     result = { ok: true };
 
