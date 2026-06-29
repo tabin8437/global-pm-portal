@@ -538,19 +538,21 @@ function onGoogleLogin(response){
     }
     if(u.status!=='approved'){errEl.style.color='#f59e0b';errEl.textContent='관리자 승인 대기 중입니다.';return;}
     apiCall({action:'update',email:email,name:name,picture:picture},function(){});
-    loginSuccess(u.role,u.name,u.picture);
+    loginSuccess(u.role,u.name,u.picture,email);
   });
 }
 
 /* ── Session ── */
 var _sessionAuth=null;
-function loginSuccess(role,name,picture){
+function loginSuccess(role,name,picture,email){
   isAdmin=(role==='admin');
-  _sessionAuth={role:role,name:name||'',picture:picture||'',ts:Date.now()};
+  _sessionAuth={role:role,name:name||'',picture:picture||'',email:email||'',ts:Date.now()};
   try{sessionStorage.setItem('portal_auth',JSON.stringify(_sessionAuth));}catch(e){}
   if(isAdmin) document.body.classList.add('is-admin');
   var roleLabel=document.getElementById('user-role-label');
   if(roleLabel) roleLabel.textContent=(name||'')+(isAdmin?' (관리자)':' (뷰어)');
+  var device=/Mobi|Android/i.test(navigator.userAgent)?'mobile':'desktop';
+  apiCall({action:'log',email:email||'',name:name||'',device:device,page:'login'},function(){});
   document.getElementById('login-overlay').style.display='none';
   document.getElementById('main-app').style.display='flex';
   initApp();
@@ -965,7 +967,23 @@ function renderAdmin(){
       '<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-users text-emerald-600"></i> 승인된 사용자 ('+approved.length+')</span></div><div class="space-y-2">'+approvedHtml+'</div></div>'+
       (rejected.length?'<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-ban text-red-400"></i> 차단된 사용자 ('+rejected.length+')</span></div><div class="space-y-2">'+rejected.map(function(u){return'<div class="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-xl"><div><div class="font-bold text-sm text-gray-500">'+esc(u.name)+'</div><div class="text-xs text-gray-400">'+esc(u.email)+' · '+((u.created||'').slice(0,10))+'</div></div><div class="flex gap-2"><button class="btn btn-sm btn-primary" onclick="approveUser(\''+esc(u.email)+'\')">복원</button><button class="btn btn-sm" style="color:#9ca3af" onclick="deleteUser(\''+esc(u.email)+'\',\''+esc(u.name)+'\')"><i class="ti ti-trash"></i></button></div></div>';}).join('')+'</div></div>':'')+
       '<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-user-plus text-blue-500"></i> 뷰어 수동 추가</span></div><div class="flex gap-2"><input type="email" id="add-viewer-email" placeholder="이메일 주소" style="flex:1"><input type="text" id="add-viewer-name" placeholder="이름" style="width:120px"><button class="btn btn-sm btn-primary" onclick="addViewer()"><i class="ti ti-plus"></i> 추가</button></div><p class="text-[11px] text-gray-400 mt-2">☁ 사용자 DB는 Google Sheets에 저장됩니다. 모든 기기에서 동기화됩니다.</p></div>'+
+      '<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-history text-blue-500"></i> 최근 접속 로그</span></div><div id="access-logs"><p class="text-sm text-gray-400 py-2 text-center">로딩 중...</p></div></div>'+
       '<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-settings-2 text-gray-500"></i> 시스템 정보</span></div><div class="space-y-3"><div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs"><b class="text-emerald-800">✅ 관리자 모드 활성</b> — 회의록 편집, 이슈 관리, 사용자 승인 가능</div><div class="p-3 bg-gray-50 border rounded-xl text-xs text-gray-500">세션은 브라우저 탭을 닫으면 만료됩니다.</div></div></div>';
+    loadAccessLogs();
+  });
+}
+function loadAccessLogs(){
+  apiGet('action=logs',function(d){
+    var el=document.getElementById('access-logs');
+    if(!el)return;
+    if(!d.ok||!d.logs||!d.logs.length){el.innerHTML='<p class="text-sm text-gray-400 py-2 text-center">접속 기록이 없습니다.</p>';return;}
+    var html='<table style="width:100%;font-size:12px;border-collapse:collapse"><tr style="border-bottom:1px solid #e5e7eb"><th style="text-align:left;padding:6px;color:#9ca3af">시간</th><th style="text-align:left;padding:6px;color:#9ca3af">이름</th><th style="text-align:left;padding:6px;color:#9ca3af">이메일</th><th style="text-align:left;padding:6px;color:#9ca3af">기기</th></tr>';
+    d.logs.forEach(function(l){
+      var t=l.time?new Date(l.time).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'';
+      html+='<tr style="border-bottom:1px solid #f3f4f6"><td style="padding:6px;color:#6b7280">'+esc(t)+'</td><td style="padding:6px">'+esc(l.name)+'</td><td style="padding:6px;color:#6b7280">'+esc(l.email)+'</td><td style="padding:6px">'+esc(l.device||'')+'</td></tr>';
+    });
+    html+='</table>';
+    el.innerHTML=html;
   });
 }
 function approveUser(email){apiCall({action:'update',email:email,status:'approved'},function(){renderAdmin();});}

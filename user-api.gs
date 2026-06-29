@@ -102,6 +102,27 @@ function doGet(e) {
       result = { ok: true };
     }
 
+  } else if (action === "log") {
+    var email = (p.email || "").toLowerCase();
+    var name = p.name || email;
+    var logSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("logs");
+    if (logSheet) {
+      logSheet.appendRow([new Date().toISOString(), email, name, p.device || "", p.page || "login"]);
+    }
+    result = { ok: true };
+
+  } else if (action === "logs") {
+    var logSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("logs");
+    var logs = [];
+    if (logSheet && logSheet.getLastRow() > 0) {
+      var data = logSheet.getDataRange().getValues();
+      var start = Math.max(0, data.length - 100);
+      for (var i = data.length - 1; i >= start; i--) {
+        logs.push({time: data[i][0], email: data[i][1], name: data[i][2], device: data[i][3], page: data[i][4]});
+      }
+    }
+    result = { ok: true, logs: logs };
+
   } else if (action === "delete") {
     var email = (p.email || "").toLowerCase();
     var row = findUserRow(email);
