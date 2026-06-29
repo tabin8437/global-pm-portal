@@ -10,7 +10,7 @@
  * 6. 배포 URL을 index.html의 USER_API_URL에 붙여넣기
  */
 
-var SHEET_NAME = "users";
+var SHEET_NAME = "user";
 
 function getSheet() {
   return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
@@ -45,10 +45,13 @@ function findUserRow(email) {
   return -1;
 }
 
+function decB64(s){try{return Utilities.newBlob(Utilities.base64Decode(s)).getDataAsString('UTF-8');}catch(e){return s;}}
+
 function doGet(e) {
   var p = (e && e.parameter) ? e.parameter : {};
   var action = (p.action || "list");
   var callback = p.callback || "";
+  if(p.name) p.name = decB64(p.name);
   var result = {};
 
   if (action === "list") {

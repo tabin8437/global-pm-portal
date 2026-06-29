@@ -482,9 +482,15 @@ function fetchUsersFromAPI(callback){
     if(d.ok){_memUsers=d.users;if(callback)callback(d.users);}
   });
 }
+function toB64(str){try{return btoa(unescape(encodeURIComponent(str||'')));}catch(e){return btoa(str||'');}}
 function apiCall(body,callback){
   var params='action='+encodeURIComponent(body.action);
-  Object.keys(body).forEach(function(k){if(k!=='action')params+='&'+encodeURIComponent(k)+'='+encodeURIComponent(body[k]||'');});
+  Object.keys(body).forEach(function(k){
+    if(k==='action')return;
+    var v=body[k]||'';
+    if(k==='name')v=toB64(v);
+    params+='&'+encodeURIComponent(k)+'='+encodeURIComponent(v);
+  });
   apiGet(params,callback);
 }
 function seedAdmin(){}
