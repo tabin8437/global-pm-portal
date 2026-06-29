@@ -278,7 +278,6 @@ var SIDEBAR_MENU = [
   ]},
   {section:'도구'},
   {id:'screenshot-spec',icon:'ti-device-mobile',label:'마켓 스샷 규격'},
-  {id:'ai',icon:'ti-robot',label:'AI 도움말'},
   {section:'회계'},
   {id:'settlement',icon:'ti-calculator',label:'정산 및 빌링 설계'},
   {section:'관리자', adminOnly:true},
@@ -606,8 +605,8 @@ function buildMobileNav(){
 }
 function doLogout(){_sessionAuth=null;try{sessionStorage.removeItem('portal_auth');}catch(e){}location.reload();}
 function checkSession(){
-  if(_sessionAuth&&_sessionAuth.role){loginSuccess(_sessionAuth.role,_sessionAuth.name,_sessionAuth.picture);return true;}
-  try{var s=JSON.parse(sessionStorage.getItem('portal_auth'));if(s&&s.role&&(Date.now()-s.ts)<86400000){loginSuccess(s.role,s.name,s.picture);return true;}}catch(e){}
+  if(_sessionAuth&&_sessionAuth.role){loginSuccess(_sessionAuth.role,_sessionAuth.name,_sessionAuth.picture,_sessionAuth.email);return true;}
+  try{var s=JSON.parse(sessionStorage.getItem('portal_auth'));if(s&&s.role&&(Date.now()-s.ts)<86400000){loginSuccess(s.role,s.name,s.picture,s.email);return true;}}catch(e){}
   return false;
 }
 
