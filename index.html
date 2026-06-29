@@ -928,7 +928,7 @@ function renderAdmin(){
     }).join(''):'<p class="text-sm text-gray-400 py-3 text-center">대기 중인 요청이 없습니다.</p>';
 
     var approvedHtml=approved.map(function(u){
-      return'<div class="flex items-center justify-between p-3 bg-white border rounded-xl"><div><div class="font-bold text-sm">'+esc(u.name)+' <span class="text-xs font-normal text-gray-400">'+(u.role==='admin'?'👑 관리자':'뷰어')+'</span></div><div class="text-xs text-gray-500">'+esc(u.email)+'</div></div><div class="flex gap-2">'+(u.role!=='admin'?'<button class="btn btn-sm" onclick="toggleRole(\''+esc(u.email)+'\',\''+u.role+'\')">역할 변경</button><button class="btn btn-sm" style="color:#ef4444" onclick="rejectUser(\''+esc(u.email)+'\',\''+esc(u.name)+'\')">차단</button><button class="btn btn-sm" style="color:#9ca3af" onclick="deleteUser(\''+esc(u.email)+'\',\''+esc(u.name)+'\')"><i class="ti ti-trash"></i></button>':'<span class="text-xs text-emerald-600 font-bold">최고 관리자</span>')+'</div></div>';
+      return'<div class="flex items-center justify-between p-3 bg-white border rounded-xl"><div><div class="font-bold text-sm">'+esc(u.name)+' <span class="text-xs font-normal text-gray-400">'+(u.role==='admin'?'👑 관리자':'뷰어')+'</span></div><div class="text-xs text-gray-500">'+esc(u.email)+'</div></div><div class="flex gap-2">'+'<select class="btn btn-sm" style="padding:2px 6px" onchange="changeRole(\''+esc(u.email)+'\',this.value)"><option value="viewer"'+(u.role==='viewer'?' selected':'')+'>뷰어</option><option value="admin"'+(u.role==='admin'?' selected':'')+'>관리자</option></select>'+(u.email!==SEED_ADMIN.email?'<button class="btn btn-sm" style="color:#ef4444" onclick="rejectUser(\''+esc(u.email)+'\',\''+esc(u.name)+'\')">차단</button><button class="btn btn-sm" style="color:#9ca3af" onclick="deleteUser(\''+esc(u.email)+'\',\''+esc(u.name)+'\')"><i class="ti ti-trash"></i></button>':'')+'</div></div>';
     }).join('');
 
     document.getElementById('content-area').innerHTML=
@@ -940,7 +940,7 @@ function renderAdmin(){
 }
 function approveUser(email){apiCall({action:'update',email:email,status:'approved'},function(){renderAdmin();});}
 function rejectUser(email,name){if(confirm((name||email)+' 사용자를 차단/거부하시겠습니까?')){apiCall({action:'update',email:email,status:'rejected'},function(){renderAdmin();});}}
-function toggleRole(email,currentRole){apiCall({action:'update',email:email,role:currentRole==='admin'?'viewer':'admin'},function(){renderAdmin();});}
+function changeRole(email,newRole){apiCall({action:'update',email:email,role:newRole},function(){renderAdmin();});}
 function deleteUser(email,name){if(confirm((name||email)+' 사용자를 완전히 삭제하시겠습니까?')){apiCall({action:'delete',email:email},function(){renderAdmin();});}}
 function addViewer(){
   var email=(document.getElementById('add-viewer-email').value||'').trim().toLowerCase();
