@@ -571,8 +571,10 @@ function loginSuccess(role,name,picture,email){
   if(roleLabelM) roleLabelM.textContent=(name||'')+(isAdmin?' (관리자)':' (뷰어)');
   var device=/Mobi|Android/i.test(navigator.userAgent)?'mobile':'desktop';
   apiCall({action:'log',email:email||'',name:name||'',device:device,page:'login'},function(){});
-  apiCall({action:'heartbeat',email:email||'',name:name||'',device:device},function(){});
-  setInterval(function(){apiCall({action:'heartbeat',email:_sessionAuth.email||'',name:_sessionAuth.name||'',device:device},function(){});},180000);
+  function sendHeartbeat(){apiCall({action:'heartbeat',email:_sessionAuth.email||'',name:_sessionAuth.name||'',device:device},function(){});}
+  sendHeartbeat();
+  setInterval(sendHeartbeat,60000);
+  window._sendHeartbeat=sendHeartbeat;
   document.getElementById('login-overlay').style.display='none';
   document.getElementById('main-app').style.display='flex';
   initApp();
@@ -1008,7 +1010,8 @@ function renderAdmin(){
       '<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-broadcast text-green-500"></i> 실시간 접속 현황</span></div><div id="online-users"><p class="text-sm text-gray-400 py-2 text-center">로딩 중...</p></div></div>'+
       '<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-history text-blue-500"></i> 최근 접속 로그</span></div><div id="access-logs"><p class="text-sm text-gray-400 py-2 text-center">로딩 중...</p></div></div>'+
       '<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-settings-2 text-gray-500"></i> 시스템 정보</span></div><div class="space-y-3"><div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs"><b class="text-emerald-800">✅ 관리자 모드 활성</b> — 회의록 편집, 이슈 관리, 사용자 승인 가능</div><div class="p-3 bg-gray-50 border rounded-xl text-xs text-gray-500">세션은 브라우저 탭을 닫으면 만료됩니다.</div></div></div>';
-    loadOnlineUsers();
+    if(window._sendHeartbeat)window._sendHeartbeat();
+    setTimeout(loadOnlineUsers,2000);
     loadAccessLogs();
   });
 }
