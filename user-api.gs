@@ -188,7 +188,9 @@ function doGet(e) {
       var data = cs.getRange(2, 1, cs.getLastRow() - 1, 7).getValues();
       for (var i = 0; i < data.length; i++) {
         if (!data[i][0]) continue;
-        evts.push({id:data[i][0], date:data[i][1], time:data[i][2], title:data[i][3], memo:data[i][4], color:data[i][5], author:data[i][6]});
+        var d = data[i][1];
+        var dateStr = (d instanceof Date) ? Utilities.formatDate(d, "GMT+9", "yyyy-MM-dd") : String(d);
+        evts.push({id:data[i][0], date:dateStr, time:String(data[i][2]||""), title:String(data[i][3]||""), memo:String(data[i][4]||""), color:String(data[i][5]||"indigo"), author:String(data[i][6]||"")});
       }
     }
     result = { ok: true, events: evts };
