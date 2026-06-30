@@ -1219,6 +1219,7 @@ function applyKpiData(d){
     window._analysisCache='<div class="space-y-2.5">'+(a.period?'<div class="text-[10px] text-gray-400 font-semibold">📅 '+esc(a.period)+'</div>':'')+html+'</div>';
   }
   if(currentPage==='dashboard') renderDashboard();
+  if(currentPage==='milestone') renderMilestonePage();
 }
 
 /* ═══════════════════════════════════════════
