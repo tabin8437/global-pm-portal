@@ -278,6 +278,7 @@ var SIDEBAR_MENU = [
     {id:'links-9',label:'공유 드라이브 · 문서',icon:'ti-folder'},
     {id:'links-10',label:'사내 협업 채널',icon:'ti-messages'}
   ]},
+  {id:'team-calendar',icon:'ti-calendar-event',label:'팀 캘린더',external:'https://tabin8437.github.io/team-calendar/'},
   {section:'도구'},
   {id:'screenshot-spec',icon:'ti-device-mobile',label:'마켓 스샷 규격'},
   {section:'회계'},
@@ -601,7 +602,11 @@ function buildMobileNav(){
       }
     }else{
       if(item.adminOnly&&!isAdmin)return;
-      html+='<div class="mobile-nav-item" onclick="nav(\''+item.id+'\');closeMobileMenu()"><i class="ti '+item.icon+'"></i>'+item.label+'</div>';
+      if(item.external){
+        html+='<div class="mobile-nav-item" onclick="window.open(\''+item.external+'\',\'_blank\');closeMobileMenu()"><i class="ti '+item.icon+'"></i>'+item.label+'</div>';
+      } else {
+        html+='<div class="mobile-nav-item" onclick="nav(\''+item.id+'\');closeMobileMenu()"><i class="ti '+item.icon+'"></i>'+item.label+'</div>';
+      }
     }
   });
   var mNav=document.getElementById('mobile-nav');
@@ -632,6 +637,8 @@ function buildSidebar(){
       } else {
         html+='<div class="nav-label'+(item.adminOnly?' admin-only':'')+'">'+item.section+'</div>';
       }
+    } else if(item.external){
+      html+='<div class="nav-item'+(item.adminOnly?' admin-only':'')+'" onclick="window.open(\''+item.external+'\',\'_blank\')"><i class="ti '+item.icon+'"></i> '+item.label+' <i class="ti ti-external-link" style="margin-left:auto;font-size:12px;opacity:.5"></i></div>';
     } else {
       html+='<div class="nav-item'+(item.id==='dashboard'?' active':'')+''+(item.adminOnly?' admin-only':'')+'" data-page="'+item.id+'" onclick="nav(\''+item.id+'\',this)"><i class="ti '+item.icon+'"></i> '+item.label+'</div>';
     }
