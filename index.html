@@ -937,7 +937,9 @@ function renderKpiPage(){
     var w=d.weekly,ch=w.change||{},m=d.monthly||{};
     var weeklyHtml=mk('DAU',w.dau,ch.dau)+mk('NRU',w.nru,ch.nru)+mk('WAU',w.wau,ch.wau)+mk('매출',w.revenue,ch.revenue)+mk('PU',w.pu,ch.pu)+mk('ARPPU',w.arppu,ch.arppu);
     var monthlyHtml='';
-    if(m.revenue) monthlyHtml='<div class="mt-2.5 pt-2.5 border-t border-'+def.color+'-100"><div class="text-[10px] font-bold text-'+def.color+'-400 mb-1">📊 당월 누적</div>'+mk('매출',m.revenue,m.revenueChange)+'</div>';
+    if(m.revenue) monthlyHtml='<div class="mt-2.5 pt-2.5 border-t border-'+def.color+'-100"><div class="text-[10px] font-bold text-'+def.color+'-400 mb-1">📊 당월 누적</div>'
+      +'<div class="py-1 flex items-center justify-between"><span class="text-[11px] text-gray-500">매출</span><div class="flex items-center gap-1.5"><span class="text-xs font-bold text-gray-900">'+fmtNum(m.revenue)+'</span>'+(m.revenueChange?'<span class="text-[9px] text-gray-400 mr-0.5">전월비</span><span class="text-[10px] font-bold '+(m.revenueChange.indexOf('▼')!==-1||m.revenueChange.indexOf('-')!==-1?'text-blue-600':'text-red-500')+'">'+m.revenueChange+'</span>':'')+'</div></div>'
+      +'</div>';
     var tgt=d.target||{},ann=d.annual||{};
     var targetHtml2='';
     if(tgt.plan){
