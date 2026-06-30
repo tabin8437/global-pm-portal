@@ -1238,7 +1238,23 @@ function applyKpiData(d){
   }
 
   // 마이비서 분석 데이터 (서버에서 요약된 섹션)
-  if(d.analysis&&d.analysis.sections&&d.analysis.sections.length){
+  if(d.analysis&&d.analysis.insight){
+    var a=d.analysis,ins=a.insight;
+    function bucket(icon,clr,title,bodyHtml){
+      return'<div class="p-3.5 bg-'+clr+'-50/60 border border-'+clr+'-100 rounded-xl"><div class="flex items-center gap-1.5 mb-1.5"><i class="ti '+icon+' text-sm text-'+clr+'-500"></i><span class="font-bold text-xs text-'+clr+'-900">'+title+'</span></div>'+bodyHtml+'</div>';
+    }
+    function listHtml(items,empty){
+      if(!items||!items.length)return'<p class="text-[12px] text-gray-400">'+empty+'</p>';
+      return'<ul class="text-[12px] text-gray-700 leading-relaxed space-y-1 list-disc list-inside">'+items.map(function(s){return'<li>'+esc(s)+'</li>';}).join('')+'</ul>';
+    }
+    var html='';
+    if(ins.feature) html+=bucket('ti-chart-bar','blue','주간 현재 특징','<p class="text-[12px] text-gray-700 leading-relaxed">'+esc(ins.feature)+'</p>');
+    if(ins.wow&&ins.wow.length) html+=bucket('ti-arrows-diff','indigo','전주 대비','<div class="flex flex-wrap gap-1.5">'+ins.wow.map(function(w){var down=w.indexOf('▼')!==-1;return'<span class="text-[11px] font-bold px-2 py-0.5 rounded-md '+(down?'text-red-600 bg-red-50':'text-blue-600 bg-blue-50')+'">'+esc(w)+'</span>';}).join('')+'</div>');
+    html+=bucket('ti-thumb-up','emerald','좋은 점',listHtml(ins.good,'특이사항 없음'));
+    html+=bucket('ti-alert-triangle','amber','문제점',listHtml(ins.problem,'특이사항 없음'));
+    html+=bucket('ti-bulb','purple','원인 후보',listHtml(ins.cause,'특이사항 없음'));
+    window._analysisCache='<div class="space-y-2.5">'+(a.period?'<div class="text-[10px] text-gray-400 font-semibold">📅 '+esc(a.period)+'</div>':'')+html+'</div>';
+  } else if(d.analysis&&d.analysis.sections&&d.analysis.sections.length){
     var a=d.analysis;
     var iconMap={'트래픽':'ti-chart-line text-blue-500','매출':'ti-coin text-emerald-500','핵심':'ti-alert-circle text-amber-500','통찰':'ti-telescope text-purple-500'};
     var colorMap={'트래픽':'blue','매출':'emerald','핵심':'amber','통찰':'purple'};
