@@ -1247,12 +1247,19 @@ function applyKpiData(d){
       if(!items||!items.length)return'<p class="text-[12px] text-gray-400">'+empty+'</p>';
       return'<ul class="text-[12px] text-gray-700 leading-relaxed space-y-1 list-disc list-inside">'+items.map(function(s){return'<li>'+esc(s)+'</li>';}).join('')+'</ul>';
     }
+    function goodBadHtml(items){
+      if(!items||!items.length)return'<p class="text-[12px] text-gray-400">특이사항 없음</p>';
+      return'<ul class="text-[12px] text-gray-700 leading-relaxed space-y-1.5">'+items.map(function(g){
+        var good=g.sign==='good';
+        return'<li class="flex items-start gap-1.5"><i class="ti '+(good?'ti-circle-check text-emerald-500':'ti-alert-circle text-amber-500')+' text-sm mt-0.5 flex-shrink-0"></i><span>'+esc(g.text)+'</span></li>';
+      }).join('')+'</ul>';
+    }
     var html='';
     if(ins.feature) html+=bucket('ti-chart-bar','blue','주간 현재 특징','<p class="text-[12px] text-gray-700 leading-relaxed">'+esc(ins.feature)+'</p>');
     if(ins.wow&&ins.wow.length) html+=bucket('ti-arrows-diff','indigo','전주 대비','<div class="flex flex-wrap gap-1.5">'+ins.wow.map(function(w){var down=w.indexOf('▼')!==-1;return'<span class="text-[11px] font-bold px-2 py-0.5 rounded-md '+(down?'text-red-600 bg-red-50':'text-blue-600 bg-blue-50')+'">'+esc(w)+'</span>';}).join('')+'</div>');
-    html+=bucket('ti-thumb-up','emerald','좋은 점',listHtml(ins.good,'특이사항 없음'));
-    html+=bucket('ti-alert-triangle','amber','문제점',listHtml(ins.problem,'특이사항 없음'));
+    html+=bucket('ti-list-check','teal','좋은 점 · 문제점',goodBadHtml(ins.goodBad));
     html+=bucket('ti-bulb','purple','원인 후보',listHtml(ins.cause,'특이사항 없음'));
+    if(a.trend&&a.trend.length) html+=bucket('ti-speakerphone','rose','커뮤니티 동향',listHtml(a.trend,'특이사항 없음'));
     window._analysisCache='<div class="space-y-2.5">'+(a.period?'<div class="text-[10px] text-gray-400 font-semibold">📅 '+esc(a.period)+'</div>':'')+html+'</div>';
   } else if(d.analysis&&d.analysis.sections&&d.analysis.sections.length){
     var a=d.analysis;
