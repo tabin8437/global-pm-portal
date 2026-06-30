@@ -1,4 +1,4 @@
-var CACHE_NAME = 'pm-portal-v1';
+var CACHE_NAME = 'pm-portal-v2';
 var ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', function(e) {
@@ -17,6 +17,11 @@ self.addEventListener('activate', function(e) {
 
 self.addEventListener('fetch', function(e) {
   if (e.request.method !== 'GET') return;
+
+  // 우리 앱(같은 출처)의 정적 파일만 캐싱 대상으로 삼는다.
+  // 구글 Apps Script API 같은 외부(cross-origin) 요청은 절대 캐싱하지 않고 브라우저가 그대로 처리하게 둔다.
+  // (한 번이라도 실패한 API 응답이 캐시되면 계속 그 에러가 재생되는 문제를 막기 위함)
+  if (new URL(e.request.url).origin !== self.location.origin) return;
 
   // 페이지 자체(HTML)는 네트워크를 먼저 시도해서 항상 최신 버전을 받아오고,
   // 오프라인일 때만 캐시로 대체 (그 외 정적 파일은 캐시 우선)
