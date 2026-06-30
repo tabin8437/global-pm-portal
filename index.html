@@ -815,7 +815,7 @@ function renderMilestonePage(){
       +'</tr>';
   }).join(''):'<tr><td colspan="5" class="px-3 py-10 text-center text-gray-400 text-xs">타임라인 데이터를 불러오는 중...</td></tr>';
 
-  c.innerHTML='<div class="card" style="padding:0;overflow:hidden">'
+  c.innerHTML='<div class="card" style="padding:0;overflow:hidden;max-width:1320px;margin:0 auto">'
     +'<div class="card-header" style="padding:14px 16px"><span class="card-title"><i class="ti ti-route text-blue-500"></i> 통합 마일스톤 타임라인</span><a href="'+MILESTONE_SHEET_EDIT_URL+'" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-pencil"></i> 원본 시트 편집</a></div>'
     +'<style>.milestone-row{border-bottom:1px solid #f3f4f6}.milestone-row:hover{background:#fafbff}.milestone-row.is-current{background:#fffbeb}.milestone-row.is-current:hover{background:#fef3c7}</style>'
     +'<div style="overflow-x:auto"><table class="text-xs border-collapse" style="width:100%;table-layout:fixed">'
