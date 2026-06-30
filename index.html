@@ -789,9 +789,16 @@ function renderMilestonePage(){
     if(!items||!items.length) return'<span class="text-gray-300">-</span>';
     return'<ul class="text-[11px] text-gray-700 space-y-1 list-disc list-inside">'+items.map(function(s){return'<li>'+esc(s)+'</li>';}).join('')+'</ul>';
   }
-  var rowsHtml=timeline.length?timeline.map(function(t,idx){
-    return'<tr class="'+(idx===0?'bg-amber-50/60':'')+' border-b border-gray-100 align-top">'
-      +'<td class="px-3 py-3 whitespace-nowrap"><div class="text-xs font-bold text-gray-900">'+esc(t.date)+'</div>'+(idx===0?'<div class="text-[10px] text-amber-600 font-bold mt-0.5">● 현재</div>':'')+(t.version?'<div class="text-[10px] text-gray-400 mt-0.5">'+esc(t.version)+'</div>':'')+'</td>'
+  var lastMonth=null;
+  var rowsHtml=timeline.length?timeline.map(function(t){
+    var sep='';
+    if(t.month&&t.month!==lastMonth){
+      lastMonth=t.month;
+      var mp=t.month.split('-');
+      sep='<tr><td colspan="5" class="px-3 pt-4 pb-1.5"><div class="text-[11px] font-bold text-gray-400 flex items-center gap-2"><span>'+mp[0]+'년 '+mp[1]+'월</span><span class="flex-1 border-t border-gray-200"></span></div></td></tr>';
+    }
+    return sep+'<tr class="'+(t.isCurrent?'bg-amber-50/60':'')+' border-b border-gray-100 align-top">'
+      +'<td class="px-3 py-3 whitespace-nowrap"><div class="text-xs font-bold text-gray-900">'+esc(t.date)+'</div>'+(t.isCurrent?'<div class="text-[10px] text-amber-600 font-bold mt-0.5">● 현재</div>':'')+(t.version?'<div class="text-[10px] text-gray-400 mt-0.5">'+esc(t.version)+'</div>':'')+'</td>'
       +'<td class="px-3 py-3 border-l border-gray-100">'+cell(t.kr)+'</td>'
       +'<td class="px-3 py-3 border-l border-gray-100">'+cell(t.tw)+'</td>'
       +'<td class="px-3 py-3 border-l border-gray-100">'+cell(t.jp)+'</td>'
