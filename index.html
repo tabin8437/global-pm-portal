@@ -1123,16 +1123,19 @@ function applyKpiData(d){
     ];
   }
   var m=d.monthly||{};var mr=d.monthlyReport||{};var mc=mr.change||{};
-  if(m.dau||m.revenue||mr.mau){
-    KPI_MONTHLY=[
-      {label:'당월 DAU 누적',value:fmtNum(m.dau||0),change:parseChange(m.dauChange).text,dir:parseChange(m.dauChange).dir,color:'#059669'},
-      {label:'당월 매출 누적',value:fmtNum(m.revenue||0),change:parseChange(m.revenueChange).text,dir:parseChange(m.revenueChange).dir,color:'#7c3aed'},
-      {label:'월 MAU',value:fmtNum(mr.mau||0),change:parseChange(mc.mau).text,dir:parseChange(mc.mau).dir,color:'#2563eb'},
-      {label:'월 평균 DAU',value:fmtNum(mr.dau||0),change:parseChange(mc.dau).text,dir:parseChange(mc.dau).dir,color:'#059669'},
-      {label:'월 PU',value:fmtNum(mr.pu||0)+'명',change:parseChange(mc.pu).text,dir:parseChange(mc.pu).dir,color:'#0891b2'},
-      {label:'월 ARPPU',value:fmtNum(mr.arppu||0),change:parseChange(mc.arppu).text,dir:parseChange(mc.arppu).dir,color:'#ca8a04'}
-    ];
-  }
+  var mUpd=[
+    {i:0,val:m.dau,change:m.dauChange},
+    {i:1,val:m.revenue,change:m.revenueChange},
+    {i:2,val:mr.mau,change:mc.mau},
+    {i:3,val:mr.dau,change:mc.dau},
+    {i:4,val:mr.pu,change:mc.pu,suffix:'명'},
+    {i:5,val:mr.arppu,change:mc.arppu}
+  ];
+  mUpd.forEach(function(u){
+    if(u.val){
+      KPI_MONTHLY[u.i]=Object.assign({},KPI_MONTHLY[u.i],{value:fmtNum(u.val)+(u.suffix||''),change:parseChange(u.change).text,dir:parseChange(u.change).dir});
+    }
+  });
   // 전권역 데이터 캐시
   if(d.regions) window._regionsCache=d.regions;
 
