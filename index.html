@@ -787,7 +787,7 @@ function renderMilestonePage(){
   var timeline=window._milestoneTimeline||[];
   function cell(items){
     if(!items||!items.length) return'<span class="text-gray-300">-</span>';
-    return'<ul class="text-[11px] text-gray-700 space-y-1 list-disc list-inside">'+items.map(function(s){return'<li>'+esc(s)+'</li>';}).join('')+'</ul>';
+    return'<ul class="text-[11px] text-gray-700 space-y-1 list-disc list-inside" style="word-break:break-all">'+items.map(function(s){return'<li>'+esc(s)+'</li>';}).join('')+'</ul>';
   }
   var lastMonth=null;
   var rowsHtml=timeline.length?timeline.map(function(t){
@@ -808,8 +808,8 @@ function renderMilestonePage(){
 
   c.innerHTML='<div class="card">'
     +'<div class="card-header"><span class="card-title"><i class="ti ti-route text-blue-500"></i> 통합 마일스톤 타임라인</span><a href="'+MILESTONE_SHEET_EDIT_URL+'" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-pencil"></i> 원본 시트 편집</a></div>'
-    +'<div style="overflow-x:auto"><table class="w-full text-xs border-collapse" style="min-width:900px">'
-    +'<thead><tr class="bg-gray-50 border-b border-gray-200"><th class="px-3 py-2 text-left text-[11px] text-gray-500 font-bold" style="width:130px">날짜</th><th class="px-3 py-2 text-left text-[11px] text-red-500 font-bold border-l border-gray-100">🇰🇷 한국</th><th class="px-3 py-2 text-left text-[11px] text-blue-500 font-bold border-l border-gray-100">🇹🇼 대만</th><th class="px-3 py-2 text-left text-[11px] text-emerald-500 font-bold border-l border-gray-100">🇯🇵 일본</th><th class="px-3 py-2 text-left text-[11px] text-purple-500 font-bold border-l border-gray-100">🌐 글로벌</th></tr></thead>'
+    +'<div style="overflow-x:auto"><table class="w-full text-xs border-collapse" style="min-width:900px;table-layout:fixed">'
+    +'<thead><tr class="bg-gray-50 border-b border-gray-200"><th class="px-3 py-2 text-left text-[11px] text-gray-500 font-bold" style="width:130px">날짜</th><th class="px-3 py-2 text-left text-[11px] text-red-500 font-bold border-l border-gray-100" style="width:21.75%">🇰🇷 한국</th><th class="px-3 py-2 text-left text-[11px] text-blue-500 font-bold border-l border-gray-100" style="width:21.75%">🇹🇼 대만</th><th class="px-3 py-2 text-left text-[11px] text-emerald-500 font-bold border-l border-gray-100" style="width:21.75%">🇯🇵 일본</th><th class="px-3 py-2 text-left text-[11px] text-purple-500 font-bold border-l border-gray-100" style="width:21.75%">🌐 글로벌</th></tr></thead>'
     +'<tbody>'+rowsHtml+'</tbody></table></div>'
     +'</div>';
 }
