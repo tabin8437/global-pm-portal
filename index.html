@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>해외사업PM 포탈</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230f172a'/><circle cx='32' cy='26' r='14' fill='none' stroke='%2338bdf8' stroke-width='3'/><line x1='32' y1='12' x2='32' y2='40' stroke='%2338bdf8' stroke-width='2.5'/><line x1='18' y1='26' x2='46' y2='26' stroke='%2338bdf8' stroke-width='2.5'/><ellipse cx='32' cy='26' rx='7' ry='14' fill='none' stroke='%2338bdf8' stroke-width='2'/><rect x='10' y='44' width='44' height='6' rx='3' fill='%2338bdf8' opacity='.3'/><rect x='18' y='44' width='8' height='6' rx='2' fill='%2338bdf8'/><rect x='38' y='44' width='8' height='6' rx='2' fill='%2338bdf8'/></svg>">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#0f172a">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -1268,6 +1271,7 @@ window.addEventListener('DOMContentLoaded',function(){
     document.getElementById('login-email').focus();
   }
 });
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
 </script>
 </body>
 </html>
