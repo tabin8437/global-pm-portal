@@ -715,7 +715,8 @@ function renderDashboard(){
   }).join('');
 
   // 월간 누적
-  var now=new Date();var monthLabel=now.getFullYear()+'년 '+(now.getMonth()+1)+'월 누적';
+  var now=new Date();var yesterday=now.getDate()-1;if(yesterday<1)yesterday=1;
+  var monthLabel=now.getFullYear()+'년 '+(now.getMonth()+1)+'월 누적 <span style="font-size:11px;font-weight:500;color:#94a3b8;margin-left:6px">1일 ~ '+(now.getMonth()+1)+'월 '+yesterday+'일 기준</span>';
   var monthlyCards=KPI_MONTHLY.map(function(k){
     var mDown=k.change.indexOf('▼')!==-1||k.change.indexOf('-')!==-1;
     var mCls=mDown?'change-down':'change-up';
