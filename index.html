@@ -219,13 +219,13 @@ body.is-admin .admin-only{display:flex}
     <div class="topbar">
       <button class="mobile-menu-btn" onclick="toggleMobileMenu()"><i class="ti ti-menu-2"></i></button>
       <div class="breadcrumb">해외사업PM 포탈 › <b id="bc-text">종합 대시보드</b></div>
-      <button class="btn btn-sm" onclick="try{localStorage.removeItem('kpi_cache')}catch(e){};location.reload()" title="전체 새로고침 (문서 · 지표 최신화)"><i class="ti ti-refresh"></i> 새로고침</button>
       <div class="clock-bar">
         🇰🇷 <b>KR</b> <span id="clock-kr">--:--:--</span>
         <div class="sep"></div>🇹🇼 <b>TW</b> <span id="clock-tw">--:--</span>
         <div class="sep"></div>🇹🇭 <b>TH</b> <span id="clock-th">--:--</span>
         <div class="sep"></div>🇺🇸 <b>PDT</b> <span id="clock-us">--:--</span>
       </div>
+      <button class="btn btn-sm" onclick="try{localStorage.removeItem('kpi_cache')}catch(e){};location.reload()" title="전체 새로고침 (문서 · 지표 최신화)"><i class="ti ti-refresh"></i> 새로고침</button>
     </div>
 
     <div class="content" id="content-area"></div>
