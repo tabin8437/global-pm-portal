@@ -1094,13 +1094,18 @@ function fetchKpiData(){
   var hour=new Date().getHours();
   try{
     var cached=JSON.parse(localStorage.getItem(cacheKey)||'null');
-    if(cached&&cached.date===today&&Math.abs(hour-cached.hour)<1){
-      applyKpiData(cached.data);return;
+    if(cached&&cached.date===today){
+      var cachedAt=cached.hour*60+(cached.minute||0);
+      var nowAt=hour*60+new Date().getMinutes();
+      var past8=hour>=8;var cachedBefore8=cached.hour<8;
+      if(!(past8&&cachedBefore8)&&(nowAt-cachedAt)<60){
+        applyKpiData(cached.data);return;
+      }
     }
   }catch(e){}
   fetch(KPI_API_URL).then(function(r){return r.json();}).then(function(data){
     if(data&&data.success){
-      try{localStorage.setItem(cacheKey,JSON.stringify({date:today,hour:hour,data:data}));}catch(e){}
+      try{localStorage.setItem(cacheKey,JSON.stringify({date:today,hour:hour,minute:new Date().getMinutes(),data:data}));}catch(e){}
       applyKpiData(data);
     }
   }).catch(function(){});
@@ -1118,7 +1123,7 @@ function applyKpiData(d){
     ];
   }
   var m=d.monthly||{};var mr=d.monthlyReport||{};var mc=mr.change||{};
-  if(Object.keys(m).length>0||Object.keys(mr).length>0){
+  if(m.dau||m.revenue||mr.mau){
     KPI_MONTHLY=[
       {label:'당월 DAU 누적',value:fmtNum(m.dau||0),change:parseChange(m.dauChange).text,dir:parseChange(m.dauChange).dir,color:'#059669'},
       {label:'당월 매출 누적',value:fmtNum(m.revenue||0),change:parseChange(m.revenueChange).text,dir:parseChange(m.revenueChange).dir,color:'#7c3aed'},
