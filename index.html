@@ -286,8 +286,8 @@ var SIDEBAR_MENU = [
 ];
 
 // 문서 페이지 URL 매핑 (preview / edit)
+var MILESTONE_SHEET_EDIT_URL='https://docs.google.com/spreadsheets/d/1wFr-DdDyyUu0nAGl6qGMNfyl3_ipxP_uqAw7Rs2PFX4/edit?gid=1910558778';
 var DOC_URLS = {
-  milestone:     {preview:'https://docs.google.com/spreadsheets/d/1wFr-DdDyyUu0nAGl6qGMNfyl3_ipxP_uqAw7Rs2PFX4/htmlview?gid=1910558778',edit:'https://docs.google.com/spreadsheets/d/1wFr-DdDyyUu0nAGl6qGMNfyl3_ipxP_uqAw7Rs2PFX4/edit?gid=1910558778'},
   event:         {preview:'https://docs.google.com/spreadsheets/d/1zf7wfWfrC_ajBPcSCg-NTZqLevnLWBNpTfI0hiUzjJE/htmlview?gid=664837488',edit:'https://docs.google.com/spreadsheets/d/1zf7wfWfrC_ajBPcSCg-NTZqLevnLWBNpTfI0hiUzjJE/edit?gid=664837488'},
   product:       {preview:'https://docs.google.com/spreadsheets/d/12f4V6PEwuU5Ep96J-9TLI7cJuIykCMOkxjQjI-9Ioeg/htmlview?gid=1208981964',edit:'https://docs.google.com/spreadsheets/d/12f4V6PEwuU5Ep96J-9TLI7cJuIykCMOkxjQjI-9Ioeg/edit?gid=1208981964'},
   'report-kpi':  {preview:'https://docs.google.com/spreadsheets/d/1Axv-pPON-Oni82wC-EDXKxWPk1_2K_EtjWE7ymeqPPo/htmlview?gid=1704819295',edit:'https://docs.google.com/spreadsheets/d/1Axv-pPON-Oni82wC-EDXKxWPk1_2K_EtjWE7ymeqPPo/edit?gid=1704819295'},
@@ -696,7 +696,8 @@ function renderPage(id){
     devmeeting:renderDevMeeting,
     'screenshot-spec':renderSpecs,
     ai:renderAI,
-    'admin-settings':renderAdmin
+    'admin-settings':renderAdmin,
+    milestone:renderMilestonePage
   };
   if(renderers[id]) renderers[id]();
   else c.innerHTML='<div class="card"><p style="color:#999;padding:20px;text-align:center">페이지 준비 중</p></div>';
@@ -778,6 +779,32 @@ function switchMilestoneTab(region){
   if(at)at.className='flex-1 py-1.5 rounded-md bg-white text-gray-900 shadow-sm font-black';
   var body=document.getElementById('milestone-widget-body');
   if(body) body.innerHTML=window.dynamicMilestone[region]||'';
+}
+
+/* ── 통합 마일스톤 타임라인 페이지 ── */
+function renderMilestonePage(){
+  var c=document.getElementById('content-area');
+  var timeline=window._milestoneTimeline||[];
+  function cell(items){
+    if(!items||!items.length) return'<span class="text-gray-300">-</span>';
+    return'<ul class="text-[11px] text-gray-700 space-y-1 list-disc list-inside">'+items.map(function(s){return'<li>'+esc(s)+'</li>';}).join('')+'</ul>';
+  }
+  var rowsHtml=timeline.length?timeline.map(function(t,idx){
+    return'<tr class="'+(idx===0?'bg-amber-50/60':'')+' border-b border-gray-100 align-top">'
+      +'<td class="px-3 py-3 whitespace-nowrap"><div class="text-xs font-bold text-gray-900">'+esc(t.date)+'</div>'+(idx===0?'<div class="text-[10px] text-amber-600 font-bold mt-0.5">● 현재</div>':'')+(t.version?'<div class="text-[10px] text-gray-400 mt-0.5">'+esc(t.version)+'</div>':'')+'</td>'
+      +'<td class="px-3 py-3 border-l border-gray-100">'+cell(t.kr)+'</td>'
+      +'<td class="px-3 py-3 border-l border-gray-100">'+cell(t.tw)+'</td>'
+      +'<td class="px-3 py-3 border-l border-gray-100">'+cell(t.jp)+'</td>'
+      +'<td class="px-3 py-3 border-l border-gray-100">'+cell(t.gl)+'</td>'
+      +'</tr>';
+  }).join(''):'<tr><td colspan="5" class="px-3 py-10 text-center text-gray-400 text-xs">타임라인 데이터를 불러오는 중...</td></tr>';
+
+  c.innerHTML='<div class="card">'
+    +'<div class="card-header"><span class="card-title"><i class="ti ti-route text-blue-500"></i> 통합 마일스톤 타임라인</span><a href="'+MILESTONE_SHEET_EDIT_URL+'" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-pencil"></i> 원본 시트 편집</a></div>'
+    +'<div style="overflow-x:auto"><table class="w-full text-xs border-collapse" style="min-width:900px">'
+    +'<thead><tr class="bg-gray-50 border-b border-gray-200"><th class="px-3 py-2 text-left text-[11px] text-gray-500 font-bold" style="width:130px">날짜</th><th class="px-3 py-2 text-left text-[11px] text-red-500 font-bold border-l border-gray-100">🇰🇷 한국</th><th class="px-3 py-2 text-left text-[11px] text-blue-500 font-bold border-l border-gray-100">🇹🇼 대만</th><th class="px-3 py-2 text-left text-[11px] text-emerald-500 font-bold border-l border-gray-100">🇯🇵 일본</th><th class="px-3 py-2 text-left text-[11px] text-purple-500 font-bold border-l border-gray-100">🌐 글로벌</th></tr></thead>'
+    +'<tbody>'+rowsHtml+'</tbody></table></div>'
+    +'</div>';
 }
 
 /* ── Schedule ── */
@@ -1146,6 +1173,7 @@ function applyKpiData(d){
   // 마일스톤 동기화
   if(d.milestone&&d.milestone.date){
     var ms=d.milestone;
+    window._milestoneTimeline=ms.timeline||[];
     function buildList(items,clr){
       if(!items||!items.length) return'<li class="text-gray-400">내역 없음</li>';
       return items.map(function(s){
