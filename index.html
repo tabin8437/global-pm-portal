@@ -739,7 +739,7 @@ function renderDashboard(){
   var annualHtml='<div id="annual-revenue-widget"></div>';
 
   // 월간 목표 뱃지
-  var monthTargetHtml='<span id="month-target-badge" class="text-[11px] text-gray-400 font-medium">'+(now.getMonth()+1)+'/1 ~ '+(now.getMonth()+1)+'/'+yesterday+' 기준</span>';
+  var monthTargetHtml='<span id="month-target-badge" class="text-[11px] text-gray-400 font-medium">1일 ~ '+(now.getMonth()+1)+'월 '+yesterday+'일 기준</span>';
 
   c.innerHTML='<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-chart-bar text-emerald-500"></i> '+weekLabel+' 주간 지표</span></div><div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">'+kpiHtml+'</div>'+
     '<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-calendar-stats text-indigo-500"></i> '+monthLabel+'</span>'+monthTargetHtml+'</div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">'+monthlyCards+'</div>'+
