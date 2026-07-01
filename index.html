@@ -1306,6 +1306,7 @@ function renderCompetitor(){
   var c=document.getElementById('content-area');
   var data=window._competitorCache;
 
+  // 데이터 없으면 안내
   if(!data||!data.games||!data.games.length){
     c.innerHTML='<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-radar text-violet-500"></i> 경쟁사 모니터링</span></div>'
       +'<div class="text-center py-16 text-gray-400"><i class="ti ti-satellite text-5xl mb-3 block"></i>'
@@ -1315,55 +1316,37 @@ function renderCompetitor(){
     return;
   }
 
-  var GAME_COLOR={'이클립스':'violet','제우스':'blue','나이트크로우':'emerald','리니지W':'amber','검은사막M':'rose'};
-  function colorOf(name){for(var k in GAME_COLOR){if(name.indexOf(k)!==-1)return GAME_COLOR[k];}return 'slate';}
-
   var updatedLabel=data.updated?'<span class="text-[10px] text-gray-400 font-medium">최종 수집: '+esc(data.updated.slice(0,16).replace('T',' '))+'</span>':'';
+
+  // 필터 탭
   var allGames=data.games.map(function(g){return g.name;});
-
-  // ── 오늘의 핵심 동향 요약 카드 ──
-  var summaryCards=data.games.filter(function(g){return g.summary;}).map(function(g){
-    var clr=colorOf(g.name);
-    return'<div class="flex items-start gap-2.5 px-3 py-2.5 bg-'+clr+'-50 border border-'+clr+'-100 rounded-xl">'
-      +'<span class="text-[10px] font-bold bg-'+clr+'-100 text-'+clr+'-700 px-1.5 py-0.5 rounded mt-0.5 flex-shrink-0">'+esc(g.name)+'</span>'
-      +'<p class="text-[12px] text-gray-700 leading-relaxed">'+esc(g.summary)+'</p></div>';
-  }).join('');
-  var summarySection=summaryCards
-    ?'<div class="card mb-4"><div class="card-header"><span class="card-title text-sm"><i class="ti ti-sparkles text-amber-500"></i> 오늘의 핵심 동향</span>'+updatedLabel+'</div>'
-      +'<div class="flex flex-col gap-2">'+summaryCards+'</div></div>'
-    :'';
-
-  // ── 검색 바 ──
-  var searchBar='<div class="card mb-4" style="padding:14px 16px">'
-    +'<div class="flex items-center gap-3 flex-wrap">'
-    +'<div class="relative flex-1" style="min-width:180px">'
-    +'<i class="ti ti-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>'
-    +'<input id="comp-search" type="text" placeholder="기사 제목·내용 검색..." oninput="compApplyFilters()"'
-    +' style="padding-left:30px;height:34px;font-size:12px;border-radius:8px">'
-    +'</div>'
-    +'<div class="flex flex-wrap gap-1.5" id="comp-filter">'
-    +'<button onclick="compSetGame(\'\')" id="comp-f-all" class="comp-tab text-[11px] font-bold px-3 py-1 rounded-full border bg-violet-600 text-white border-violet-600">전체</button>'
+  var filterHtml='<div class="flex flex-wrap gap-1.5 mb-4" id="comp-filter">'
+    +'<button onclick="compFilter(\'\')" id="comp-f-all" class="comp-tab active text-[11px] font-bold px-3 py-1 rounded-full border bg-violet-600 text-white border-violet-600">전체</button>'
     +allGames.map(function(g){
-      return'<button onclick="compSetGame(\''+esc(g)+'\')" id="comp-f-'+esc(g)+'" class="comp-tab text-[11px] font-bold px-3 py-1 rounded-full border bg-white text-gray-600 border-gray-300 hover:border-violet-400 hover:text-violet-700 transition-colors">'+esc(g)+'</button>';
-    }).join('')
-    +'</div>'
-    +'<button onclick="compClearFilters()" class="btn btn-sm text-gray-400 border-0 bg-transparent hover:text-gray-700 flex-shrink-0"><i class="ti ti-x"></i> 초기화</button>'
-    +'</div></div>';
+      return'<button onclick="compFilter(\''+esc(g)+'\')" id="comp-f-'+esc(g)+'" class="comp-tab text-[11px] font-bold px-3 py-1 rounded-full border bg-white text-gray-600 border-gray-300 hover:border-violet-400 hover:text-violet-700 transition-colors">'+esc(g)+'</button>';
+    }).join('')+'</div>';
 
-  // ── 게임 카드 ──
+  // 게임 카드들
+  var GAME_COLOR={
+    '이클립스':'violet','제우스':'blue','나이트크로우':'emerald','리니지W':'amber','검은사막M':'rose'
+  };
+  function colorOf(name){
+    for(var k in GAME_COLOR){if(name.indexOf(k)!==-1)return GAME_COLOR[k];}
+    return 'slate';
+  }
+
   var cardsHtml=data.games.map(function(g){
     var clr=colorOf(g.name);
     var articles=g.articles||[];
+    var summaryHtml=g.summary?'<div class="mb-3 px-3 py-2.5 bg-'+clr+'-50 border border-'+clr+'-200 rounded-xl text-[12px] text-'+clr+'-900 leading-relaxed"><i class="ti ti-sparkles text-'+clr+'-400 mr-1"></i>'+esc(g.summary)+'</div>':'';
     var artHtml=articles.length?articles.map(function(a,i){
       var dateStr=a.date?'<span class="text-[10px] text-gray-400 flex-shrink-0">'+esc(a.date.slice(0,10))+'</span>':'';
       var sourceStr=a.source?'<span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded flex-shrink-0">'+esc(a.source)+'</span>':'';
-      var descStr=a.desc?'<p class="comp-desc text-[11px] text-gray-500 mt-0.5 leading-relaxed line-clamp-2">'+esc(a.desc)+'</p>':'';
+      var descStr=a.desc?'<p class="text-[11px] text-gray-500 mt-0.5 leading-relaxed line-clamp-2">'+esc(a.desc)+'</p>':'';
       var linkAttr=a.url?'href="'+esc(a.url)+'" target="_blank" rel="noopener"':'href="#" onclick="return false"';
-      return'<li class="comp-article py-2.5 '+(i>0?'border-t border-gray-100':'')+'"'
-        +' data-title="'+esc((a.title||'').toLowerCase())+'" data-desc="'+esc((a.desc||'').toLowerCase())+'">'
-        +'<a '+linkAttr+' class="group block">'
+      return'<li class="py-2.5 '+(i>0?'border-t border-gray-100':'')+'"><a '+linkAttr+' class="group block">'
         +'<div class="flex items-start justify-between gap-2">'
-        +'<span class="comp-title text-[12px] font-semibold text-gray-800 group-hover:text-'+clr+'-700 leading-snug">'+esc(a.title)+'</span>'
+        +'<span class="text-[12px] font-semibold text-gray-800 group-hover:text-'+clr+'-700 leading-snug">'+esc(a.title)+'</span>'
         +'<div class="flex items-center gap-1 flex-shrink-0 mt-0.5">'+sourceStr+dateStr+'</div></div>'
         +descStr+'</a></li>';
     }).join('')
@@ -1371,75 +1354,28 @@ function renderCompetitor(){
 
     return'<div class="card comp-game-card" data-game="'+esc(g.name)+'">'
       +'<div class="card-header"><span class="card-title text-sm"><i class="ti ti-device-gamepad-2 text-'+clr+'-500"></i> '+esc(g.name)+'</span>'
-      +'<span class="comp-count text-[10px] font-bold bg-'+clr+'-50 text-'+clr+'-700 border border-'+clr+'-200 px-2 py-0.5 rounded-full">'+articles.length+'건</span></div>'
+      +'<span class="text-[10px] font-bold bg-'+clr+'-50 text-'+clr+'-700 border border-'+clr+'-200 px-2 py-0.5 rounded-full">'+articles.length+'건</span></div>'
+      +summaryHtml
       +'<ul>'+artHtml+'</ul></div>';
   }).join('');
 
-  c.innerHTML=summarySection
-    +searchBar
-    +'<div id="comp-cards" class="grid grid-cols-1 lg:grid-cols-2 gap-4">'+cardsHtml+'</div>'
-    +'<div id="comp-noresult" class="hidden text-center py-10 text-gray-400 text-sm"><i class="ti ti-search-off text-3xl mb-2 block"></i>검색 결과가 없습니다</div>';
-
-  window._compActiveGame='';
+  c.innerHTML='<div class="card-header mb-3" style="padding:0"><span class="card-title text-sm"><i class="ti ti-radar text-violet-500"></i> 경쟁사 모니터링</span>'+updatedLabel+'</div>'
+    +filterHtml
+    +'<div id="comp-cards" class="grid grid-cols-1 lg:grid-cols-2 gap-4">'+cardsHtml+'</div>';
 }
 
-function compSetGame(name){
-  window._compActiveGame=name;
+function compFilter(name){
+  // 탭 active 상태
   document.querySelectorAll('.comp-tab').forEach(function(btn){
-    var on=(name===''&&btn.id==='comp-f-all')||(name!==''&&btn.id==='comp-f-'+name);
-    btn.className=btn.className
-      .replace(/bg-violet-600 text-white border-violet-600/g,'')
-      .replace(/bg-white text-gray-600 border-gray-300/g,'').trim()
-      +' '+(on?'bg-violet-600 text-white border-violet-600':'bg-white text-gray-600 border-gray-300');
+    var isAll=(name===''&&btn.id==='comp-f-all');
+    var isMatch=(name!==''&&btn.id==='comp-f-'+name);
+    if(isAll||isMatch){btn.className=btn.className.replace(/bg-white text-gray-600 border-gray-300/,'').trim()+' bg-violet-600 text-white border-violet-600';}
+    else{btn.className=btn.className.replace(/bg-violet-600 text-white border-violet-600/,'').trim()+' bg-white text-gray-600 border-gray-300';}
   });
-  compApplyFilters();
-}
-
-function compClearFilters(){
-  var el=document.getElementById('comp-search');
-  if(el) el.value='';
-  compSetGame('');
-}
-
-function compApplyFilters(){
-  var q=(document.getElementById('comp-search')||{value:''}).value.trim().toLowerCase();
-  var game=window._compActiveGame||'';
-  var anyVisible=false;
-
-  document.querySelectorAll('.comp-game-card').forEach(function(card){
-    var gameMatch=(game===''||card.dataset.game===game);
-    if(!gameMatch){card.style.display='none';return;}
-
-    var articles=card.querySelectorAll('.comp-article');
-    var cardVisible=false;
-    articles.forEach(function(li){
-      var match=!q||(li.dataset.title||'').indexOf(q)!==-1||(li.dataset.desc||'').indexOf(q)!==-1;
-      li.style.display=match?'':'none';
-      if(match) cardVisible=true;
-    });
-
-    // 검색어 하이라이트
-    if(q){
-      card.querySelectorAll('.comp-title,.comp-desc').forEach(function(el){
-        var orig=el.textContent;
-        var idx=orig.toLowerCase().indexOf(q);
-        if(idx===-1){el.innerHTML=esc(orig);return;}
-        el.innerHTML=esc(orig.slice(0,idx))+'<mark class="bg-yellow-200 rounded px-0.5">'+esc(orig.slice(idx,idx+q.length))+'</mark>'+esc(orig.slice(idx+q.length));
-      });
-    } else {
-      card.querySelectorAll('.comp-title,.comp-desc').forEach(function(el){el.innerHTML=esc(el.textContent);});
-    }
-
-    // 카드 표시 여부 + 건수 업데이트
-    var visCount=card.querySelectorAll('.comp-article:not([style*="display: none"]):not([style*="display:none"])').length;
-    var countEl=card.querySelector('.comp-count');
-    if(countEl) countEl.textContent=visCount+'건';
-    card.style.display=(gameMatch&&(cardVisible||!q))?'':'none';
-    if(gameMatch&&(cardVisible||!q)) anyVisible=true;
+  // 카드 표시/숨김
+  document.querySelectorAll('.comp-game-card').forEach(function(el){
+    el.style.display=(name===''||el.dataset.game===name)?'':'none';
   });
-
-  var nr=document.getElementById('comp-noresult');
-  if(nr) nr.className=anyVisible?'hidden':'text-center py-10 text-gray-400 text-sm';
 }
 
 /* ═══════════════════════════════════════════
