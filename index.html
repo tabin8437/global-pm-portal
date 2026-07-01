@@ -1222,8 +1222,7 @@ function applyKpiData(d){
       global:'<div class="bg-purple-50 border border-purple-200 p-3 rounded-xl mb-3 flex items-center justify-between"><span class="text-xs font-bold text-purple-900">글로벌 서비스</span><span class="text-[11px] bg-purple-200 text-purple-900 px-2 py-0.5 rounded font-bold">'+esc(ms.date)+'</span></div><ul class="space-y-1 text-xs text-gray-700 list-disc list-inside p-3 bg-white rounded-xl border shadow-sm">'+buildList(ms.gl)+'</ul>',
       cross:'<div class="mb-2.5 flex items-center justify-between border-b border-purple-200 pb-2"><span class="font-bold text-purple-900 text-xs"><i class="ti ti-world text-purple-600"></i> 전 권역 크로스체크</span><span class="text-[11px] bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded">'+esc(ms.date)+'</span></div><div class="grid grid-cols-2 gap-2.5">'+card('🇰🇷 한국','red',ms.kr)+card('🇹🇼 대만','blue',ms.tw)+card('🇯🇵 일본','emerald',ms.jp)+card('🌐 글로벌','purple',ms.gl)+'</div>'
     };
-    var mdEl=document.getElementById('milestone-active-date');
-    if(mdEl) mdEl.textContent='최신: '+ms.date;
+    window._milestoneCurrentDate=ms.date;
   }
 
   // 연간매출 데이터
@@ -1278,6 +1277,11 @@ function applyKpiData(d){
   if(currentPage==='dashboard') renderDashboard();
   if(currentPage==='milestone') renderMilestonePage();
   if(currentPage==='competitor') renderCompetitor();
+  // renderDashboard가 DOM을 교체한 뒤에 뱃지 업데이트
+  if(window._milestoneCurrentDate){
+    var mdEl=document.getElementById('milestone-active-date');
+    if(mdEl) mdEl.textContent='최신: '+window._milestoneCurrentDate;
+  }
 }
 
 /* ═══════════════════════════════════════════
