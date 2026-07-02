@@ -228,6 +228,7 @@ body.is-admin .admin-only{display:flex}
         <div class="sep"></div>🇹🇼 <b>TW</b> <span id="clock-tw">--:--</span>
         <div class="sep"></div>🇹🇭 <b>TH</b> <span id="clock-th">--:--</span>
         <div class="sep"></div>🇺🇸 <b>PDT</b> <span id="clock-us">--:--</span>
+        <div class="sep"></div>🌐 <b>UTC</b> <span id="clock-utc">--:--</span>
       </div>
       <button class="btn btn-sm" onclick="try{localStorage.removeItem('kpi_cache')}catch(e){};location.reload()" title="전체 새로고침 (문서 · 지표 최신화)"><i class="ti ti-refresh"></i> 새로고침</button>
     </div>
@@ -1161,6 +1162,7 @@ function runClocks(){
     document.getElementById('clock-tw').textContent=new Date(now.getTime()-3600000).toLocaleTimeString('ko-KR',{hour12:false,hour:'2-digit',minute:'2-digit'});
     document.getElementById('clock-th').textContent=new Date(now.getTime()-7200000).toLocaleTimeString('ko-KR',{hour12:false,hour:'2-digit',minute:'2-digit'});
     document.getElementById('clock-us').textContent=new Date(now.getTime()-57600000).toLocaleTimeString('ko-KR',{hour12:false,hour:'2-digit',minute:'2-digit'});
+    document.getElementById('clock-utc').textContent=now.toLocaleTimeString('ko-KR',{timeZone:'UTC',hour12:false,hour:'2-digit',minute:'2-digit'});
   },1000);
 }
 
