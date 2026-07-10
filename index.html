@@ -1287,7 +1287,7 @@ function fetchKpiData(){
       }
     }
   }catch(e){}
-  fetch(KPI_API_URL).then(function(r){return r.json();}).then(function(data){
+  fetch(KPI_API_URL+'?t='+Date.now()).then(function(r){return r.json();}).then(function(data){
     if(data&&data.success){
       try{localStorage.setItem(cacheKey,JSON.stringify({date:today,hour:hour,minute:new Date().getMinutes(),data:data}));}catch(e){}
       applyKpiData(data);
