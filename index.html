@@ -957,9 +957,9 @@ function renderSpecs(){
 
 /* ── Archive (meetings) ── */
 function renderArchive(type){
-  var iconMap={weekly:'ti-file-text text-blue-500',internal:'ti-lock text-amber-500'};
-  var colorMap={weekly:'blue',internal:'amber'};
-  var titles={weekly:'주간회의',internal:'내부 회의'};
+  var iconMap={weekly:'ti-file-text text-blue-500',report:'ti-report text-emerald-500',internal:'ti-lock text-amber-500'};
+  var colorMap={weekly:'blue',report:'emerald',internal:'amber'};
+  var titles={weekly:'주간회의',report:'보고',internal:'내부 회의'};
   var clr=colorMap[type]||'blue';
   var c=document.getElementById('content-area');
 
