@@ -1282,7 +1282,7 @@ function fetchKpiData(){
       var cachedAt=cached.hour*60+(cached.minute||0);
       var nowAt=hour*60+new Date().getMinutes();
       var past8=hour>=8;var cachedBefore8=cached.hour<8;
-      if(!(past8&&cachedBefore8)&&(nowAt-cachedAt)<60){
+      if(!(past8&&cachedBefore8)&&(nowAt-cachedAt)<5){
         applyKpiData(cached.data);return;
       }
     }
