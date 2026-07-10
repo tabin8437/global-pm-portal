@@ -516,7 +516,8 @@ function fetchMeetings(type, cb){
 }
 
 function apiPostMeeting(params){
-  return fetch(KPI_API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(params)}).then(function(r){return r.json();});
+  var qs=Object.keys(params).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(params[k]||'');}).join('&');
+  return fetch(KPI_API_URL+'?'+qs+'&t='+Date.now()).then(function(r){return r.json();});
 }
 var isAdmin=false;
 var currentPage='dashboard';
