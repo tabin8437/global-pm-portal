@@ -1246,7 +1246,11 @@ function runClocks(){
   },1000);
 }
 
-function fmtNum(n){if(n>=100000000)return(n/100000000).toFixed(1)+'억';if(n>=10000)return(n/10000).toFixed(1)+'만';return n.toLocaleString();}
+function fmtNum(n){
+  if(n>=100000000){var v=Math.round(n/10000000)/10;return(v%1===0?v.toFixed(0):v.toFixed(1))+'억';}
+  if(n>=10000){var v=Math.round(n/1000)/10;return(v%1===0?v.toFixed(0):v.toFixed(1))+'만';}
+  return Math.round(n).toLocaleString();
+}
 function parseChange(s){var str=String(s||'');var isDown=str.indexOf('▼')!==-1||str.indexOf('-')!==-1;var num=str.replace(/[▲▼\s]/g,'');return{text:(isDown?'▼':'▲')+num,dir:isDown?'down':'up'};}
 
 function fetchKpiData(){
