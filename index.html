@@ -972,6 +972,7 @@ function renderArchive(type){
     +'<div class="form-group"><label>참석자</label><input type="text" id="mt-attendees" placeholder="홍길동, 김철수"></div></div>'
     +'<div class="form-group"><label>요약</label><input type="text" id="mt-summary" placeholder="한 줄 요약"></div>'
     +'<div class="form-group"><label>상세 내용</label><textarea id="mt-details" style="min-height:120px" placeholder="회의 내용 상세 기록"></textarea></div>'
+    +'<div class="form-group"><label>문서 링크 (선택)</label><input type="text" id="mt-file" placeholder="구글 드라이브 · 스프레드시트 URL"></div>'
     +'<div class="form-group"><label>이미지 URL (선택)</label><input type="text" id="mt-imageUrl" placeholder="구글 드라이브 공유 URL"></div>'
     +'<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:8px">'
     +'<button class="btn btn-sm" onclick="closeMeetingForm()">취소</button>'
@@ -1000,6 +1001,8 @@ function renderArchive(type){
             +(m.author?'<span class="text-gray-300">·</span><span class="text-gray-400">'+esc(m.author.split('@')[0])+'</span>':'')
             +'</div></div>'
             +'<div class="flex gap-1 shrink-0">'
+            +(m.file?'<a href="'+esc(m.file)+'" target="_blank" class="btn btn-sm btn-ghost text-gray-400 hover:text-'+clr+'-600" title="새창열기"><i class="ti ti-external-link"></i></a>':'')
+            +(m.file?'<button class="btn btn-sm btn-ghost text-gray-400 hover:text-'+clr+'-600" title="미리보기" onclick="previewMeeting(\''+esc(m.file)+'\')"><i class="ti ti-eye"></i></button>':'')
             +'<button class="btn btn-sm btn-ghost text-gray-400 hover:text-'+clr+'-600" onclick="openMeetingFormEdit(\''+esc(m.id)+'\',\''+type+'\')"><i class="ti ti-pencil"></i></button>'
             +'<button class="btn btn-sm btn-ghost text-gray-400 hover:text-red-500" onclick="deleteMeetingRow(\''+esc(m.id)+'\',\''+type+'\')"><i class="ti ti-trash"></i></button>'
             +'</div></div>'
@@ -1036,6 +1039,7 @@ function openMeetingFormEdit(id, type){
   document.getElementById('mt-summary').value=m.summary||'';
   document.getElementById('mt-details').value=m.details||'';
   document.getElementById('mt-imageUrl').value=m.imageUrl||'';
+  if(document.getElementById('mt-file'))document.getElementById('mt-file').value=m.file||'';
   document.getElementById('mt-form-title').textContent='회의록 수정';
   document.getElementById('mt-form').style.display='block';
   document.getElementById('mt-form').scrollIntoView({behavior:'smooth'});
@@ -1051,6 +1055,7 @@ function saveMeeting(){
     attendees:document.getElementById('mt-attendees').value.trim(),
     summary:document.getElementById('mt-summary').value.trim(),
     details:document.getElementById('mt-details').value.trim(),
+    file:document.getElementById('mt-file')?document.getElementById('mt-file').value.trim():'',
     imageUrl:document.getElementById('mt-imageUrl').value.trim(),
     author:_sessionAuth?_sessionAuth.email:''
   };
@@ -1065,6 +1070,18 @@ function saveMeeting(){
       renderArchive(type);
     });
   }).catch(function(e){alert('저장 실패: '+e.message);});
+}
+function previewMeeting(url){
+  var overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML='<div style="width:100%;max-width:1100px;height:85vh;background:#fff;border-radius:16px;overflow:hidden;display:flex;flex-direction:column">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #e5e7eb">'
+    +'<span style="font-weight:700;font-size:14px">미리보기</span>'
+    +'<div style="display:flex;gap:8px"><a href="'+url+'" target="_blank" style="font-size:12px;color:#6366f1;font-weight:600"><i class="ti ti-external-link"></i> 새창열기</a>'
+    +'<button onclick="this.closest(\'div[style*=inset]\').remove()" style="font-size:20px;color:#9ca3af;background:none;border:none;cursor:pointer">×</button></div></div>'
+    +'<iframe src="'+url+'" style="flex:1;border:none;width:100%"></iframe></div>';
+  overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
+  document.body.appendChild(overlay);
 }
 function deleteMeetingRow(id, type){
   if(!confirm('삭제하시겠습니까?'))return;
