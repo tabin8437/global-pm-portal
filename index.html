@@ -996,7 +996,7 @@ function renderArchive(type){
             +'<div class="flex items-start justify-between gap-2">'
             +'<div class="flex-1 min-w-0"><div class="font-bold text-sm text-gray-900 leading-snug">'+esc(m.title)+'</div>'
             +'<div class="flex flex-wrap items-center gap-2 mt-2 text-[11px] text-gray-500">'
-            +'<span class="inline-flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded-md font-semibold"><i class="ti ti-calendar text-gray-400"></i> '+esc(m.date)+'</span>'
+            +'<span class="inline-flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded-md font-semibold"><i class="ti ti-calendar text-gray-400"></i> '+esc(String(m.date||'').slice(0,10))+'</span>'
             +(m.attendees?'<span class="inline-flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded-md font-semibold"><i class="ti ti-users text-gray-400"></i> '+esc(m.attendees)+'</span>':'')
             +(m.author?'<span class="text-gray-300">·</span><span class="text-gray-400">'+esc(m.author.split('@')[0])+'</span>':'')
             +'</div></div>'
@@ -1034,7 +1034,7 @@ function openMeetingFormEdit(id, type){
   if(!m)return;
   editTarget={type:type,id:id};
   document.getElementById('mt-title').value=m.title||'';
-  document.getElementById('mt-date').value=m.date||'';
+  document.getElementById('mt-date').value=String(m.date||'').slice(0,10);
   document.getElementById('mt-attendees').value=m.attendees||'';
   document.getElementById('mt-summary').value=m.summary||'';
   document.getElementById('mt-details').value=m.details||'';
