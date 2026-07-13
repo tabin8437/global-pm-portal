@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>로컬라이제이션 롤백 감지</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4f46e5">
+<link rel="icon" href="icon-192.png">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,'Pretendard','Segoe UI',sans-serif;background:#f3f4f6;color:#1f2937;padding:24px}
+.wrap{max-width:1100px;margin:0 auto}
+h1{font-size:20px;font-weight:800;margin-bottom:4px}
+.sub{font-size:12px;color:#6b7280;margin-bottom:20px}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:18px 20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.card h2{font-size:14px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.drop{border:2px dashed #d1d5db;border-radius:10px;padding:22px;text-align:center;color:#6b7280;font-size:13px;cursor:pointer;transition:.15s}
+.drop:hover,.drop.drag{border-color:#6366f1;background:#eef2ff;color:#4338ca}
+.drop input{display:none}
+.status{font-size:12px;color:#374151;margin-top:10px;padding:8px 10px;background:#f9fafb;border-radius:8px;display:none}
+.status.show{display:block}
+.status b{color:#111827}
+.btn{border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;transition:.15s}
+.btn-primary{background:#4f46e5;color:#fff}
+.btn-primary:hover{background:#4338ca}
+.btn-ghost{background:#f3f4f6;color:#374151}
+.btn-ghost:hover{background:#e5e7eb}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.progress{height:6px;border-radius:3px;background:#e5e7eb;overflow:hidden;margin-top:10px;display:none}
+.progress.show{display:block}
+.progress-bar{height:100%;background:#4f46e5;width:0%;transition:width .15s}
+.summary{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.summary-card{flex:1;min-width:140px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px}
+.summary-card .num{font-size:24px;font-weight:900}
+.summary-card .label{font-size:11px;color:#6b7280;margin-top:2px}
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tab{padding:6px 14px;border-radius:999px;font-size:12px;font-weight:700;background:#f3f4f6;color:#6b7280;cursor:pointer;border:1px solid transparent}
+.tab.active{background:#eef2ff;color:#4338ca;border-color:#c7d2fe}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#f9fafb;text-align:left;padding:8px 10px;font-weight:700;color:#374151;border-bottom:1px solid #e5e7eb;white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid #f3f4f6;vertical-align:top}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.badge-rollback{background:#fee2e2;color:#b91c1c}
+.badge-normal{background:#fef3c7;color:#92400e}
+.badge-unknown{background:#e5e7eb;color:#4b5563}
+.badge-added{background:#dbeafe;color:#1d4ed8}
+.badge-removed{background:#f3e8ff;color:#7e22ce}
+.badge-mistranslation{background:#cffafe;color:#0e7490}
+.badge-pass{background:#f1f5f9;color:#475569}
+.badge-glossary{background:#ede9fe;color:#6d28d9}
+.badge-script_issue{background:#ffe4e6;color:#be123c}
+.empty{text-align:center;color:#9ca3af;padding:30px;font-size:13px}
+.table-wrap{max-height:560px;overflow:auto;border:1px solid #e5e7eb;border-radius:10px}
+.diff-old{color:#9ca3af;text-decoration:line-through;font-size:11px}
+.diff-new{color:#111827;font-weight:600}
+.idx{font-weight:700;color:#4f46e5}
+.warn{font-size:11px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;padding:8px 10px;border-radius:8px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div style="font-size:11px;color:#9ca3af;margin-bottom:6px">made by 조현영 yeriel.jo · <span id="app-version">v2026.07.10-3 (전언어 검사)</span></div>
+  <h1>🌏 로컬라이제이션 롤백 감지</h1>
+  <div class="sub">정상본 대비 새 엑셀의 번체/간체 스크립트 롤백 + 일반 변경을 자동으로 잡아줍니다. 모든 처리는 브라우저 안에서만 일어나고, 파일은 외부로 전송되지 않습니다.</div>
+
+  <div class="card">
+    <h2>① 정상본 (기준 파일)</h2>
+    <div id="baseline-status" class="status"></div>
+    <div class="drop" id="baseline-drop">
+      <div id="baseline-drop-text">엑셀 파일을 끌어다 놓거나 클릭해서 정상본을 등록하세요</div>
+      <input type="file" id="baseline-input" accept=".xlsx">
+    </div>
+    <div class="row">
+      <button class="btn btn-ghost" id="baseline-clear" style="display:none">정상본 삭제</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>② 새 파일 (비교할 파일)</h2>
+    <div class="row" style="margin-top:0;margin-bottom:10px">
+      <label style="font-size:12px;color:#374151;font-weight:700">이 인덱스 이하는 모든 검사에서 제외:</label>
+      <input type="number" id="index-min" style="width:120px;padding:6px 8px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-weight:700;color:#4f46e5">
+      <span class="sub" style="margin:0">값을 바꾼 뒤 새 파일을 다시 올리면(또는 오역 검사를 다시 실행하면) 적용됩니다</span>
+    </div>
+    <div class="drop" id="new-drop">
+      <div id="new-drop-text">정상본을 먼저 등록한 뒤, 비교할 새 엑셀 파일을 올려주세요</div>
+      <input type="file" id="new-input" accept=".xlsx">
+    </div>
+    <div class="progress" id="progress"><div class="progress-bar" id="progress-bar"></div></div>
+    <div id="progress-text" class="sub" style="margin-top:4px"></div>
+  </div>
+
+  <div class="card">
+    <h2>③ 의미 기반 오역 탐지 <span style="font-weight:400;color:#9ca3af;font-size:11px">(선택 기능)</span></h2>
+    <div class="sub" style="margin-bottom:10px"><b>🧠 오역 확정</b>은 한글 원문과 번역(전 언어)의 뜻이 완전히 다른, AI가 통계적으로 확신하는 경우만 보여줍니다. 짧은 아이템/몬스터명은 AI 판별이 불안정해서 자동 확정하지 않고 <b>⚠️ PASS(검토 필요)</b> 탭에 따로 모아둡니다. ② 카드에서 설정한 제외 기준 인덱스 초과 행만 검사합니다. 최초 실행 시 AI 모델을 한 번만 내려받으며, 이후 계산은 브라우저 안에서만 이뤄져 텍스트가 외부로 전송되지 않습니다. (② 새 파일 업로드 후 사용 가능)</div>
+    <div class="row">
+      <label style="font-size:12px;color:#374151">표시할 의심 항목 수</label>
+      <input type="range" id="mt-topn" min="100" max="3000" step="100" value="500" style="width:160px">
+      <span id="mt-topn-val" style="font-size:12px;color:#4f46e5;font-weight:700">500</span>
+      <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#374151;cursor:pointer">
+        <input type="checkbox" id="mt-topn-all"> 전체 표시(제한 없음)
+      </label>
+      <button class="btn btn-primary" id="mt-run-btn">🧠 오역 검사 시작</button>
+    </div>
+    <div class="row" style="margin-top:12px;align-items:stretch">
+      <div class="drop" id="gloss-drop" style="flex:1;padding:12px">
+        <div id="gloss-drop-text">📖 글로서리(용어집)를 올리면 ② 새 파일 검사 때 "한글 원문 전체가 글로서리 용어와 일치하는 행"의 각 언어 번역이 등록된 형태 그대로인지 검사합니다 — 단어를 쪼개거나 문장을 끊어서 보지 않습니다 (xlsx/csv, 언어 열 자동 인식)</div>
+        <input type="file" id="gloss-input" accept=".xlsx,.csv">
+      </div>
+      <button class="btn btn-ghost" id="gloss-clear" style="display:none">글로서리 삭제</button>
+    </div>
+    <div id="gloss-status" class="status"></div>
+    <div class="progress" id="mt-progress"><div class="progress-bar" id="mt-progress-bar"></div></div>
+    <div id="mt-progress-text" class="sub" style="margin-top:4px"></div>
+    <div class="warn">⚠️ 이 기능은 AI 추정치이며 100% 정확하지 않습니다. 유사도 %의 절대값보다 <b>순위(의심 N위)</b>가 중요합니다 — 위에서부터 검토하다가 정상 번역만 연속되면 멈추세요. 실제 오역 여부는 반드시 사람이 확인해주세요.</div>
+  </div>
+
+  <div id="result-section" style="display:none">
+    <div class="summary">
+      <div class="summary-card"><div class="num" id="sum-rollback" style="color:#b91c1c">0</div><div class="label">🚨 간체↔번체 바뀜</div></div>
+      <div class="summary-card"><div class="num" id="sum-script_issue" style="color:#be123c">0</div><div class="label">🚨 간체 칸 번체 혼입</div></div>
+      <div class="summary-card"><div class="num" id="sum-normal" style="color:#92400e">0</div><div class="label">📝 일반 변경(검토 필요)</div></div>
+      <div class="summary-card"><div class="num" id="sum-mistranslation" style="color:#0e7490">0</div><div class="label">🧠 오역 확정(의미 불일치)</div></div>
+      <div class="summary-card"><div class="num" id="sum-pass" style="color:#475569">0</div><div class="label">⚠️ PASS(검토 필요, 확신도 낮음)</div></div>
+      <div class="summary-card"><div class="num" id="sum-glossary" style="color:#6d28d9">0</div><div class="label">📖 글로서리 기준(전체)</div></div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-top:0">
+        <div class="tabs" id="tabs">
+          <div class="tab active" data-filter="all">전체</div>
+          <div class="tab" data-filter="rollback">🚨 간체↔번체 바뀜만</div>
+          <div class="tab" data-filter="script_issue">🚨 간체 칸 번체 혼입만</div>
+          <div class="tab" data-filter="normal">📝 일반 변경만</div>
+          <div class="tab" data-filter="mistranslation">🧠 오역 확정만</div>
+          <div class="tab" data-filter="pass">⚠️ PASS(검토용)만</div>
+          <div class="tab" data-filter="glossary">📖 글로서리 기준만</div>
+        </div>
+        <button class="btn btn-primary" id="export-btn">결과 엑셀로 내보내기</button>
+      </div>
+      <div class="table-wrap" style="margin-top:10px">
+        <table>
+          <thead><tr><th>Index</th><th>한글 원문</th><th>언어</th><th>판정</th><th>정상본 텍스트</th><th>새파일 텍스트</th></tr></thead>
+          <tbody id="result-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// 버전 표기 — 화면 좌상단에 표시되어 지금 어떤 버전이 실행 중인지 바로 확인 가능
+const APP_VERSION = '2026.07.10-3';
+document.getElementById('app-version').textContent = 'v' + APP_VERSION + ' (전언어 검사)';
+// 브라우저가 오래된 캐시 버전을 로드한 경우 최신 버전으로 1회 자동 새로고침
+if(location.protocol.startsWith('http')){
+  fetch(location.pathname, { cache:'no-store' }).then(r=> r.ok ? r.text() : null).then(html=>{
+    if(!html) return;
+    const m = html.match(/APP_VERSION = '([^']+)'/);
+    if(m && m[1] !== APP_VERSION && !sessionStorage.getItem('reloaded_'+m[1])){
+      sessionStorage.setItem('reloaded_'+m[1], '1');
+      location.reload();
+    }
+  }).catch(()=>{});
+}
+
+const SHEET_NAME = 'String';
+const DATA_START_ROW = 5; // 1~4행 헤더, 5행부터 데이터
+const COMPARE_COLUMNS = ['Name<ko>','Name<en>','Name<ch>','Name<ja>','Name<vi>','Name<es>','Name<zh>','Name<th>'];
+const SCRIPT_COLUMNS = new Set(['Name<ch>','Name<zh>']);
+const LANG_LABEL = {
+  'Name<ko>':'ko', 'Name<en>':'en', 'Name<ch>':'ch(번체)', 'Name<ja>':'ja',
+  'Name<vi>':'vi', 'Name<es>':'es', 'Name<zh>':'zh(간체)', 'Name<th>':'th', '(전체)':'(전체)'
+};
+const DB_NAME = 'rollback_check_db', DB_STORE = 'baseline';
+
+let convT2S = null, convS2T = null;
+function initOpenCC(){
+  try{
+    convT2S = OpenCC.Converter({ from: 'tw', to: 'cn' });
+    convS2T = OpenCC.Converter({ from: 'cn', to: 'tw' });
+  }catch(e){ console.error('OpenCC 초기화 실패', e); }
+}
+initOpenCC();
+
+const EMB_STORE = 'embeddings'; // 오역 탐지용 임베딩 캐시 (텍스트별 계산 결과 저장 → 재실행 시 즉시 완료)
+function idbOpen(){
+  return new Promise((resolve,reject)=>{
+    const req = indexedDB.open(DB_NAME, 2);
+    req.onupgradeneeded = ()=>{
+      const db = req.result;
+      if(!db.objectStoreNames.contains(DB_STORE)) db.createObjectStore(DB_STORE);
+      if(!db.objectStoreNames.contains(EMB_STORE)) db.createObjectStore(EMB_STORE);
+    };
+    req.onsuccess = ()=> resolve(req.result);
+    req.onerror = ()=> reject(req.error);
+  });
+}
+async function idbSet(key, val){
+  const db = await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(DB_STORE,'readwrite');
+    tx.objectStore(DB_STORE).put(val, key);
+    tx.oncomplete = ()=> resolve();
+    tx.onerror = ()=> reject(tx.error);
+  });
+}
+async function idbGet(key){
+  const db = await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(DB_STORE,'readonly');
+    const req = tx.objectStore(DB_STORE).get(key);
+    req.onsuccess = ()=> resolve(req.result);
+    req.onerror = ()=> reject(req.error);
+  });
+}
+async function idbDel(key){
+  const db = await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(DB_STORE,'readwrite');
+    tx.objectStore(DB_STORE).delete(key);
+    tx.oncomplete = ()=> resolve();
+    tx.onerror = ()=> reject(tx.error);
+  });
+}
+
+// 엑셀(arrayBuffer) -> { index: {컬럼명: 값} } 형태로 파싱
+// Index 셀이 '=A{이전행}+1' 수식이고 캐시값이 없는 경우를 직접 +1 계산으로 복원
+function parseWorkbook(arrayBuffer){
+  const wb = XLSX.read(arrayBuffer, { type:'array', cellFormula:true });
+  if(!wb.SheetNames.includes(SHEET_NAME)) throw new Error(`'${SHEET_NAME}' 시트를 찾을 수 없습니다. 시트 목록: ${wb.SheetNames.join(', ')}`);
+  const ws = wb.Sheets[SHEET_NAME];
+  const ref = XLSX.utils.decode_range(ws['!ref']);
+
+  // 헤더(1행) 읽기 -> 컬럼명 -> 열 인덱스(0-base)
+  const colOf = {};
+  for(let c=ref.s.c; c<=ref.e.c; c++){
+    const cell = ws[XLSX.utils.encode_cell({r:0,c})];
+    const name = cell ? cell.v : null;
+    if(name) colOf[name] = c;
+  }
+  const required = ['Index', ...COMPARE_COLUMNS];
+  const missing = required.filter(c => !(c in colOf));
+  if(missing.length) throw new Error('필수 컬럼이 헤더에 없습니다: ' + missing.join(', '));
+
+  const idxCol = colOf['Index'];
+  let lastIdxVal = null; // 직전 행에서 해석된 Index 값 (이어가기용)
+  const data = {};
+
+  for(let r=DATA_START_ROW-1; r<=ref.e.r; r++){
+    const idxCell = ws[XLSX.utils.encode_cell({r, c:idxCol})];
+    const entry = {};
+    let hasAnyContent = false;
+    for(const col of COMPARE_COLUMNS){
+      const cell = ws[XLSX.utils.encode_cell({r, c:colOf[col]})];
+      const v = cell && cell.v != null ? String(cell.v) : '';
+      if(v) hasAnyContent = true;
+      entry[col] = v;
+    }
+
+    let idxVal = null;
+    if(idxCell && idxCell.v != null){
+      // 셀에 실제 숫자(캐시된 계산값 포함)가 있으면 그대로 사용
+      idxVal = idxCell.v;
+    } else if(lastIdxVal != null && hasAnyContent){
+      // Index 셀이 비어있거나(SheetJS가 공유 수식을 못 읽는 경우 포함) 수식만 있고 캐시값이 없는 경우,
+      // 이 시트의 Index는 항상 "바로 위 행 + 1" 패턴이므로 이어서 계산
+      idxVal = lastIdxVal + 1;
+    }
+
+    if(idxVal == null) continue;
+    lastIdxVal = idxVal;
+    data[idxVal] = entry;
+  }
+  return data;
+}
+
+function isScriptRollback(oldText, newText){
+  if(!convT2S || !convS2T) return null; // OpenCC 로드 실패
+  if(!oldText || !newText) return false;
+  const toSimplified = convT2S(newText);
+  const toTraditional = convS2T(newText);
+  return toSimplified === oldText || toTraditional === oldText;
+}
+
+// 전역 검사 범위: 인덱스 891001 이하는 모든 검사에서 제외 (기존 검수 완료분)
+// 화면의 입력칸에서 조절 가능하며 브라우저에 저장되어 유지된다.
+let INDEX_MIN = Number(localStorage.getItem('index_min')) || 891001;
+const idxChecked = idx => Number(idx) > INDEX_MIN;
+{
+  const inp = document.getElementById('index-min');
+  inp.value = INDEX_MIN;
+  inp.addEventListener('change', ()=>{
+    const v = Number(inp.value);
+    if(Number.isFinite(v) && v >= 0){
+      INDEX_MIN = v;
+      localStorage.setItem('index_min', String(v));
+    } else {
+      inp.value = INDEX_MIN;
+    }
+  });
+}
+
+function compareData(baseline, newData){
+  const results = [];
+  const allIdx = new Set([...Object.keys(baseline), ...Object.keys(newData)]);
+  const sorted = [...allIdx].sort((a,b)=> Number(a)-Number(b));
+
+  for(const idx of sorted){
+    if(!idxChecked(idx)) continue; // 인덱스 891001 이하 제외
+    const base = baseline[idx], neu = newData[idx];
+    // 신규 추가/삭제된 인덱스는 결과에서 제외 (사용자 요청으로 기능 삭제)
+    if(base === undefined || neu === undefined) continue;
+    const koText = base['Name<ko>'] || '';
+    for(const col of COMPARE_COLUMNS){
+      const oldText = base[col], newText = neu[col];
+      if(oldText === newText) continue;
+      if(!newText) continue; // 새파일 텍스트가 빈값인 일반/롤백 변경은 결과에서 제외
+      let kind, label;
+      if(SCRIPT_COLUMNS.has(col)){
+        const rollback = isScriptRollback(oldText, newText);
+        if(rollback === null){ kind='unknown'; label='판별불가(OpenCC 미로드)'; }
+        else if(rollback){
+          kind='rollback';
+          label = col === 'Name<zh>' ? '🚨 간체인데 번체로 변경됨' : '🚨 번체인데 간체로 변경됨';
+        }
+        else { kind='normal'; label='📝 일반 변경(검토 필요)'; }
+      } else {
+        kind='normal'; label='📝 일반 변경(검토 필요)';
+      }
+      results.push({ idx, lang:col, kind, verdictLabel:label, oldText, newText, koText:(col==='Name<ko>'?'':koText) });
+    }
+  }
+  return results;
+}
+
+// ── 간체 칸에 번체 글자가 섞여 있는지 검사 ──
+// 새 파일의 Name<zh>(간체) 칸을 완전 간체로 변환했을 때 값이 달라지면 번체 글자가 섞여 있다는 뜻.
+function checkZhContamination(newData){
+  if(!convT2S) return [];
+  const results = [];
+  for(const idx of Object.keys(newData)){
+    if(!idxChecked(idx)) continue;
+    const zh = newData[idx]['Name<zh>'];
+    if(!zh) continue;
+    const zhBody = stripMarkup(zh); // 태그/플레이스홀더는 판정에서 제외
+    if(!zhBody) continue;
+    const purified = convT2S(zhBody);
+    if(purified !== zhBody){
+      results.push({ idx, lang:'Name<zh>', kind:'script_issue',
+        verdictLabel:`🚨 간체 칸에 번체 글자 혼입 (완전 간체 변환: ${purified})`,
+        oldText:'', newText: zh, koText: newData[idx]['Name<ko>'] || '' });
+    }
+  }
+  return results;
+}
+
+// ── 글로서리 기준 검사 (전 언어) ──
+// 단어를 쪼개거나 문장을 끊어서 보지 않는다 — 한글 원문 전체가 글로서리 용어와 정확히 일치하는 행만 대상.
+// 그 행의 각 언어 텍스트가 글로서리에 등록된 형태 그대로면 문제없음(표시 안 함), 다르면 이슈로 표시.
+function checkGlossaryExact(newData, glossary){
+  if(!glossary || !glossary.entries || !glossary.entries.length) return [];
+  const byKo = new Map();
+  for(const e of glossary.entries) byKo.set(e.ko, e);
+  const results = [];
+  for(const idx of Object.keys(newData)){
+    if(!idxChecked(idx)) continue;
+    const koNorm = stripMarkup(newData[idx]['Name<ko>'] || '').trim();
+    if(!koNorm) continue;
+    const entry = byKo.get(koNorm);
+    if(!entry || !entry.tr) continue; // 원문 전체가 글로서리 용어가 아니면 검사 대상 아님
+    for(const {col, key} of AI_LANGS){
+      const alts = entry.tr[key];
+      if(!alts || !alts.length) continue; // 글로서리에 이 언어 번역이 없으면 판단 불가
+      const txtRaw = newData[idx][col];
+      if(!txtRaw) continue;
+      const txt = stripMarkup(txtRaw).trim();
+      if(!txt) continue;
+      const lower = (key === 'en' || key === 'es' || key === 'vi');
+      const matched = alts.some(a=> lower ? a.trim().toLowerCase() === txt.toLowerCase() : a.trim() === txt);
+      if(!matched){
+        results.push({ idx, lang: col, kind:'glossary',
+          verdictLabel:`📖 글로서리 기준과 다름 — 등록 형태: ${alts.join(' / ')}`,
+          oldText: alts[0], newText: txtRaw, koText: koNorm });
+      }
+    }
+  }
+  return results;
+}
+
+// ── 검사 완료 알림 ──
+// 검사 시작 시(사용자 클릭/드롭 시점) 권한을 요청하고, 완료되면 Windows 알림을 띄운다.
+// 창이 포커스 상태이고 검사가 5초 미만이면 화면에서 바로 보이므로 알림 생략.
+async function ensureNotifyPermission(){
+  if(!('Notification' in window)) return false;
+  if(Notification.permission === 'granted') return true;
+  if(Notification.permission === 'denied') return false;
+  try{ return (await Notification.requestPermission()) === 'granted'; }catch(e){ return false; }
+}
+async function notifyDone(title, body, startedAt){
+  if(document.hasFocus() && (Date.now() - startedAt) < 5000) return;
+  if(!('Notification' in window) || Notification.permission !== 'granted') return;
+  const opts = { body, icon:'icon-192.png', badge:'icon-192.png' };
+  try{
+    const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null;
+    if(reg && reg.showNotification){ reg.showNotification(title, opts); return; }
+  }catch(e){}
+  try{
+    const n = new Notification(title, opts);
+    n.onclick = ()=>{ window.focus(); n.close(); };
+  }catch(e){}
+}
+
+// ── 글로서리(용어집) 기반 판정 ──
+// 확정된 용어 번역쌍을 기준으로: 한글 원문에 용어가 있는데 간체에 대응 번역이 없으면 강한 오역 신호,
+// 제대로 있으면 정상 신호로 사용한다.
+const GLOSS_LANG_LABEL = { zh:'간체', ch:'번체', en:'영어', es:'스페인어', th:'태국어', ja:'일본어', vi:'베트남어' };
+const GLOSS_VALID = { zh:/[一-鿿]/, ch:/[一-鿿]/, en:/[A-Za-z]/, es:/[A-Za-z]/, th:/[฀-๿]/, ja:/[ぁ-ヿ一-鿿]/, vi:/[A-Za-zÀ-ỹ]/ };
+
+function parseGlossarySheet(ws){
+  const rows = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
+  if(!rows.length) return { entries: [], langs: [] };
+
+  // 헤더에서 한글 열 + 대상 언어 열들(간체/번체/영어/스페인어/태국어) 자동 인식
+  const KO_RE = /ko|kor|한국|한글|원문/i;
+  const header = (rows[0]||[]).map(c=> String(c||''));
+  let koCol = header.findIndex(h=> KO_RE.test(h));
+  const used = [];
+  const colOfLang = {};
+  const tryAssign = (lang, patterns)=>{
+    for(const re of patterns){
+      const i = header.findIndex((h,idx)=> idx!==koCol && !used.includes(idx) && re.test(h));
+      if(i !== -1){ colOfLang[lang] = i; used.push(i); return; }
+    }
+  };
+  tryAssign('zh', [/간체|zh-?cn|chs|simplified/i]);
+  tryAssign('ch', [/번체|zh-?tw|cht|traditional/i]);
+  if(colOfLang.zh === undefined) tryAssign('zh', [/zh|중문|중국/i]);
+  tryAssign('en', [/영어|english/i, /(^|[^A-Za-z])en([^A-Za-z]|$)/i]);
+  tryAssign('es', [/스페인|spanish/i, /(^|[^A-Za-z])es([^A-Za-z]|$)/i]);
+  tryAssign('th', [/태국|thai/i, /(^|[^A-Za-z])th([^A-Za-z]|$)/i]);
+  tryAssign('ja', [/일본|japanese/i, /(^|[^A-Za-z])(ja|jp)([^A-Za-z]|$)/i]);
+  tryAssign('vi', [/베트남|vietnam/i, /(^|[^A-Za-z])vi([^A-Za-z]|$)/i]);
+  let dataStart = 1;
+  if(koCol === -1 || !Object.keys(colOfLang).length){ koCol = 0; colOfLang.zh = 1; dataStart = 0; } // 헤더 없으면 A=한글, B=간체
+
+  const hasHangulG = /[가-힣]/;
+  const byKo = new Map(); // koTerm -> { lang: Set(대안들) }
+  for(let r=dataStart; r<rows.length; r++){
+    const koRaw = String(rows[r][koCol]||'').trim();
+    if(!koRaw || !hasHangulG.test(koRaw)) continue;
+    // 한 셀에 여러 표기가 있는 경우( / ; | 구분 ) 모두 인정.
+    // (공백 포함 여부로 "고유명사 vs 일반 대사"를 가르려 했으나, 실제 글로서리는 "지혜의 샘물",
+    //  "쉴드 메이든"처럼 공백 있는 고유명사가 대다수라 그 기준으로는 걸러낼 수 없었다 — 되돌림)
+    const koTerms = koRaw.split(/[;|/]/).map(s=>s.trim()).filter(s=> s.length>=2 && hasHangulG.test(s));
+    if(!koTerms.length) continue;
+    for(const [lang, col] of Object.entries(colOfLang)){
+      const raw = String(rows[r][col]||'').trim();
+      if(!raw || !GLOSS_VALID[lang].test(raw)) continue;
+      const alts = raw.split(/[;|/]/).map(s=>s.trim()).filter(Boolean);
+      if(!alts.length) continue;
+      for(const ko of koTerms){
+        if(!byKo.has(ko)) byKo.set(ko, {});
+        const tr = byKo.get(ko);
+        if(!tr[lang]) tr[lang] = new Set();
+        alts.forEach(a=> tr[lang].add(a));
+      }
+    }
+  }
+  const entries = [...byKo.entries()].map(([ko, tr])=> ({
+    ko, tr: Object.fromEntries(Object.entries(tr).map(([l,s])=> [l, [...s]]))
+  }));
+  return { entries, langs: Object.keys(colOfLang) };
+}
+
+function parseGlossary(arrayBuffer, fileName){
+  const wb = XLSX.read(arrayBuffer, { type:'array' });
+  // 글로서리 시트 자동 탐색: 이름이 글로서리스러운 시트 우선, 아니면 유효 용어쌍이 가장 많은 시트
+  const nameRe = /glossary|용어|글로서리/i;
+  let best = { entries: [], langs: [], sheet: null };
+  const ordered = [...wb.SheetNames].sort((a,b)=> (nameRe.test(b)?1:0) - (nameRe.test(a)?1:0));
+  for(const sn of ordered){
+    const parsed = parseGlossarySheet(wb.Sheets[sn]);
+    if(parsed.entries.length > best.entries.length) best = { entries: parsed.entries, langs: parsed.langs, sheet: sn };
+    if(nameRe.test(sn) && parsed.entries.length) break; // 이름이 맞는 시트에서 찾았으면 확정
+  }
+  if(!best.entries.length) throw new Error('사용할 수 있는 용어쌍을 찾지 못했습니다. 파일의 열 구성을 확인해주세요.');
+  return { name:fileName, sheet:best.sheet, langs:best.langs, entries:best.entries, savedAt: Date.now() };
+}
+
+function setGlossStatus(text){
+  const el = document.getElementById('gloss-status');
+  el.innerHTML = text;
+  el.classList.toggle('show', !!text);
+}
+
+async function handleGlossaryFile(file){
+  setGlossStatus('글로서리 읽는 중...');
+  try{
+    const buf = await file.arrayBuffer();
+    const gloss = parseGlossary(buf, file.name);
+    await idbSet('glossary', gloss);
+    const langsTxt = (gloss.langs||[]).map(l=> GLOSS_LANG_LABEL[l]||l).join('/');
+    setGlossStatus(`📖 글로서리: <b>${escapeHtml(gloss.name)}</b>${gloss.sheet ? ' · 시트: ' + escapeHtml(gloss.sheet) : ''} · ${gloss.entries.length.toLocaleString()}개 용어${langsTxt ? ' · 검수 언어: ' + langsTxt : ''} — 다음에 새 파일을 올릴 때부터 글로서리 검사가 반영됩니다`);
+    document.getElementById('gloss-clear').style.display = 'inline-block';
+  }catch(e){
+    setGlossStatus('<span style="color:#b91c1c">오류: ' + escapeHtml(e.message) + '</span>');
+  }
+}
+
+// ── 의미 기반 오역(불일치) 탐지 ──
+// 다국어 문장 임베딩 모델을 브라우저 안에서 구동해 한글 원문과 간체 번역의 의미 유사도를 계산한다.
+// 최초 1회 모델 파일만 CDN에서 내려받고, 이후 계산은 전부 로컬(WASM)에서 수행되어 텍스트가 외부로 전송되지 않는다.
+// multilingual-e5: 한-중 번역쌍 판별력이 더 좋은 다국어 모델 (E5 계열은 'query: ' 접두사 필요)
+const MT_MODEL_ID = 'Xenova/multilingual-e5-small';
+const MT_PREFIX = 'query: ';
+let mtExtractor = null, mtLoadingPromise = null, mtDevice = null;
+let lastNewData = null;
+let lastMtScored = []; // 마지막 오역 검사의 전체 후보(의심순 정렬) — 엑셀 내보내기에 전량 포함
+
+async function loadMistranslationModel(onProgress){
+  if(mtExtractor) return mtExtractor;
+  if(mtLoadingPromise) return mtLoadingPromise;
+  mtLoadingPromise = (async ()=>{
+    const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0');
+    env.allowLocalModels = false;
+    let extractor;
+    try{
+      // GPU(WebGPU) 우선 — CPU(WASM) 대비 수 배~수십 배 빠름
+      extractor = await pipeline('feature-extraction', MT_MODEL_ID, { device:'webgpu', dtype:'fp32', progress_callback:onProgress });
+      mtDevice = 'webgpu';
+    }catch(e){
+      console.warn('WebGPU 사용 불가 → CPU(WASM)로 대체:', e.message);
+      extractor = await pipeline('feature-extraction', MT_MODEL_ID, { device:'wasm', dtype:'q8', progress_callback:onProgress });
+      mtDevice = 'wasm';
+    }
+    mtExtractor = extractor;
+    return extractor;
+  })().catch(e=>{ mtLoadingPromise = null; throw e; });
+  return mtLoadingPromise;
+}
+
+// 임베딩 캐시 (IndexedDB) — 같은 텍스트는 두 번 계산하지 않음
+function embKey(text){ return MT_MODEL_ID + '|' + mtDevice + '|' + text; }
+async function embCacheGetMany(keys){
+  if(!keys.length) return [];
+  const db = await idbOpen();
+  return new Promise((resolve)=>{
+    const store = db.transaction(EMB_STORE,'readonly').objectStore(EMB_STORE);
+    const out = new Array(keys.length);
+    let done = 0;
+    keys.forEach((k,i)=>{
+      const r = store.get(k);
+      r.onsuccess = ()=>{ out[i] = r.result || null; if(++done===keys.length) resolve(out); };
+      r.onerror  = ()=>{ out[i] = null;            if(++done===keys.length) resolve(out); };
+    });
+  });
+}
+async function embCacheClear(){
+  const db = await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(EMB_STORE,'readwrite');
+    tx.objectStore(EMB_STORE).clear();
+    tx.oncomplete = ()=> resolve();
+    tx.onerror = ()=> reject(tx.error);
+  });
+}
+async function embCacheSetMany(pairs){
+  if(!pairs.length) return;
+  const db = await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(EMB_STORE,'readwrite');
+    const store = tx.objectStore(EMB_STORE);
+    for(const [k,v] of pairs) store.put(v,k);
+    tx.oncomplete = ()=> resolve();
+    tx.onerror = ()=> reject(tx.error);
+  });
+}
+
+function cosineSim(a, b){
+  let dot = 0;
+  for(let i=0;i<a.length;i++) dot += a[i]*b[i];
+  return dot; // 두 벡터 모두 정규화되어 있으므로 내적 = 코사인 유사도
+}
+
+async function embedBatch(extractor, texts){
+  const output = await extractor(texts, { pooling:'mean', normalize:true });
+  const hidden = output.dims[output.dims.length-1];
+  const vectors = [];
+  for(let i=0;i<texts.length;i++) vectors.push(output.data.slice(i*hidden, (i+1)*hidden));
+  return vectors;
+}
+
+// AI 의미 유사도 검사를 적용할 언어들. multilingual-e5는 100개 이상 언어를 지원하는 모델이라
+// 간체(zh)뿐 아니라 번체/영어/스페인어/태국어도 "한글 원문과 뜻이 통하는지"를 직접 판별할 수 있다.
+const AI_LANGS = [
+  { col:'Name<zh>', key:'zh' },
+  { col:'Name<ch>', key:'ch' },
+  { col:'Name<en>', key:'en' },
+  { col:'Name<es>', key:'es' },
+  { col:'Name<th>', key:'th' },
+  { col:'Name<ja>', key:'ja' },
+  { col:'Name<vi>', key:'vi' }
+];
+
+// 마크업/플레이스홀더 제거 — <span ...>, <#e>, {0}, &amp; 같은 태그는 번역 의미 비교에 노이즈만 더한다
+const _normMemo = new Map();
+function stripMarkup(s){
+  let v = _normMemo.get(s);
+  if(v !== undefined) return v;
+  v = String(s||'')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\{\d+\}/g, ' ')
+    .replace(/&[a-zA-Z#0-9]+;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  _normMemo.set(s, v);
+  return v;
+}
+
+async function detectMistranslations(newData, topN){
+  const hasHangul = /[가-힣]/;
+  // AI 의미 검사 대상: 한글 원문이 2어절 이상이거나(공백 있는 구/문장), 공백 없이 한 단어라도 5자 이상인
+  // (예: "살려주세요"처럼 완결된 문장인데 띄어쓰기가 없는 경우) 행만 포함한다.
+  // 아주 짧은 아이템/스킬명(고유명사, 보통 4자 이하)은 임베딩 유사도가 원래 낮게 나오는 경향이 있어 AI 판별 신뢰도가 낮다
+  // — 실측 검증: 짧은 단어를 그대로 포함시키면 정상 번역의 45%가 오탐되고, 이 기준으로 제한하면 오탐이 0건이 되면서
+  //   진짜 오역은 오히려 더 뚜렷하게(표준편차 5배 이상 벗어남) 잡힌다. 아주 짧은 단어는 글로서리 용어 대조만으로 판별한다.
+  const isAiCheckable = ko => {
+    const words = ko.trim().split(/\s+/).filter(Boolean);
+    return words.length >= 2 || (words[0]||'').length >= 5;
+  };
+  // 문장형(서술어로 끝남, 예: "...하세요","...습니다")인지, 명사구형(아이템/몬스터명, 예: "산화된 종")인지 구분.
+  // 실측 검증: 문장형끼리만 비교하면 정상 번역과 진짜 오역이 z-score로 깔끔하게 갈리지만(정상 최악 -0.4 vs 오역 -4~-8),
+  // 명사구형은 정상 번역도 원래 유사도가 낮아 오역과 통계적으로 뒤섞여(정상 -2.3 vs 오역 -1.0 처럼 역전) 자동 확정이 위험하다.
+  // 그래서 문장형만 "오역 확정"으로 자동 표시하고, 명사구형은 아무리 낮아도 "PASS(검토 필요)"로만 표시한다.
+  // 명사 끝음절과 겹치는 글자(자: 배회자/수호자/관리자, 라: -도라/카메라 등)를 넣으면
+  // 아이템/몬스터명이 문장으로 오분류되어 오역확정에 잘못 올라가므로(실사례 발생),
+  // 명사 끝에 잘 안 나오는 확실한 서술어 종결어미만 잡는다.
+  const looksLikeSentence = ko => /(다|요|까|죠|네|습니다|세요)$/.test(ko.trim());
+  const langRows = {};
+  for(const {col, key} of AI_LANGS){
+    langRows[key] = Object.keys(newData).filter(idx=>{
+      if(!idxChecked(idx)) return false; // 인덱스 891001 이하 제외
+      const ko = stripMarkup(newData[idx]['Name<ko>']), txt = stripMarkup(newData[idx][col]);
+      return ko && hasHangul.test(ko) && isAiCheckable(ko) && txt && GLOSS_VALID[key].test(txt);
+    });
+  }
+  const totalRows = AI_LANGS.reduce((s,{key})=> s + langRows[key].length, 0);
+  if(!totalRows) return [];
+
+  const progress = document.getElementById('mt-progress'), bar = document.getElementById('mt-progress-bar'), ptext = document.getElementById('mt-progress-text');
+  progress.classList.add('show');
+  bar.style.width = '0%';
+
+  // 글로서리 검사는 ② 새 파일 업로드 시(checkGlossaryExact) 별도로 수행 — 여기서는 순수 AI 의미 비교만 한다.
+  let results = [];
+  let bucketA = [], meaningBad = [], meaningPass = [], scoredAll = [];
+  let deviceLabel = null, missing = [];
+
+  // ── 2) AI 의미 유사도 검사 — 검사할 다국어 문장(2어절 이상)이 있을 때만 모델을 불러온다 ──
+  if(totalRows){
+    ptext.textContent = 'AI 모델 불러오는 중... (최초 1회만 다운로드, 이후 브라우저에 캐시됨)';
+    const downloadStartedAt = Date.now();
+    let sawDownload = false;
+    const extractor = await loadMistranslationModel((p)=>{
+      if(p.status === 'progress'){
+        sawDownload = true;
+        const pct = Math.round(p.progress || 0);
+        bar.style.width = (pct*0.2) + '%';
+        ptext.textContent = `AI 모델 다운로드 중... ${pct}%`;
+      }
+    });
+    deviceLabel = mtDevice === 'webgpu' ? 'GPU 가속' : 'CPU';
+    if(sawDownload) notifyDone('📥 AI 모델 다운로드 완료', '이어서 오역 검사를 자동으로 진행합니다', downloadStartedAt);
+
+    // 모델/디바이스가 바뀌면 이전 캐시는 호환되지 않으므로 비움
+    const cacheTag = MT_MODEL_ID + '|' + mtDevice;
+    const prevTag = await idbGet('emb_model');
+    if(prevTag !== cacheTag){
+      await embCacheClear();
+      await idbSet('emb_model', cacheTag);
+    }
+
+    // 중복 제거 — 같은 텍스트는 언어와 무관하게 한 번만 임베딩
+    // (태그/플레이스홀더를 제거한 순수 문장으로 임베딩해야 의미 비교가 정확해진다)
+    const uniqueSet = new Set();
+    for(const {col, key} of AI_LANGS){
+      for(const idx of langRows[key]){
+        uniqueSet.add(stripMarkup(newData[idx]['Name<ko>']));
+        uniqueSet.add(stripMarkup(newData[idx][col]));
+      }
+    }
+    const uniqueTexts = [...uniqueSet];
+
+    ptext.textContent = '이전 계산 결과(캐시) 확인 중...';
+    const cached = await embCacheGetMany(uniqueTexts.map(embKey));
+    const vecMap = new Map();
+    uniqueTexts.forEach((t,i)=>{
+      if(cached[i]) vecMap.set(t, cached[i]);
+      else missing.push(t);
+    });
+
+    const BATCH = mtDevice === 'webgpu' ? 64 : 16;
+    for(let i=0;i<missing.length;i+=BATCH){
+      const chunk = missing.slice(i, i+BATCH);
+      const vecs = await embedBatch(extractor, chunk.map(t=> MT_PREFIX + t));
+      const pairs = [];
+      for(let j=0;j<chunk.length;j++){
+        vecMap.set(chunk[j], vecs[j]);
+        pairs.push([embKey(chunk[j]), vecs[j]]);
+      }
+      embCacheSetMany(pairs).catch(e=> console.warn('임베딩 캐시 저장 실패(동작에는 영향 없음):', e));
+      const donePct = 20 + Math.round((i+chunk.length)/missing.length*58);
+      bar.style.width = donePct + '%';
+      ptext.textContent = `의미 분석 중(${deviceLabel})... ${(i+chunk.length).toLocaleString()}/${missing.length.toLocaleString()} (캐시 재사용 ${(uniqueTexts.length-missing.length).toLocaleString()}건)`;
+      await new Promise(r=>setTimeout(r, 0));
+    }
+
+    // 언어별 원본 유사도 계산 — 2어절 이상 문장만 대상이라 길이 편향이 적어 배경보정 없이도 안정적이다(실측 검증됨)
+    const scoredByLang = {};
+    for(const {col, key} of AI_LANGS){
+      const arr = [];
+      for(const idx of langRows[key]){
+        const ko = newData[idx]['Name<ko>'], txt = newData[idx][col];
+        const a = vecMap.get(stripMarkup(ko)), b = vecMap.get(stripMarkup(txt));
+        if(!a || !b) continue;
+        const sim = cosineSim(a, b);
+        arr.push({ idx, lang: col, ko, text: txt, sim });
+      }
+      scoredByLang[key] = arr;
+      ptext.textContent = `의미 비교 계산 중... (${GLOSS_LANG_LABEL[key]||key})`;
+      await new Promise(r=>setTimeout(r, 0));
+    }
+
+    // 언어별로 통계 기준(z-score)을 따로 낸다 — 언어마다 유사도의 절대 수준이 달라서
+    // 전체를 한 기준으로 섞으면 특정 언어가 과다/과소 탐지될 수 있다.
+    // 이 판정을 먼저 확정한 뒤, topN/전체 옵션은 "오역 의심" 목록을 몇 건까지 보여줄지에만 적용한다.
+    // (topN을 그냥 전체 후보 슬라이스에 써버리면 "전체 표시"를 켰을 때 의미가 멀쩡한 행까지
+    //  전부 오역 의심에 섞여 들어가 부정확해진다 — 그래서 분류를 먼저, 표시 개수 제한을 나중에 적용한다)
+    //
+    // 문장형과 명사구형은 통계를 따로 낸다(같은 언어 안이라도 섞으면 안 됨) — 실측 검증 결과,
+    // 문장형끼리만 비교하면 정상 번역(최악 z≈-0.4)과 진짜 오역(z≈-2~-8)이 큰 간격으로 깔끔하게 갈리지만,
+    // "산화된 종" 같은 명사구형(아이템/몬스터명)은 정상 번역도 원래 유사도가 낮아 오역과 순위가 역전되기도 해서
+    // (정상 z=-2.3인데 실제 오역이 z=-1.0인 경우도 나옴) 자동으로 "확정"시키면 위험하다.
+    // → 문장형만 기준을 넘으면 "🧠 오역 확정", 명사구형은 아무리 낮아도 "⚠️ PASS(검토 필요)"로만 표시한다.
+    // z-score만 쓰면 언어별로 표본이 적을 때(예: 특정 언어 문장형이 몇십 건뿐) 통계가 불안정해져서
+    // 실제로는 유사도 77~80%인, 그냥 표현만 다른 정상 번역까지 "확정"으로 잘못 올라오는 문제가 있었다.
+    // 그래서 z-score(상대 기준) 외에 원본 유사도 절대 상한(SIM_CEILING)도 같이 만족해야만 확정으로 인정한다.
+    // 표현이 다를 뿐 뜻이 통하는 유사 표현은 오역이 아니므로 확정에서 제외한다.
+    const Z_SENT_BAD = -2.0;     // 문장형: 이 밑이어야 오역 확정 후보
+    const SIM_CEILING = 0.78;    // 문장형: 원본 유사도가 이 밑이어야 확정(실측: 진짜 오역 73~76%, 정상은 흔히 85%+이지만
+                                  // 표현만 다른 경우 76~78%까지도 나와 여유를 둠 — 그 이상은 유사 표현으로 보고 제외)
+    const Z_PHRASE_PASS = -1.0;  // 명사구형: 확정 없음, 이 밑이면 PASS만
+    const MIN_SAMPLE = 20;       // 언어별 문장형 표본이 이보다 적으면 z-score가 불안정해 "확정" 대신 PASS로만 취급
+    for(const {key} of AI_LANGS){
+      const arr = scoredByLang[key];
+      if(!arr.length) continue;
+      const sentArr = arr.filter(s=> looksLikeSentence(s.ko));
+      const phraseArr = arr.filter(s=> !looksLikeSentence(s.ko));
+      const zify = (subArr) => {
+        if(!subArr.length) return;
+        const sims = subArr.map(s=> s.sim);
+        const mean = sims.reduce((a,b)=>a+b,0) / sims.length;
+        const std = Math.sqrt(sims.reduce((a,b)=> a + (b-mean)*(b-mean), 0) / sims.length) || 1e-6;
+        subArr.forEach(s=> { s.z = (s.sim - mean) / std; });
+      };
+      zify(sentArr); zify(phraseArr);
+      const sentReliable = sentArr.length >= MIN_SAMPLE; // 표본이 적으면 z-score를 확정 근거로 못 씀
+      for(const s of sentArr){
+        s.textType = 'sentence';
+        // 표현이 다를 뿐인 유사 문장(z만 낮고 유사도는 정상 범위)은 오역이 아니므로 결과에 올리지 않는다.
+        const looksOff = s.z < Z_SENT_BAD && s.sim < SIM_CEILING;
+        if(!looksOff) continue;
+        if(sentReliable) meaningBad.push(s);
+        else { s.lowSample = true; meaningPass.push(s); } // 표본 부족 — 확정 대신 검토 대상으로만
+      }
+      for(const s of phraseArr){
+        s.textType = 'phrase';
+        if(s.z < Z_PHRASE_PASS) meaningPass.push(s);
+      }
+    }
+    scoredAll = AI_LANGS.flatMap(({key})=> scoredByLang[key]).sort((x,y)=> x.z - y.z);
+    lastMtScored = scoredAll; // 엑셀 "오역검사_전체" 내보내기용 — 언어 무관 통합 랭킹
+
+    // "🧠 오역 확정": 문장형이면서 통계적으로 확실히 이상한 행만 대상(언어 무관, z-score로 정렬)
+    meaningBad.sort((x,y)=> x.z - y.z);
+    const bucketACount = Number.isFinite(topN) ? Math.min(topN, meaningBad.length) : meaningBad.length;
+    bucketA = meaningBad.slice(0, bucketACount);
+    results = bucketA.map((s, rank)=> ({
+      idx: s.idx, lang: s.lang, kind:'mistranslation',
+      verdictLabel: `🧠 의심 ${rank+1}위 (유사도 ${(Math.max(0, s.sim)*100).toFixed(0)}%)`,
+      oldText:'', newText: s.text, koText: s.ko
+    }));
+
+    // "⚠️ PASS": 확정하기엔 애매한 행 — 명사구형(아이템/몬스터명)은 전부 여기로, 문장형은 경계선상만
+    meaningPass.sort((x,y)=> x.z - y.z);
+    results.push(...meaningPass.map(s=> ({
+      idx: s.idx, lang: s.lang, kind:'pass',
+      verdictLabel: `⚠️ PASS(검토 필요, 확신도 낮음) — 유사도 ${(Math.max(0, s.sim)*100).toFixed(0)}%`
+        + (s.textType === 'phrase' ? ' · 아이템/몬스터명 등 명사구라 AI가 확정하기 어려움' : (s.lowSample ? ' · 이 언어는 표본이 적어 통계 신뢰도가 낮음' : ' · 경계선상(확정 기준 근처)')),
+      oldText:'', newText: s.text, koText: s.ko
+    })));
+  }
+
+  bar.style.width = '100%';
+  const langCounts = totalRows ? ' — ' + AI_LANGS.map(({key})=> `${GLOSS_LANG_LABEL[key]||key} ${(langRows[key]||[]).length.toLocaleString()}건`).join(', ') : '';
+  const cacheNote = deviceLabel ? ` (${deviceLabel} / 신규 계산 ${missing.length.toLocaleString()}건)` : '';
+  ptext.textContent = `완료 — 🧠 오역 확정(한글 원문과 뜻이 완전히 다른 것만) ${bucketA.length.toLocaleString()}건 · ⚠️ PASS(검토 필요) ${meaningPass.length.toLocaleString()}건 · 전체 검사 ${scoredAll.length.toLocaleString()}건(인덱스 ${INDEX_MIN.toLocaleString()} 초과만)${langCounts} · 전체는 "결과 엑셀로 내보내기"에 전량 포함됩니다`
+    + cacheNote;
+  setTimeout(()=>{ progress.classList.remove('show'); bar.style.width='0%'; }, 1500);
+  return results;
+}
+
+document.getElementById('mt-topn').addEventListener('input', (e)=>{
+  document.getElementById('mt-topn-val').textContent = Number(e.target.value).toLocaleString();
+});
+document.getElementById('mt-topn-all').addEventListener('change', (e)=>{
+  document.getElementById('mt-topn').disabled = e.target.checked;
+  document.getElementById('mt-topn-val').textContent = e.target.checked ? '전체(제한없음)' : Number(document.getElementById('mt-topn').value).toLocaleString();
+});
+
+document.getElementById('mt-run-btn').addEventListener('click', async ()=>{
+  if(!lastNewData){ alert('먼저 ② 새 파일을 업로드해주세요.'); return; }
+  const btn = document.getElementById('mt-run-btn');
+  const topN = document.getElementById('mt-topn-all').checked ? Infinity : parseInt(document.getElementById('mt-topn').value, 10);
+  btn.disabled = true;
+  const startedAt = Date.now();
+  ensureNotifyPermission();
+  try{
+    const mtResults = await detectMistranslations(lastNewData, topN);
+    // 정상본이 있으면 해당 인덱스·해당 언어의 정상본 텍스트를 채워서 "예전부터 이랬는지" 비교 가능하게
+    const baseline = await idbGet('baseline');
+    if(baseline){
+      mtResults.forEach(r=>{ r.oldText = (baseline.data[r.idx] || {})[r.lang] || '(정상본에 없음)'; });
+    }
+    // AI 검사 결과(오역확정/PASS)만 갱신 — ②에서 만든 롤백/일반변경/혼입/글로서리 결과는 유지
+    currentResults = currentResults.filter(r=> r.kind !== 'mistranslation' && r.kind !== 'pass').concat(mtResults);
+    document.getElementById('result-section').style.display = 'block';
+    renderResults();
+    notifyDone('🧠 오역 검사 완료', `오역 확정 ${mtResults.filter(r=>r.kind==='mistranslation').length.toLocaleString()}건 — 클릭하면 결과 화면으로 이동합니다`, startedAt);
+  }catch(e){
+    document.getElementById('mt-progress').classList.remove('show');
+    document.getElementById('mt-progress-text').textContent = '';
+    alert('오역 검사 중 오류: ' + e.message);
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+// ── UI 배선 ──
+let currentResults = [];
+let currentFilter = 'all';
+
+function setStatus(text){
+  const el = document.getElementById('baseline-status');
+  el.innerHTML = text;
+  el.classList.toggle('show', !!text);
+}
+
+async function loadBaselineFromDb(){
+  const saved = await idbGet('baseline');
+  if(saved){
+    setStatus(`현재 정상본: <b>${escapeHtml(saved.name)}</b> · ${Object.keys(saved.data).length.toLocaleString()}개 인덱스 · ${new Date(saved.savedAt).toLocaleString('ko-KR')} 등록`);
+    document.getElementById('baseline-drop-text').textContent = '다른 파일로 교체하려면 클릭하거나 끌어다 놓으세요';
+    document.getElementById('baseline-clear').style.display = 'inline-block';
+    document.getElementById('new-drop-text').textContent = '비교할 새 엑셀 파일을 끌어다 놓거나 클릭하세요';
+    return saved.data;
+  }
+  return null;
+}
+
+function escapeHtml(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function handleBaselineFile(file){
+  setStatus('정상본 읽는 중...');
+  try{
+    const buf = await file.arrayBuffer();
+    const data = parseWorkbook(buf);
+    await idbSet('baseline', { name:file.name, data, savedAt: Date.now() });
+    setStatus(`현재 정상본: <b>${escapeHtml(file.name)}</b> · ${Object.keys(data).length.toLocaleString()}개 인덱스 · 방금 등록`);
+    document.getElementById('baseline-drop-text').textContent = '다른 파일로 교체하려면 클릭하거나 끌어다 놓으세요';
+    document.getElementById('baseline-clear').style.display = 'inline-block';
+    document.getElementById('new-drop-text').textContent = '비교할 새 엑셀 파일을 끌어다 놓거나 클릭하세요';
+  }catch(e){
+    setStatus('<span style="color:#b91c1c">오류: ' + escapeHtml(e.message) + '</span>');
+  }
+}
+
+async function handleNewFile(file){
+  const baseline = await idbGet('baseline');
+  if(!baseline){
+    alert('먼저 정상본을 등록해주세요.');
+    return;
+  }
+  const progress = document.getElementById('progress'), bar = document.getElementById('progress-bar'), ptext = document.getElementById('progress-text');
+  progress.classList.add('show');
+  bar.style.width = '15%';
+  ptext.textContent = '새 파일 읽는 중...';
+  const startedAt = Date.now();
+  ensureNotifyPermission();
+  try{
+    const buf = await file.arrayBuffer();
+    const newData = parseWorkbook(buf);
+    lastNewData = newData;
+    bar.style.width = '55%';
+    ptext.textContent = '비교 중... (' + Object.keys(newData).length.toLocaleString() + '개 인덱스)';
+    await new Promise(r=>setTimeout(r, 30)); // UI 갱신을 위한 양보
+    const results = compareData(baseline.data, newData);
+    // ① 간체 칸에 번체 글자가 섞여 있는지 검사
+    results.push(...checkZhContamination(newData));
+    // ② 글로서리 기준 검사(전 언어) — 원문 전체가 글로서리 용어와 일치하는 행만, 단어 쪼개기 없음
+    const glossaryForCheck = await idbGet('glossary');
+    if(glossaryForCheck && glossaryForCheck.entries.length && !glossaryForCheck.entries[0].tr){
+      glossaryForCheck.entries = glossaryForCheck.entries.map(e=> ({ ko: e.ko, tr: { zh: e.zh || [] } }));
+    }
+    results.push(...checkGlossaryExact(newData, glossaryForCheck));
+    bar.style.width = '100%';
+    const cnt = k => results.filter(r=> r.kind===k).length;
+    ptext.textContent = `완료 — 총 ${results.length.toLocaleString()}건 (인덱스 ${INDEX_MIN.toLocaleString()} 초과만 검사) · 🚨 간체↔번체 바뀜 ${cnt('rollback')}건 · 🚨 간체 칸 번체 혼입 ${cnt('script_issue')}건 · 📝 일반 변경 ${cnt('normal')}건 · 📖 글로서리 기준 이탈 ${cnt('glossary')}건`;
+    currentResults = results;
+    renderResults();
+    notifyDone('🌏 롤백 검사 완료', `총 ${results.length.toLocaleString()}건 차이 — 간체↔번체 바뀜 ${cnt('rollback')}건 · 간체 칸 번체 혼입 ${cnt('script_issue')}건 · 글로서리 이탈 ${cnt('glossary')}건`, startedAt);
+    setTimeout(()=>{ progress.classList.remove('show'); bar.style.width='0%'; }, 1200);
+  }catch(e){
+    progress.classList.remove('show');
+    ptext.textContent = '';
+    alert('오류: ' + e.message);
+  }
+}
+
+function renderResults(){
+  document.getElementById('result-section').style.display = 'block';
+  const counts = { rollback:0, script_issue:0, normal:0, unknown:0, mistranslation:0, pass:0, glossary:0 };
+  currentResults.forEach(r=> counts[r.kind] = (counts[r.kind]||0) + 1);
+  document.getElementById('sum-rollback').textContent = counts.rollback;
+  document.getElementById('sum-script_issue').textContent = counts.script_issue;
+  document.getElementById('sum-normal').textContent = counts.normal;
+  document.getElementById('sum-mistranslation').textContent = counts.mistranslation;
+  document.getElementById('sum-pass').textContent = counts.pass;
+  document.getElementById('sum-glossary').textContent = counts.glossary;
+
+  const filtered = currentFilter === 'all' ? currentResults : currentResults.filter(r=>r.kind===currentFilter);
+  const body = document.getElementById('result-body');
+  if(!filtered.length){
+    body.innerHTML = '<tr><td colspan="6"><div class="empty">해당하는 결과가 없습니다</div></td></tr>';
+    return;
+  }
+  const badgeClass = { rollback:'badge-rollback', normal:'badge-normal', unknown:'badge-unknown', mistranslation:'badge-mistranslation', pass:'badge-pass', glossary:'badge-glossary', script_issue:'badge-script_issue' };
+  body.innerHTML = filtered.slice(0, 2000).map(r=>
+    `<tr><td class="idx">${escapeHtml(r.idx)}</td><td style="color:#4b5563">${escapeHtml(r.koText)}</td><td style="white-space:nowrap">${escapeHtml(LANG_LABEL[r.lang]||r.lang)}</td>`+
+    `<td><span class="badge ${badgeClass[r.kind]||''}">${escapeHtml(r.verdictLabel)}</span></td>`+
+    `<td class="diff-old">${escapeHtml(r.oldText)}</td><td class="diff-new">${escapeHtml(r.newText)}</td></tr>`
+  ).join('') + (filtered.length>2000 ? `<tr><td colspan="6" class="empty">표시는 상위 2,000건까지만 — 전체 결과는 "결과 엑셀로 내보내기"로 확인하세요</td></tr>` : '');
+}
+
+document.getElementById('tabs').addEventListener('click', (e)=>{
+  const tab = e.target.closest('.tab');
+  if(!tab) return;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+  currentFilter = tab.dataset.filter;
+  renderResults();
+});
+
+document.getElementById('export-btn').addEventListener('click', ()=>{
+  const rows = [['Index','한글 원문','언어','판정','정상본 텍스트','새파일 텍스트']];
+  currentResults.forEach(r=> rows.push([r.idx, r.koText, LANG_LABEL[r.lang]||r.lang, r.verdictLabel, r.oldText, r.newText]));
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '비교결과');
+  // 오역 검사를 돌렸다면 화면 표시(상위 N건)와 무관하게 전체 후보(모든 언어)를 의심순으로 별도 시트에 전량 포함
+  if(lastMtScored.length){
+    const rows2 = [['의심순위','언어','Index','한글 원문','대상 텍스트','유사도(%)','텍스트 유형']];
+    lastMtScored.forEach((s,i)=> rows2.push([i+1, LANG_LABEL[s.lang]||s.lang, s.idx, s.ko, s.text, Math.round(Math.max(0,s.sim)*100), s.textType==='phrase'?'명사구(아이템/몬스터명)':'문장']));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows2), '오역검사_전체(의심순)');
+  }
+  XLSX.writeFile(wb, '롤백검사결과_' + new Date().toISOString().slice(0,10) + '.xlsx');
+});
+
+function wireDrop(dropId, inputId, handler){
+  const drop = document.getElementById(dropId), input = document.getElementById(inputId);
+  drop.addEventListener('click', ()=> input.click());
+  input.addEventListener('change', ()=>{ if(input.files[0]) handler(input.files[0]); input.value=''; });
+  drop.addEventListener('dragover', (e)=>{ e.preventDefault(); drop.classList.add('drag'); });
+  drop.addEventListener('dragleave', ()=> drop.classList.remove('drag'));
+  drop.addEventListener('drop', (e)=>{
+    e.preventDefault(); drop.classList.remove('drag');
+    if(e.dataTransfer.files[0]) handler(e.dataTransfer.files[0]);
+  });
+}
+wireDrop('baseline-drop','baseline-input', handleBaselineFile);
+wireDrop('new-drop','new-input', handleNewFile);
+wireDrop('gloss-drop','gloss-input', handleGlossaryFile);
+
+document.getElementById('gloss-clear').addEventListener('click', async ()=>{
+  if(!confirm('등록된 글로서리를 삭제할까요?')) return;
+  await idbDel('glossary');
+  setGlossStatus('');
+  document.getElementById('gloss-clear').style.display = 'none';
+});
+
+(async ()=>{
+  const gloss = await idbGet('glossary');
+  if(gloss){
+    const langsTxt = (gloss.langs||[]).map(l=> GLOSS_LANG_LABEL[l]||l).join('/');
+    const oldFormatWarn = !gloss.langs ? ' · <span style="color:#b45309">⚠️ 간체 전용(구버전) — 글로서리 파일을 다시 올리면 영어/스페인어/태국어/번체도 검수됩니다</span>' : '';
+    setGlossStatus(`📖 글로서리: <b>${escapeHtml(gloss.name)}</b> · ${gloss.entries.length.toLocaleString()}개 용어${langsTxt ? ' · 검수 언어: ' + langsTxt : ''} · ${new Date(gloss.savedAt).toLocaleString('ko-KR')} 등록${oldFormatWarn}`);
+    document.getElementById('gloss-clear').style.display = 'inline-block';
+  }
+})();
+
+document.getElementById('baseline-clear').addEventListener('click', async ()=>{
+  if(!confirm('등록된 정상본을 삭제할까요?')) return;
+  await idbDel('baseline');
+  setStatus('');
+  document.getElementById('baseline-drop-text').textContent = '엑셀 파일을 끌어다 놓거나 클릭해서 정상본을 등록하세요';
+  document.getElementById('baseline-clear').style.display = 'none';
+  document.getElementById('new-drop-text').textContent = '정상본을 먼저 등록한 뒤, 비교할 새 엑셀 파일을 올려주세요';
+});
+
+if(!convT2S){
+  document.querySelector('.wrap').insertAdjacentHTML('afterbegin', '<div class="warn">⚠️ OpenCC 변환 라이브러리를 불러오지 못했습니다 — 인터넷 연결을 확인하고 새로고침해주세요. (번체/간체 롤백 판별이 동작하지 않습니다)</div>');
+}
+
+loadBaselineFromDb();
+
+// PWA(설치형 앱) 지원 — http(s)로 열렸을 때만 서비스워커 등록 (file://에서는 건너뜀)
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  navigator.serviceWorker.register('./sw.js').catch(e=> console.warn('서비스워커 등록 실패:', e));
+}
+</script>
+</body>
+</html>
