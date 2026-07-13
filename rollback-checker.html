@@ -298,6 +298,8 @@ const idxChecked = idx => Number(idx) > INDEX_MIN;
     if(Number.isFinite(v) && v >= 0){
       INDEX_MIN = v;
       localStorage.setItem('index_min', String(v));
+      // 이미 검사한 결과가 있으면 새 기준으로 즉시 다시 필터링해서 보여줌
+      if(typeof currentResults !== 'undefined' && currentResults.length) renderResults();
     } else {
       inp.value = INDEX_MIN;
     }
@@ -935,8 +937,10 @@ async function handleNewFile(file){
 
 function renderResults(){
   document.getElementById('result-section').style.display = 'block';
+  // 제외 기준 인덱스는 렌더 시점에 다시 적용 — 입력값을 바꾸면 즉시 반영됨
+  const visible = currentResults.filter(r=> idxChecked(r.idx));
   const counts = { rollback:0, script_issue:0, normal:0, unknown:0, mistranslation:0, pass:0, glossary:0 };
-  currentResults.forEach(r=> counts[r.kind] = (counts[r.kind]||0) + 1);
+  visible.forEach(r=> counts[r.kind] = (counts[r.kind]||0) + 1);
   document.getElementById('sum-rollback').textContent = counts.rollback;
   document.getElementById('sum-script_issue').textContent = counts.script_issue;
   document.getElementById('sum-normal').textContent = counts.normal;
@@ -944,7 +948,7 @@ function renderResults(){
   document.getElementById('sum-pass').textContent = counts.pass;
   document.getElementById('sum-glossary').textContent = counts.glossary;
 
-  const filtered = currentFilter === 'all' ? currentResults : currentResults.filter(r=>r.kind===currentFilter);
+  const filtered = currentFilter === 'all' ? visible : visible.filter(r=>r.kind===currentFilter);
   const body = document.getElementById('result-body');
   if(!filtered.length){
     body.innerHTML = '<tr><td colspan="6"><div class="empty">해당하는 결과가 없습니다</div></td></tr>';
@@ -969,7 +973,7 @@ document.getElementById('tabs').addEventListener('click', (e)=>{
 
 document.getElementById('export-btn').addEventListener('click', ()=>{
   const rows = [['Index','한글 원문','언어','판정','정상본 텍스트','새파일 텍스트']];
-  currentResults.forEach(r=> rows.push([r.idx, r.koText, LANG_LABEL[r.lang]||r.lang, r.verdictLabel, r.oldText, r.newText]));
+  currentResults.filter(r=> idxChecked(r.idx)).forEach(r=> rows.push([r.idx, r.koText, LANG_LABEL[r.lang]||r.lang, r.verdictLabel, r.oldText, r.newText]));
   const ws = XLSX.utils.aoa_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, '비교결과');
