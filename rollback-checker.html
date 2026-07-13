@@ -82,7 +82,7 @@ td{padding:8px 10px;border-bottom:1px solid #f3f4f6;vertical-align:top}
   <div class="card">
     <h2>② 새 파일 (비교할 파일)</h2>
     <div class="row" style="margin-top:0;margin-bottom:10px">
-      <label style="font-size:12px;color:#374151;font-weight:700">이 인덱스 이하는 모든 검사에서 제외:</label>
+      <label style="font-size:12px;color:#374151;font-weight:700">이 인덱스 초과는 모든 검사에서 제외 (이하만 검사):</label>
       <input type="number" id="index-min" style="width:120px;padding:6px 8px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-weight:700;color:#4f46e5">
       <span class="sub" style="margin:0">값을 바꾼 뒤 새 파일을 다시 올리면(또는 오역 검사를 다시 실행하면) 적용됩니다</span>
     </div>
@@ -96,7 +96,7 @@ td{padding:8px 10px;border-bottom:1px solid #f3f4f6;vertical-align:top}
 
   <div class="card">
     <h2>③ 의미 기반 오역 탐지 <span style="font-weight:400;color:#9ca3af;font-size:11px">(선택 기능)</span></h2>
-    <div class="sub" style="margin-bottom:10px"><b>🧠 오역 확정</b>은 한글 원문과 번역(전 언어)의 뜻이 완전히 다른, AI가 통계적으로 확신하는 경우만 보여줍니다. 짧은 아이템/몬스터명은 AI 판별이 불안정해서 자동 확정하지 않고 <b>⚠️ PASS(검토 필요)</b> 탭에 따로 모아둡니다. ② 카드에서 설정한 제외 기준 인덱스 초과 행만 검사합니다. 최초 실행 시 AI 모델을 한 번만 내려받으며, 이후 계산은 브라우저 안에서만 이뤄져 텍스트가 외부로 전송되지 않습니다. (② 새 파일 업로드 후 사용 가능)</div>
+    <div class="sub" style="margin-bottom:10px"><b>🧠 오역 확정</b>은 한글 원문과 번역(전 언어)의 뜻이 완전히 다른, AI가 통계적으로 확신하는 경우만 보여줍니다. 짧은 아이템/몬스터명은 AI 판별이 불안정해서 자동 확정하지 않고 <b>⚠️ PASS(검토 필요)</b> 탭에 따로 모아둡니다. ② 카드에서 설정한 기준 인덱스 이하 행만 검사합니다. 최초 실행 시 AI 모델을 한 번만 내려받으며, 이후 계산은 브라우저 안에서만 이뤄져 텍스트가 외부로 전송되지 않습니다. (② 새 파일 업로드 후 사용 가능)</div>
     <div class="row">
       <label style="font-size:12px;color:#374151">표시할 의심 항목 수</label>
       <input type="range" id="mt-topn" min="100" max="3000" step="100" value="500" style="width:160px">
@@ -286,10 +286,10 @@ function isScriptRollback(oldText, newText){
   return toSimplified === oldText || toTraditional === oldText;
 }
 
-// 전역 검사 범위: 인덱스 891001 이하는 모든 검사에서 제외 (기존 검수 완료분)
+// 전역 검사 범위: 인덱스 891001 초과는 모든 검사에서 제외 (그 이하만 검사)
 // 화면의 입력칸에서 조절 가능하며 브라우저에 저장되어 유지된다.
 let INDEX_MIN = Number(localStorage.getItem('index_min')) || 891001;
-const idxChecked = idx => Number(idx) > INDEX_MIN;
+const idxChecked = idx => Number(idx) <= INDEX_MIN;
 {
   const inp = document.getElementById('index-min');
   inp.value = INDEX_MIN;
@@ -312,7 +312,7 @@ function compareData(baseline, newData){
   const sorted = [...allIdx].sort((a,b)=> Number(a)-Number(b));
 
   for(const idx of sorted){
-    if(!idxChecked(idx)) continue; // 인덱스 891001 이하 제외
+    if(!idxChecked(idx)) continue; // 기준 인덱스 초과 제외
     const base = baseline[idx], neu = newData[idx];
     // 신규 추가/삭제된 인덱스는 결과에서 제외 (사용자 요청으로 기능 삭제)
     if(base === undefined || neu === undefined) continue;
@@ -647,7 +647,7 @@ async function detectMistranslations(newData, topN){
   const langRows = {};
   for(const {col, key} of AI_LANGS){
     langRows[key] = Object.keys(newData).filter(idx=>{
-      if(!idxChecked(idx)) return false; // 인덱스 891001 이하 제외
+      if(!idxChecked(idx)) return false; // 기준 인덱스 초과 제외
       const ko = stripMarkup(newData[idx]['Name<ko>']), txt = stripMarkup(newData[idx][col]);
       return ko && hasHangul.test(ko) && isAiCheckable(ko) && txt && GLOSS_VALID[key].test(txt);
     });
@@ -925,7 +925,7 @@ async function handleNewFile(file){
     results.push(...checkGlossaryExact(newData, glossaryForCheck));
     bar.style.width = '100%';
     const cnt = k => results.filter(r=> r.kind===k).length;
-    ptext.textContent = `완료 — 총 ${results.length.toLocaleString()}건 (인덱스 ${INDEX_MIN.toLocaleString()} 초과만 검사) · 🚨 간체↔번체 바뀜 ${cnt('rollback')}건 · 🚨 간체 칸 번체 혼입 ${cnt('script_issue')}건 · 📝 일반 변경 ${cnt('normal')}건 · 📖 글로서리 기준 이탈 ${cnt('glossary')}건`;
+    ptext.textContent = `완료 — 총 ${results.length.toLocaleString()}건 (인덱스 ${INDEX_MIN.toLocaleString()} 이하만 검사) · 🚨 간체↔번체 바뀜 ${cnt('rollback')}건 · 🚨 간체 칸 번체 혼입 ${cnt('script_issue')}건 · 📝 일반 변경 ${cnt('normal')}건 · 📖 글로서리 기준 이탈 ${cnt('glossary')}건`;
     currentResults = results;
     renderResults();
     notifyDone('🌏 롤백 검사 완료', `총 ${results.length.toLocaleString()}건 차이 — 간체↔번체 바뀜 ${cnt('rollback')}건 · 간체 칸 번체 혼입 ${cnt('script_issue')}건 · 글로서리 이탈 ${cnt('glossary')}건`, startedAt);
