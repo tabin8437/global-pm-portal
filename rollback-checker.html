@@ -382,7 +382,9 @@ function checkGlossaryExact(newData, glossary){
       const txt = stripMarkup(txtRaw).trim();
       if(!txt) continue;
       const lower = (key === 'en' || key === 'es' || key === 'vi');
-      const matched = alts.some(a=> lower ? a.trim().toLowerCase() === txt.toLowerCase() : a.trim() === txt);
+      // 띄어쓰기만 다른 경우는 이슈로 보지 않음 — 모든 공백 제거 후 비교
+      const norm = s => s.replace(/\s+/g, '');
+      const matched = alts.some(a=> lower ? norm(a).toLowerCase() === norm(txt).toLowerCase() : norm(a) === norm(txt));
       if(!matched){
         results.push({ idx, lang: col, kind:'glossary',
           verdictLabel:`📖 글로서리 기준과 다름 — 등록 형태: ${alts.join(' / ')}`,
