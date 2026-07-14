@@ -1063,15 +1063,15 @@ function saveMeeting(){
   };
   if(!params.title){alert('제목을 입력해주세요.');return;}
   if(!params.date){alert('날짜를 선택해주세요.');return;}
-  closeMeetingForm();
-  var listEl=document.getElementById('mt-list');
-  if(listEl)listEl.innerHTML='<div class="text-center py-6 text-gray-400 text-sm">저장 중...</div>';
-  apiPostMeeting(params).then(function(){
+  // 저장 성공이 확인되기 전에는 폼을 닫지 않는다 (작성 내용 유실 방지)
+  apiPostMeeting(params).then(function(d){
+    if(!d||!d.ok){alert('저장 실패: 서버가 저장을 처리하지 못했습니다.\n'+(d&&d.error?d.error:'작성 내용은 그대로 남아있으니 다시 시도해주세요.'));return;}
+    closeMeetingForm();
     fetchMeetings(type,function(list){
       _meetingCache[type]=list;
       renderArchive(type);
     });
-  }).catch(function(e){alert('저장 실패: '+e.message);});
+  }).catch(function(e){alert('저장 실패: '+e.message+'\n작성 내용은 그대로 남아있으니 다시 시도해주세요.');});
 }
 function toDocPreviewUrl(url){
   // 구글 문서/시트/슬라이드 URL은 /preview 형태로 바꿔 카드 안에 깔끔하게 임베드
