@@ -1018,6 +1018,7 @@ function renderArchive(type){
 }
 
 var _mtCurrentType='weekly';
+var _mtTypeNames={weekly:'주간회의',report:'보고/분석',internal:'내부 회의'};
 function openMeetingForm(type){
   _mtCurrentType=type;
   editTarget={type:type,id:null};
@@ -1026,7 +1027,7 @@ function openMeetingForm(type){
   });
   var d=document.getElementById('mt-date');
   if(d)d.value=new Date().toISOString().slice(0,10);
-  document.getElementById('mt-form-title').textContent='회의록 추가';
+  document.getElementById('mt-form-title').textContent=(_mtTypeNames[type]||'회의록')+' 추가';
   document.getElementById('mt-form').style.display='block';
 }
 function openMeetingFormEdit(id, type){
@@ -1042,7 +1043,7 @@ function openMeetingFormEdit(id, type){
   document.getElementById('mt-details').value=m.details||'';
   document.getElementById('mt-imageUrl').value=m.imageUrl||'';
   if(document.getElementById('mt-file'))document.getElementById('mt-file').value=m.file||'';
-  document.getElementById('mt-form-title').textContent='회의록 수정';
+  document.getElementById('mt-form-title').textContent=(_mtTypeNames[type]||'회의록')+' 수정';
   document.getElementById('mt-form').style.display='block';
   document.getElementById('mt-form').scrollIntoView({behavior:'smooth'});
 }
