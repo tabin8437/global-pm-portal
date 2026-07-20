@@ -477,6 +477,7 @@ var KPI_DATA = [
   {label:'일평균 DAU',value:'29,296',change:'▲2.0%',dir:'up',color:'#10b981',trend:[]},
   {label:'누적 NRU',value:'14,197',change:'▲112.2%',dir:'up',color:'#ef4444',trend:[],alert:true},
   {label:'주간 WAU',value:'42,764',change:'▲6.8%',dir:'up',color:'#3b82f6',trend:[]},
+  {label:'주간 PU',value:'5,562',change:'▲13.7%',dir:'up',color:'#14b8a6',trend:[]},
   {label:'주간 매출',value:'2.11억',change:'▼29.0%',dir:'down',color:'#8b5cf6',trend:[]}
 ];
 
@@ -783,7 +784,7 @@ function renderDashboard(){
   // 월간 목표 뱃지
   var monthTargetHtml='<span id="month-target-badge" class="text-[11px] text-gray-400 font-medium">1일 ~ '+(now.getMonth()+1)+'월 '+yesterday+'일 기준</span>';
 
-  c.innerHTML='<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-chart-bar text-emerald-500"></i> '+weekLabel+' 주간 지표</span></div><div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">'+kpiHtml+'</div>'+
+  c.innerHTML='<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-chart-bar text-emerald-500"></i> '+weekLabel+' 주간 지표</span></div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">'+kpiHtml+'</div>'+
     '<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-calendar-stats text-indigo-500"></i> '+monthLabel+'</span>'+monthTargetHtml+'</div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">'+monthlyCards+'</div>'+
     '<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">'+
     '<div class="lg:col-span-2">'+analysisHtml+'</div>'+
@@ -1312,6 +1313,7 @@ function applyKpiData(d){
       {label:'일평균 DAU',value:fmtNum(w.dau),change:parseChange(c.dau).text,dir:parseChange(c.dau).dir,color:'#10b981',trend:[]},
       {label:'누적 NRU',value:fmtNum(w.nru),change:parseChange(c.nru).text,dir:parseChange(c.nru).dir,color:'#ef4444',trend:[],alert:parseChange(c.nru).dir==='up'&&parseFloat(String(c.nru||'').replace(/[^0-9.]/g,''))>50},
       {label:'주간 WAU',value:fmtNum(w.wau),change:parseChange(c.wau).text,dir:parseChange(c.wau).dir,color:'#3b82f6',trend:[]},
+      {label:'주간 PU',value:fmtNum(w.pu),change:parseChange(c.pu).text,dir:parseChange(c.pu).dir,color:'#14b8a6',trend:[]},
       {label:'주간 매출',value:fmtNum(w.revenue),change:parseChange(c.revenue).text,dir:parseChange(c.revenue).dir,color:'#8b5cf6',trend:[]}
     ];
   }
