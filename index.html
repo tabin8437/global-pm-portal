@@ -1107,58 +1107,115 @@ function deleteMeetingRow(id, type){
 /* ── 주차별 추이 그래프 (매출 · DAU · PU · ARPPU) ── */
 function shortPeriod(s){
   s=String(s||'').trim();
-  var m=s.match(/\d{1,2}[\/\.\-]\d{1,2}/);      // "7/6~7/12" → "7/6"
-  if(m) return m[0];
+  // "Tue Jul 07 2026 00:00:00 GMT+0900" 같은 Date 문자열도 "7/7"로 정리
+  if(/[A-Za-z]{3}/.test(s)&&/\d{4}/.test(s)){
+    var d=new Date(s);
+    if(!isNaN(d.getTime())) return (d.getMonth()+1)+'/'+d.getDate();
+  }
+  var m=s.match(/(\d{1,2})[\/\.\-](\d{1,2})(?!\d)/);   // "7/6~7/12" → "7/6"
+  if(m) return Number(m[1])+'/'+Number(m[2]);
   return s.length>9?s.slice(0,9):s;
 }
-function trendSvg(series,labels,color){
-  var W=520,H=170,PL=6,PR=6,PT=16,PB=24,n=series.length;
-  var max=Math.max.apply(null,series),min=Math.min.apply(null,series),span=max-min;
-  var yMax=max+(span?span*0.18:(Math.abs(max)*0.1||1));
-  var yMin=Math.max(0,min-(span?span*0.18:(Math.abs(min)*0.1||0)));
-  var yR=(yMax-yMin)||1;
+var TREND_REGIONS=[
+  {key:'kr',label:'한국',  color:'#ef4444'},
+  {key:'tw',label:'대만',  color:'#3b82f6'},
+  {key:'jp',label:'일본',  color:'#10b981'},
+  {key:'gl',label:'글로벌',color:'#8b5cf6'}
+];
+
+// 여러 권역 시계열을 한 좌표계에 겹쳐 그린다. values 안의 null은 선을 끊지 않고 건너뛴다.
+function multiTrendSvg(seriesList,labels,fmt){
+  var W=560,H=215,PL=54,PR=14,PT=14,PB=26;
+  var all=[];
+  seriesList.forEach(function(s){s.values.forEach(function(v){if(v!==null&&isFinite(v))all.push(v);});});
+  if(!all.length) return '';
+  var max=Math.max.apply(null,all),min=Math.min.apply(null,all);
+  if(max===min){max=max*1.1||1;min=Math.max(0,min*0.9);}
+  var pad=(max-min)*0.12;
+  var yMax=max+pad,yMin=Math.max(0,min-pad),yR=(yMax-yMin)||1;
+  var n=labels.length;
   function X(i){return PL+(W-PL-PR)*(n===1?0.5:i/(n-1));}
   function Y(v){return PT+(H-PT-PB)*(1-(v-yMin)/yR);}
-  var pts=series.map(function(v,i){return X(i).toFixed(1)+','+Y(v).toFixed(1);});
-  var gid='tg'+Math.random().toString(36).slice(2,8);
-  var dots=series.map(function(v,i){
-    var last=i===n-1;
-    return '<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(v).toFixed(1)+'" r="'+(last?3.6:2.2)+'" fill="'+(last?color:'#fff')+'" stroke="'+color+'" stroke-width="1.6"><title>'+esc(labels[i]||'')+' · '+fmtNum(v)+'</title></circle>';
+
+  var grid='',TICKS=4;
+  for(var g=0;g<=TICKS;g++){
+    var gv=yMin+(yR*g/TICKS),gy=Y(gv);
+    grid+='<line x1="'+PL+'" y1="'+gy.toFixed(1)+'" x2="'+(W-PR)+'" y2="'+gy.toFixed(1)+'" stroke="#eef2f7" stroke-width="1"/>'
+        +'<text x="'+(PL-8)+'" y="'+(gy+3.2).toFixed(1)+'" font-size="9" fill="#9ca3af" text-anchor="end">'+esc(fmt(gv))+'</text>';
+  }
+
+  var paths=seriesList.map(function(s){
+    var pts=[],dots='';
+    s.values.forEach(function(v,i){
+      if(v===null||!isFinite(v))return;
+      pts.push(X(i).toFixed(1)+','+Y(v).toFixed(1));
+      dots+='<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(v).toFixed(1)+'" r="2.6" fill="#fff" stroke="'+s.color+'" stroke-width="1.8">'
+           +'<title>'+esc(s.label+' · '+labels[i]+' · '+fmt(v))+'</title></circle>';
+    });
+    if(!pts.length)return'';
+    return '<path d="M'+pts.join(' L')+'" fill="none" stroke="'+s.color+'" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>'+dots;
   }).join('');
-  var idxs=[0,Math.floor((n-1)/2),n-1].filter(function(v,i,a){return a.indexOf(v)===i;});
-  var xl=idxs.map(function(i){
-    var an=i===0?'start':(i===n-1?'end':'middle');
-    return '<text x="'+X(i).toFixed(1)+'" y="'+(H-7)+'" font-size="9" fill="#9ca3af" text-anchor="'+an+'">'+esc(shortPeriod(labels[i]))+'</text>';
-  }).join('');
-  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block">'
-    +'<defs><linearGradient id="'+gid+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="'+color+'" stop-opacity="0.22"/><stop offset="100%" stop-color="'+color+'" stop-opacity="0"/></linearGradient></defs>'
-    +'<path d="M'+X(0).toFixed(1)+','+(H-PB)+' L'+pts.join(' L')+' L'+X(n-1).toFixed(1)+','+(H-PB)+' Z" fill="url(#'+gid+')"/>'
-    +'<path d="M'+pts.join(' L')+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'
-    +dots+xl+'</svg>';
+
+  var step=Math.max(1,Math.ceil(n/6)),xl='';
+  for(var i2=0;i2<n;i2+=step){
+    xl+='<text x="'+X(i2).toFixed(1)+'" y="'+(H-8)+'" font-size="9" fill="#9ca3af" text-anchor="'+(i2===0?'start':'middle')+'">'+esc(labels[i2])+'</text>';
+  }
+  if((n-1)%step!==0)
+    xl+='<text x="'+X(n-1).toFixed(1)+'" y="'+(H-8)+'" font-size="9" fill="#9ca3af" text-anchor="end">'+esc(labels[n-1])+'</text>';
+
+  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block">'+grid+paths+xl+'</svg>';
 }
+
 function renderTrendCharts(){
-  var tr=window._trendCache||[];
-  if(tr.length<2) return '';
-  var labels=tr.map(function(t){return t.period;});
-  var defs=[
-    {key:'revenue',label:'주간 매출',color:'#8b5cf6'},
-    {key:'dau',    label:'일평균 DAU',color:'#10b981'},
-    {key:'pu',     label:'일평균 PU', color:'#14b8a6'},
-    {key:'arppu',  label:'ARPPU',     color:'#f59e0b'}
+  var byR=window._trendByRegionCache;
+  var hasRegion=byR&&TREND_REGIONS.some(function(r){return (byR[r.key]||[]).length>=2;});
+  // 권역 데이터가 아직 없으면 글로벌 단일 추이로 대체 표시
+  if(!hasRegion){
+    var tr=window._trendCache||[];
+    if(tr.length<2) return '';
+    byR={gl:tr};
+  }
+
+  // x축은 가장 긴 권역 시계열을 기준으로 잡고, 권역마다 빠진 주차는 null로 둔다
+  var base=[];
+  TREND_REGIONS.forEach(function(r){var a=byR[r.key]||[];if(a.length>base.length)base=a;});
+  if(base.length<2) return '';
+  var labels=base.map(function(t){return shortPeriod(t.period);});
+
+  var metrics=[
+    {key:'revenue',label:'주간 매출'},
+    {key:'dau',    label:'일평균 DAU'},
+    {key:'pu',     label:'일평균 PU'},
+    {key:'arppu',  label:'ARPPU'}
   ];
-  var cards=defs.map(function(d){
-    var series=tr.map(function(t){return Number(t[d.key])||0;});
-    if(!series.some(function(v){return v>0;})) return '';
-    var last=series[series.length-1],prev=series.length>1?series[series.length-2]:0;
-    var diff=prev?((last-prev)/prev*100):0,up=diff>=0;
-    return '<div class="card"><div class="flex items-center justify-between mb-1">'
-      +'<span class="text-xs font-bold text-gray-700">'+d.label+'</span>'
-      +'<div class="flex items-baseline gap-1.5"><span class="text-sm font-bold" style="color:'+d.color+'">'+fmtNum(last)+'</span>'
-      +(prev?'<span class="text-[10px] font-bold '+(up?'text-red-500':'text-blue-600')+'">'+(up?'▲':'▼')+Math.abs(diff).toFixed(1)+'%</span>':'')
-      +'</div></div>'+trendSvg(series,labels,d.color)+'</div>';
+
+  var cards=metrics.map(function(m){
+    var seriesList=[],legend='';
+    TREND_REGIONS.forEach(function(r){
+      var arr=byR[r.key]||[];
+      if(arr.length<2) return;
+      var map={};
+      arr.forEach(function(t){var v=Number(t[m.key]);map[shortPeriod(t.period)]=(v>0?v:null);});
+      var vals=labels.map(function(l){return map.hasOwnProperty(l)?map[l]:null;});
+      if(!vals.some(function(v){return v!==null;})) return;
+      seriesList.push({label:r.label,color:r.color,values:vals});
+      var lastV=null;
+      for(var i=vals.length-1;i>=0;i--){if(vals[i]!==null){lastV=vals[i];break;}}
+      legend+='<span class="inline-flex items-center gap-1 text-[10px] font-bold" style="color:'+r.color+'">'
+        +'<span style="width:8px;height:8px;border-radius:2px;background:'+r.color+';display:inline-block"></span>'+r.label
+        +(lastV!==null?' <span class="text-gray-500">'+fmtNum(lastV)+'</span>':'')+'</span>';
+    });
+    if(!seriesList.length) return '';
+    var svg=multiTrendSvg(seriesList,labels,fmtNum);
+    if(!svg) return '';
+    return '<div class="card"><div class="flex items-center justify-between mb-2 flex-wrap gap-y-1">'
+      +'<span class="text-xs font-bold text-gray-700">'+m.label+'</span>'
+      +'<div class="flex items-center gap-2.5 flex-wrap">'+legend+'</div>'
+      +'</div>'+svg+'</div>';
   }).join('');
+
   if(!cards) return '';
-  return '<div class="card-header" style="padding:0;margin:18px 0 12px"><span class="card-title"><i class="ti ti-chart-line text-indigo-500"></i> 주차별 추이</span><span class="text-[11px] text-gray-400 font-medium">최근 '+tr.length+'주 · 점에 마우스를 올리면 값 표시</span></div>'
+  return '<div class="card-header" style="padding:0;margin:18px 0 12px"><span class="card-title"><i class="ti ti-chart-line text-indigo-500"></i> 주차별 추이 <span class="text-[11px] text-gray-400 font-medium ml-1">권역별</span></span><span class="text-[11px] text-gray-400 font-medium">최근 '+labels.length+'주 · 점에 마우스를 올리면 값 표시</span></div>'
     +'<div class="grid grid-cols-1 md:grid-cols-2 gap-4">'+cards+'</div>';
 }
 
@@ -1398,6 +1455,7 @@ function applyKpiData(d){
   if(d.regions) window._regionsCache=d.regions;
   // 주차별 추이 캐시 (매출/DAU/PU/ARPPU 그래프용)
   if(d.weeklyTrend&&d.weeklyTrend.length) window._trendCache=d.weeklyTrend;
+  if(d.weeklyTrendByRegion) window._trendByRegionCache=d.weeklyTrendByRegion;
 
   // 마일스톤 동기화
   if(d.milestone&&d.milestone.date){
