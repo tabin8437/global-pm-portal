@@ -1116,6 +1116,14 @@ function shortPeriod(s){
   if(m) return Number(m[1])+'/'+Number(m[2]);
   return s.length>9?s.slice(0,9):s;
 }
+// "7/14" 같은 주차 라벨을 시간순 정렬용 숫자로 (연말연초 보정 포함)
+function weekKeyOf(lbl){
+  var m=String(lbl).match(/^(\d{1,2})\/(\d{1,2})$/);
+  if(!m) return 0;
+  var now=new Date(),t=new Date(now.getFullYear(),+m[1]-1,+m[2]).getTime();
+  if(t-now.getTime()>180*86400000) t=new Date(now.getFullYear()-1,+m[1]-1,+m[2]).getTime();
+  return t;
+}
 var TREND_REGIONS=[
   {key:'kr',label:'한국',  color:'#ef4444'},
   {key:'tw',label:'대만',  color:'#3b82f6'},
@@ -1168,19 +1176,21 @@ function multiTrendSvg(seriesList,labels,fmt){
 
 function renderTrendCharts(){
   var byR=window._trendByRegionCache;
-  var hasRegion=byR&&TREND_REGIONS.some(function(r){return (byR[r.key]||[]).length>=2;});
+  var hasRegion=byR&&['kr','tw','jp'].some(function(k){return (byR[k]||[]).length>0;});
   // 권역 데이터가 아직 없으면 글로벌 단일 추이로 대체 표시
   if(!hasRegion){
     var tr=window._trendCache||[];
-    if(tr.length<2) return '';
+    if(!tr.length) return '';
     byR={gl:tr};
   }
 
-  // x축은 가장 긴 권역 시계열을 기준으로 잡고, 권역마다 빠진 주차는 null로 둔다
-  var base=[];
-  TREND_REGIONS.forEach(function(r){var a=byR[r.key]||[];if(a.length>base.length)base=a;});
-  if(base.length<2) return '';
-  var labels=base.map(function(t){return shortPeriod(t.period);});
+  // x축 = 전 권역에 등장하는 주차의 합집합(중복 제거 후 시간순). 권역마다 빠진 주차는 null로 둔다.
+  var labelSet={};
+  TREND_REGIONS.forEach(function(r){
+    (byR[r.key]||[]).forEach(function(t){var l=shortPeriod(t.period);if(l)labelSet[l]=1;});
+  });
+  var labels=Object.keys(labelSet).sort(function(a,b){return weekKeyOf(a)-weekKeyOf(b);});
+  if(labels.length<2) return '';
 
   var metrics=[
     {key:'revenue',label:'주간 매출'},
@@ -1193,8 +1203,8 @@ function renderTrendCharts(){
     var seriesList=[],legend='';
     TREND_REGIONS.forEach(function(r){
       var arr=byR[r.key]||[];
-      if(arr.length<2) return;
-      var map={};
+      if(!arr.length) return;
+      var map={};   // 같은 주차가 여러 번 오면 마지막 값이 이김
       arr.forEach(function(t){var v=Number(t[m.key]);map[shortPeriod(t.period)]=(v>0?v:null);});
       var vals=labels.map(function(l){return map.hasOwnProperty(l)?map[l]:null;});
       if(!vals.some(function(v){return v!==null;})) return;
@@ -1215,7 +1225,10 @@ function renderTrendCharts(){
   }).join('');
 
   if(!cards) return '';
-  return '<div class="card-header" style="padding:0;margin:18px 0 12px"><span class="card-title"><i class="ti ti-chart-line text-indigo-500"></i> 주차별 추이 <span class="text-[11px] text-gray-400 font-medium ml-1">권역별</span></span><span class="text-[11px] text-gray-400 font-medium">최근 '+labels.length+'주 · 점에 마우스를 올리면 값 표시</span></div>'
+  var note=hasRegion
+    ?'최근 '+labels.length+'주 · 점에 마우스를 올리면 값 표시'
+    :'글로벌만 표시 중 — 권역별 데이터는 KPI API 재배포 후 쌓입니다';
+  return '<div class="card-header" style="padding:0;margin:18px 0 12px"><span class="card-title"><i class="ti ti-chart-line text-indigo-500"></i> 주차별 추이 <span class="text-[11px] text-gray-400 font-medium ml-1">'+(hasRegion?'권역별':'글로벌')+'</span></span><span class="text-[11px] '+(hasRegion?'text-gray-400':'text-amber-600')+' font-medium">'+note+'</span></div>'
     +'<div class="grid grid-cols-1 md:grid-cols-2 gap-4">'+cards+'</div>';
 }
 
