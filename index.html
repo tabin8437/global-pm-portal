@@ -827,9 +827,24 @@ function switchMilestoneTab(region){
 }
 
 /* ── 통합 마일스톤 타임라인 페이지 ── */
+// 오늘 날짜 기준 "현재" 마일스톤 = 오늘이거나 오늘 직전의 가장 최근 행 (시트 하이라이트에 의존 안 함)
+function milestoneCurrentIdx(timeline){
+  var today=new Date();today.setHours(0,0,0,0);
+  var bi=-1,bt=-Infinity;
+  (timeline||[]).forEach(function(t,i){
+    var m=String(t.date||'').match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if(!m)return;
+    var tt=new Date(+m[1],+m[2]-1,+m[3]).getTime();
+    if(tt<=today.getTime()&&tt>bt){bt=tt;bi=i;}
+  });
+  return bi;
+}
 function renderMilestonePage(){
   var c=document.getElementById('content-area');
   var timeline=window._milestoneTimeline||[];
+  // 시트 하이라이트가 안 옮겨졌어도 오늘 기준으로 "현재"를 자동 판정
+  var curIdx=milestoneCurrentIdx(timeline);
+  if(curIdx!==-1) timeline.forEach(function(t,i){t.isCurrent=(i===curIdx);});
   var regionClr={kr:'#ef4444',tw:'#3b82f6',jp:'#10b981',gl:'#a855f7'};
   var DOW_KR={Mon:'월',Tue:'화',Wed:'수',Thu:'목',Fri:'금',Sat:'토',Sun:'일'};
   function dateKr(s){
@@ -1501,6 +1516,9 @@ function applyKpiData(d){
   if(d.milestone&&d.milestone.date){
     var ms=d.milestone;
     window._milestoneTimeline=ms.timeline||[];
+    // 오늘 기준 현재 마일스톤으로 최상위 필드를 덮어씀 (대시보드 위젯·뱃지도 최신 날짜 반영)
+    var _ci=milestoneCurrentIdx(ms.timeline||[]);
+    if(_ci!==-1){var _cur=ms.timeline[_ci];ms.date=_cur.date;ms.version=_cur.version;ms.kr=_cur.kr;ms.tw=_cur.tw;ms.jp=_cur.jp;ms.gl=_cur.gl;}
     function buildList(items,clr){
       if(!items||!items.length) return'<li class="text-gray-400">내역 없음</li>';
       return items.map(function(s){
