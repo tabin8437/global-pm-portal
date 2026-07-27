@@ -956,12 +956,29 @@ function renderPlatform(){
 }
 function renderAppleUI(data){
   var latest=data.latest||{},hist=data.history||[];
+  function hasVer(v){return v&&/\d+\.\d+/.test(v);}
   ['global','tw','jp'].forEach(function(r){
-    var box=document.getElementById('apple-box-'+r),m=latest[r];
-    if(box&&m){box.classList.add('approved');box.querySelector('.apple-region-body').innerHTML='<div class="text-lg font-bold text-emerald-700 my-1">'+m.version+'</div><div class="text-[11px] text-emerald-600">✅ 심의 통과</div>';if(document.getElementById('mini-v-'+r))document.getElementById('mini-v-'+r).textContent=m.version;}
+    var box=document.getElementById('apple-box-'+r);if(!box)return;
+    // 해당 권역 히스토리에서 최신 심의일 + 버전이 있는 가장 최근 값을 각각 찾는다
+    var rows=hist.filter(function(m){return m.region===r;});
+    var newest=rows[0]||latest[r];
+    var verRow=rows.filter(function(m){return hasVer(m.version);})[0]||(hasVer((latest[r]||{}).version)?latest[r]:null);
+    if(!newest&&!verRow)return;
+    var bigVer=verRow?verRow.version.replace(/\s*for\s*iOS/i,''):'심의 통과';
+    var newestDate=newest?String(newest.date).slice(0,10):'';
+    // 최신 심의가 버전 표기 건보다 더 최근이면 날짜를 함께 노출
+    var showDate=newest&&(!verRow||newest.date>verRow.date)?newestDate:(verRow?String(verRow.date).slice(0,10):newestDate);
+    box.classList.add('approved');
+    box.querySelector('.apple-region-body').innerHTML=
+      '<div class="text-lg font-bold text-emerald-700 my-1">'+esc(bigVer)+(hasVer(bigVer)?' <span class="text-[11px] font-medium text-emerald-600">for iOS</span>':'')+'</div>'
+      +'<div class="text-[11px] text-emerald-600">✅ 심의 통과'+(showDate?' · 최신 '+showDate:'')+'</div>';
+    if(document.getElementById('mini-v-'+r))document.getElementById('mini-v-'+r).textContent=hasVer(bigVer)?bigVer:'통과';
   });
   var hc=document.getElementById('apple-mail-history');if(!hc||!hist.length)return;
-  hc.innerHTML=hist.map(function(m){return'<div class="row-item"><div style="flex:1"><div class="text-xs font-bold text-gray-800">'+(REGION_LABEL[m.region]||m.region)+' <b class="text-indigo-600">'+m.version+'</b> 심의 통과</div><div class="text-[10px] text-gray-400 mt-1">📅 '+m.date+' · '+m.subject+'</div></div></div>';}).join('');
+  hc.innerHTML=hist.map(function(m){
+    var v=hasVer(m.version)?'<b class="text-indigo-600">'+esc(m.version.replace(/\s*for\s*iOS/i,''))+'</b> ':'<span class="text-gray-400">버전 미표기 </span>';
+    return'<div class="row-item"><div style="flex:1"><div class="text-xs font-bold text-gray-800">'+(REGION_LABEL[m.region]||m.region)+' '+v+'심의 통과</div><div class="text-[10px] text-gray-400 mt-1">📅 '+esc(m.date)+' · '+esc(m.subject)+'</div></div></div>';
+  }).join('');
 }
 function loadAppleMails(){renderAppleUI(backupMails);fetch(APPLE_API_URL+'?t='+Date.now()).then(function(r){return r.json();}).then(function(d){if(d&&d.success&&d.history&&d.history.length)renderAppleUI(d);}).catch(function(){});}
 function renderPlatformIssues(){var el=document.getElementById('platform-issue-list');if(!el)return;el.innerHTML=platformData.issues.map(function(iss,i){return'<div class="row-item"><div style="flex:1"><div class="font-semibold">'+iss.title+'</div><div class="text-xs text-gray-500 mt-1">📅 '+iss.date+' · '+iss.status+'</div></div>'+(isAdmin?'<button class="btn btn-sm" onclick="editPlatformIssue('+i+')">수정</button>':'')+'</div>';}).join('');}
