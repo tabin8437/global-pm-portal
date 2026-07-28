@@ -544,11 +544,23 @@ function getUserDB(){
   _memUsers=[];return _memUsers;
 }
 function saveUserDB(users){_memUsers=users;}
-function apiGet(params,callback){
-  fetch(USER_API_URL+'?'+params+'&t='+Date.now())
+// Apps Script는 콜드 스타트 때 응답이 10초 이상 걸리기도 한다.
+// 타임아웃을 두고 자동 재시도하며, 최종 실패는 콜백으로 알려 화면에 표시할 수 있게 한다.
+function apiGet(params,callback,onFail,_try){
+  _try=_try||1;
+  var TIMEOUT=15000, MAX_TRY=3;
+  var ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
+  var timer=setTimeout(function(){ if(ctrl)ctrl.abort(); },TIMEOUT);
+  var opt=ctrl?{signal:ctrl.signal}:{};
+  fetch(USER_API_URL+'?'+params+'&t='+Date.now(),opt)
     .then(function(r){return r.json();})
-    .then(function(d){if(callback)callback(d);})
-    .catch(function(e){console.error('API 오류:',e);});
+    .then(function(d){clearTimeout(timer);if(callback)callback(d);})
+    .catch(function(e){
+      clearTimeout(timer);
+      console.error('API 오류(시도 '+_try+'/'+MAX_TRY+'):',e);
+      if(_try<MAX_TRY){ setTimeout(function(){apiGet(params,callback,onFail,_try+1);},800*_try); }
+      else if(onFail) onFail(e);
+    });
 }
 function fetchUsersFromAPI(callback){
   apiGet('action=list',function(d){
@@ -579,7 +591,7 @@ function onGoogleLogin(response){
   var email=payload.email.toLowerCase();
   var name=payload.name||email;
   var picture=payload.picture||'';
-  errEl.style.color='#6b7280';errEl.textContent='확인 중...';
+  errEl.style.color='#6b7280';errEl.textContent='확인 중... (서버 첫 응답은 10초 정도 걸릴 수 있어요)';
   apiGet('action=check&email='+encodeURIComponent(email),function(d){
     if(!d.ok){errEl.style.color='#ef4444';errEl.textContent='서버 오류';return;}
     var u=d.user;
@@ -592,6 +604,11 @@ function onGoogleLogin(response){
     }
     if(u.status!=='approved'){errEl.style.color='#f59e0b';errEl.textContent='관리자 승인 대기 중입니다.';return;}
     loginSuccess(u.role,u.name||name,u.picture||picture,email);
+  },function(){
+    // 3회 재시도까지 실패 — 화면에 상태를 알리고 재시도 버튼 제공
+    errEl.style.color='#ef4444';
+    errEl.innerHTML='서버 응답이 없습니다. 네트워크를 확인하고 다시 시도해주세요. '
+      +'<button onclick="location.reload()" style="margin-left:6px;padding:2px 8px;border:1px solid #ef4444;background:#fff;color:#ef4444;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">새로고침</button>';
   });
 }
 
