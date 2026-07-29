@@ -1690,9 +1690,33 @@ function renderCompetitor(){
       +'<ul>'+artHtml+'</ul></div>';
   }).join('');
 
-  c.innerHTML='<div class="card-header mb-3" style="padding:0"><span class="card-title text-sm"><i class="ti ti-radar text-violet-500"></i> 경쟁사 모니터링</span>'+updatedLabel+'</div>'
+  c.innerHTML='<div class="card-header mb-3" style="padding:0"><span class="card-title text-sm"><i class="ti ti-radar text-violet-500"></i> 경쟁사 모니터링</span>'
+    +'<div class="flex items-center gap-2">'+updatedLabel
+    +'<button id="comp-collect-btn" class="btn btn-sm btn-primary" onclick="collectCompetitorNow()"><i class="ti ti-refresh"></i> 지금 수집</button></div></div>'
     +filterHtml
     +'<div id="comp-cards" class="grid grid-cols-1 lg:grid-cols-2 gap-4">'+cardsHtml+'</div>';
+}
+
+// 뉴스를 지금 새로 수집한다 (수집기는 Apps Script에서 실행 → 1~2분 소요)
+function collectCompetitorNow(){
+  var btn=document.getElementById('comp-collect-btn');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2 animate-spin"></i> 수집 중... (1~2분)';}
+  fetch(KPI_API_URL+'?action=competitor_collect&t='+Date.now())
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d||!d.ok){
+        if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-refresh"></i> 지금 수집';}
+        alert('수집 실패: '+((d&&(d.error||d.hint))||'수집기가 이 프로젝트에 없습니다.'));
+        return;
+      }
+      try{localStorage.removeItem('kpi_cache');}catch(e){}
+      if(btn)btn.innerHTML='<i class="ti ti-check"></i> 완료 — 새로고침 중';
+      location.reload();
+    })
+    .catch(function(e){
+      if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-refresh"></i> 지금 수집';}
+      alert('수집 실패: '+e.message);
+    });
 }
 
 function compFilter(name){
