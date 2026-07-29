@@ -63,7 +63,7 @@ td{padding:8px 10px;border-bottom:1px solid #f3f4f6;vertical-align:top}
 </head>
 <body>
 <div class="wrap">
-  <div style="font-size:11px;color:#9ca3af;margin-bottom:6px">made by 조현영 yeriel.jo · <span id="app-version">v2026.07.10-3 (전언어 검사)</span></div>
+  <div style="font-size:11px;color:#9ca3af;margin-bottom:6px">made by 조현영 yeriel.jo · <span id="app-version">v2026.07.10-6 (번체→간체 변환 추가)</span></div>
   <h1>🌏 로컬라이제이션 롤백 감지</h1>
   <div class="sub">정상본 대비 새 엑셀의 번체/간체 스크립트 롤백 + 일반 변경을 자동으로 잡아줍니다. 모든 처리는 브라우저 안에서만 일어나고, 파일은 외부로 전송되지 않습니다.</div>
 
@@ -108,7 +108,7 @@ td{padding:8px 10px;border-bottom:1px solid #f3f4f6;vertical-align:top}
     </div>
     <div class="row" style="margin-top:12px;align-items:stretch">
       <div class="drop" id="gloss-drop" style="flex:1;padding:12px">
-        <div id="gloss-drop-text">📖 글로서리(용어집)를 올리면 ② 새 파일 검사 때 "한글 원문 전체가 글로서리 용어와 일치하는 행"의 각 언어 번역이 등록된 형태 그대로인지 검사합니다 — 단어를 쪼개거나 문장을 끊어서 보지 않습니다 (xlsx/csv, 언어 열 자동 인식)</div>
+        <div id="gloss-drop-text">📖 글로서리(용어집)를 올리면 ② 새 파일 검사 때 한글 원문 문장 안에 등장하는 글로서리 용어를 찾아, 각 언어 번역에 등록된 확정 번역이 들어있는지 검사합니다 — 단어를 조각내지 않고 온전한 단어만 매칭합니다 (xlsx/csv, 언어 열 자동 인식)</div>
         <input type="file" id="gloss-input" accept=".xlsx,.csv">
       </div>
       <button class="btn btn-ghost" id="gloss-clear" style="display:none">글로서리 삭제</button>
@@ -117,6 +117,41 @@ td{padding:8px 10px;border-bottom:1px solid #f3f4f6;vertical-align:top}
     <div class="progress" id="mt-progress"><div class="progress-bar" id="mt-progress-bar"></div></div>
     <div id="mt-progress-text" class="sub" style="margin-top:4px"></div>
     <div class="warn">⚠️ 이 기능은 AI 추정치이며 100% 정확하지 않습니다. 유사도 %의 절대값보다 <b>순위(의심 N위)</b>가 중요합니다 — 위에서부터 검토하다가 정상 번역만 연속되면 멈추세요. 실제 오역 여부는 반드시 사람이 확인해주세요.</div>
+  </div>
+
+  <div class="card">
+    <h2>④ 번체 → 간체 변환 <span style="font-weight:400;color:#9ca3af;font-size:11px">(검수와 무관한 독립 기능)</span></h2>
+    <div class="sub" style="margin-bottom:10px">번체가 들어있는 엑셀을 올리면, 지정한 열의 번체를 간체로 변환해서 원하는 열에 채워 넣은 새 엑셀을 내려받습니다. 원본 파일은 수정되지 않고, 나머지 셀·시트는 그대로 보존됩니다.</div>
+    <div class="drop" id="conv-drop" style="padding:14px">
+      <div id="conv-drop-text">변환할 엑셀 파일을 끌어다 놓거나 클릭하세요 (.xlsx)</div>
+      <input type="file" id="conv-input" accept=".xlsx">
+    </div>
+    <div id="conv-setup" style="display:none;margin-top:12px">
+      <div class="row" style="margin-top:0">
+        <label style="font-size:12px;color:#374151;font-weight:700">시트</label>
+        <select id="conv-sheet" style="padding:6px 8px;border:1px solid #d1d5db;border-radius:8px;font-size:13px"></select>
+        <label style="font-size:12px;color:#374151;font-weight:700">헤더 행</label>
+        <input type="number" id="conv-header-row" value="1" min="1" style="width:70px;padding:6px 8px;border:1px solid #d1d5db;border-radius:8px;font-size:13px">
+        <label style="font-size:12px;color:#374151;font-weight:700">데이터 시작 행</label>
+        <input type="number" id="conv-start-row" value="2" min="1" style="width:70px;padding:6px 8px;border:1px solid #d1d5db;border-radius:8px;font-size:13px">
+      </div>
+      <div class="row">
+        <label style="font-size:12px;color:#374151;font-weight:700">번체(원본) 열</label>
+        <select id="conv-src" style="padding:6px 8px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;min-width:180px"></select>
+        <span style="font-size:14px;color:#6b7280">→</span>
+        <label style="font-size:12px;color:#374151;font-weight:700">간체(결과) 열</label>
+        <select id="conv-dst" style="padding:6px 8px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;min-width:180px"></select>
+        <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#374151;cursor:pointer">
+          <input type="checkbox" id="conv-overwrite"> 결과 열에 값이 있어도 덮어쓰기
+        </label>
+      </div>
+      <div class="row">
+        <button class="btn btn-primary" id="conv-run-btn">🔄 간체로 변환해서 내려받기</button>
+        <span id="conv-preview" class="sub" style="margin:0"></span>
+      </div>
+    </div>
+    <div class="progress" id="conv-progress"><div class="progress-bar" id="conv-progress-bar"></div></div>
+    <div id="conv-status" class="status"></div>
   </div>
 
   <div id="result-section" style="display:none">
@@ -153,8 +188,8 @@ td{padding:8px 10px;border-bottom:1px solid #f3f4f6;vertical-align:top}
 
 <script>
 // 버전 표기 — 화면 좌상단에 표시되어 지금 어떤 버전이 실행 중인지 바로 확인 가능
-const APP_VERSION = '2026.07.10-3';
-document.getElementById('app-version').textContent = 'v' + APP_VERSION + ' (전언어 검사)';
+const APP_VERSION = '2026.07.10-6';
+document.getElementById('app-version').textContent = 'v' + APP_VERSION + ' (번체→간체 변환 추가)';
 // 브라우저가 오래된 캐시 버전을 로드한 경우 최신 버전으로 1회 자동 새로고침
 if(location.protocol.startsWith('http')){
   fetch(location.pathname, { cache:'no-store' }).then(r=> r.ok ? r.text() : null).then(html=>{
@@ -289,7 +324,7 @@ function isScriptRollback(oldText, newText){
 // 전역 검사 범위: 인덱스 891001 초과는 모든 검사에서 제외 (그 이하만 검사)
 // 화면의 입력칸에서 조절 가능하며 브라우저에 저장되어 유지된다.
 let INDEX_MIN = Number(localStorage.getItem('index_min')) || 891001;
-const idxChecked = idx => Number(idx) <= INDEX_MIN;
+const idxChecked = idx => Number(idx) > INDEX_MIN; // 기준 인덱스 초과만 검사 (이하는 제외)
 {
   const inp = document.getElementById('index-min');
   inp.value = INDEX_MIN;
@@ -360,35 +395,81 @@ function checkZhContamination(newData){
   return results;
 }
 
+// ── 글로서리 용어 찾기 (word-boundary) ──
+// 용어를 조각내지 않고 "가장 긴 용어를 통째로" 찾는다. 단어 중간에서 우연히 겹친 것은 매칭하지 않는다.
+// 예: "라구"가 용어여도 "조심하라구"의 "-라구"(어미)는 앞 글자가 한글이라 매칭 안 됨.
+//     "이스"가 용어여도 "이스터"의 "이스"는 뒷글자가 조사가 아니라 매칭 안 됨.
+const GL_HANGUL_RE = /[가-힣]/;
+const GL_PARTICLES = new Set(['은','는','이','가','을','를','의','와','과','에','로','도','만','께','랑','야','여','부','보','처','같','한','인','님']);
+function buildGlossaryIndex(entries){
+  const map = new Map(); // 첫 글자 -> entries (검색 가속용)
+  for(const e of entries){
+    const c = e.ko[0];
+    if(!map.has(c)) map.set(c, []);
+    map.get(c).push(e);
+  }
+  return map;
+}
+function findGlossaryTerms(koText, gidx){
+  const found = [];
+  let i = 0;
+  while(i < koText.length){
+    const atWordStart = (i === 0) || !GL_HANGUL_RE.test(koText[i-1]);
+    if(atWordStart){
+      const list = gidx.get(koText[i]);
+      let best = null;
+      if(list){
+        for(const e of list){
+          if(!koText.startsWith(e.ko, i)) continue;
+          // 2글자 이하 짧은 용어: 뒤에 다른 한글이 이어지면 조사일 때만 인정
+          if(e.ko.length <= 2){
+            const next = koText[i + e.ko.length];
+            if(next && GL_HANGUL_RE.test(next) && !GL_PARTICLES.has(next)) continue;
+          }
+          if(!best || e.ko.length > best.ko.length) best = e;
+        }
+      }
+      if(best){ found.push(best); i += best.ko.length; continue; }
+    }
+    i += 1;
+  }
+  return found;
+}
+
 // ── 글로서리 기준 검사 (전 언어) ──
-// 단어를 쪼개거나 문장을 끊어서 보지 않는다 — 한글 원문 전체가 글로서리 용어와 정확히 일치하는 행만 대상.
-// 그 행의 각 언어 텍스트가 글로서리에 등록된 형태 그대로면 문제없음(표시 안 함), 다르면 이슈로 표시.
+// 한글 원문 문장 안에 등장하는 글로서리 용어를 word-boundary로 찾고(조각내기 없음),
+// 그 용어의 확정 번역이 각 언어 텍스트에 들어있지 않으면 이슈로 표시한다.
+// 사용자 선택: 흔한 단어도 제외하지 않고 전부 검사한다.
 function checkGlossaryExact(newData, glossary){
   if(!glossary || !glossary.entries || !glossary.entries.length) return [];
-  const byKo = new Map();
-  for(const e of glossary.entries) byKo.set(e.ko, e);
+  const gidx = buildGlossaryIndex(glossary.entries);
   const results = [];
   for(const idx of Object.keys(newData)){
     if(!idxChecked(idx)) continue;
-    const koNorm = stripMarkup(newData[idx]['Name<ko>'] || '').trim();
-    if(!koNorm) continue;
-    const entry = byKo.get(koNorm);
-    if(!entry || !entry.tr) continue; // 원문 전체가 글로서리 용어가 아니면 검사 대상 아님
+    const koBody = stripMarkup(newData[idx]['Name<ko>'] || '');
+    if(!koBody || !GL_HANGUL_RE.test(koBody)) continue;
+    const rawTerms = findGlossaryTerms(koBody, gidx);
+    if(!rawTerms.length) continue;
+    // 같은 용어가 문장에 여러 번 나와도 한 번만 검사
+    const terms = [...new Map(rawTerms.map(e=> [e.ko, e])).values()];
     for(const {col, key} of AI_LANGS){
-      const alts = entry.tr[key];
-      if(!alts || !alts.length) continue; // 글로서리에 이 언어 번역이 없으면 판단 불가
       const txtRaw = newData[idx][col];
       if(!txtRaw) continue;
-      const txt = stripMarkup(txtRaw).trim();
+      const txt = stripMarkup(txtRaw);
       if(!txt) continue;
-      const lower = (key === 'en' || key === 'es' || key === 'vi');
-      // 띄어쓰기만 다른 경우는 이슈로 보지 않음 — 모든 공백 제거 후 비교
-      const norm = s => s.replace(/\s+/g, '');
-      const matched = alts.some(a=> lower ? norm(a).toLowerCase() === norm(txt).toLowerCase() : norm(a) === norm(txt));
-      if(!matched){
+      const lower = (key === 'en' || key === 'es' || key === 'vi'); // 라틴 문자는 대소문자 무시
+      const hay = lower ? txt.toLowerCase() : txt;
+      const viols = [];
+      for(const e of terms){
+        const alts = e.tr && e.tr[key];
+        if(!alts || !alts.length) continue; // 이 언어의 등록 번역이 없으면 판단 불가
+        const ok = alts.some(a=> hay.includes(lower ? a.toLowerCase() : a));
+        if(!ok) viols.push(e.ko + '→' + alts[0]);
+      }
+      if(viols.length){
         results.push({ idx, lang: col, kind:'glossary',
-          verdictLabel:`📖 글로서리 기준과 다름 — 등록 형태: ${alts.join(' / ')}`,
-          oldText: alts[0], newText: txtRaw, koText: koNorm });
+          verdictLabel:`📖 글로서리 기준과 다름: ${viols.slice(0,3).join(', ')}${viols.length>3?' 외 '+(viols.length-3)+'건':''}`,
+          oldText: viols.map(v=> v.split('→')[1]).join(' / '), newText: txtRaw, koText: koBody });
       }
     }
   }
@@ -925,7 +1006,7 @@ async function handleNewFile(file){
     results.push(...checkGlossaryExact(newData, glossaryForCheck));
     bar.style.width = '100%';
     const cnt = k => results.filter(r=> r.kind===k).length;
-    ptext.textContent = `완료 — 총 ${results.length.toLocaleString()}건 (인덱스 ${INDEX_MIN.toLocaleString()} 이하만 검사) · 🚨 간체↔번체 바뀜 ${cnt('rollback')}건 · 🚨 간체 칸 번체 혼입 ${cnt('script_issue')}건 · 📝 일반 변경 ${cnt('normal')}건 · 📖 글로서리 기준 이탈 ${cnt('glossary')}건`;
+    ptext.textContent = `완료 — 총 ${results.length.toLocaleString()}건 (인덱스 ${INDEX_MIN.toLocaleString()} 초과만 검사) · 🚨 간체↔번체 바뀜 ${cnt('rollback')}건 · 🚨 간체 칸 번체 혼입 ${cnt('script_issue')}건 · 📝 일반 변경 ${cnt('normal')}건 · 📖 글로서리 기준 이탈 ${cnt('glossary')}건`;
     currentResults = results;
     renderResults();
     notifyDone('🌏 롤백 검사 완료', `총 ${results.length.toLocaleString()}건 차이 — 간체↔번체 바뀜 ${cnt('rollback')}건 · 간체 칸 번체 혼입 ${cnt('script_issue')}건 · 글로서리 이탈 ${cnt('glossary')}건`, startedAt);
@@ -1032,6 +1113,164 @@ document.getElementById('baseline-clear').addEventListener('click', async ()=>{
 if(!convT2S){
   document.querySelector('.wrap').insertAdjacentHTML('afterbegin', '<div class="warn">⚠️ OpenCC 변환 라이브러리를 불러오지 못했습니다 — 인터넷 연결을 확인하고 새로고침해주세요. (번체/간체 롤백 판별이 동작하지 않습니다)</div>');
 }
+
+// ── ④ 번체 → 간체 변환 (검수 기능과 완전히 독립) ──
+// 업로드한 워크북을 그대로 유지한 채, 지정한 열의 번체만 간체로 바꿔 다른 열에 채워 넣고 새 파일로 저장한다.
+let convWb = null, convFileName = '';
+
+function setConvStatus(text){
+  const el = document.getElementById('conv-status');
+  el.innerHTML = text;
+  el.classList.toggle('show', !!text);
+}
+
+// 시트의 헤더 행을 읽어 "열이름(엑셀열문자)" 목록을 만든다. 헤더가 비어도 열문자만으로 선택 가능.
+function convReadColumns(ws, headerRow){
+  const ref = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+  const cols = [];
+  for(let c = ref.s.c; c <= ref.e.c; c++){
+    const cell = ws[XLSX.utils.encode_cell({ r: headerRow - 1, c })];
+    const name = cell && cell.v != null ? String(cell.v).trim() : '';
+    const letter = XLSX.utils.encode_col(c);
+    cols.push({ c, letter, name, label: name ? `${name}  (${letter}열)` : `(${letter}열)` });
+  }
+  return cols;
+}
+
+function convRefreshColumns(){
+  const sheetName = document.getElementById('conv-sheet').value;
+  const headerRow = Math.max(1, Number(document.getElementById('conv-header-row').value) || 1);
+  const ws = convWb.Sheets[sheetName];
+  const cols = convReadColumns(ws, headerRow);
+  const srcSel = document.getElementById('conv-src'), dstSel = document.getElementById('conv-dst');
+  const prevSrc = srcSel.value, prevDst = dstSel.value;
+  const opts = cols.map(col=> `<option value="${col.c}">${escapeHtml(col.label)}</option>`).join('');
+  // 결과 열은 "새 열로 추가"도 선택 가능
+  const nextCol = cols.length ? cols[cols.length-1].c + 1 : 0;
+  srcSel.innerHTML = opts;
+  dstSel.innerHTML = opts + `<option value="${nextCol}">➕ 새 열로 추가 (${XLSX.utils.encode_col(nextCol)}열)</option>`;
+  // 번체/간체로 보이는 열이 있으면 자동 선택
+  const findCol = re => cols.find(col=> re.test(col.name));
+  const chCol = findCol(/번체|zh-?tw|cht|traditional|Name<ch>/i);
+  const zhCol = findCol(/간체|zh-?cn|chs|simplified|Name<zh>/i);
+  if(prevSrc && [...srcSel.options].some(o=>o.value===prevSrc)) srcSel.value = prevSrc;
+  else if(chCol) srcSel.value = String(chCol.c);
+  if(prevDst && [...dstSel.options].some(o=>o.value===prevDst)) dstSel.value = prevDst;
+  else if(zhCol) dstSel.value = String(zhCol.c);
+  convUpdatePreview();
+}
+
+// 선택한 설정으로 첫 변환 예시를 보여줘서, 열/행 지정이 맞는지 눈으로 확인할 수 있게 한다.
+function convUpdatePreview(){
+  const el = document.getElementById('conv-preview');
+  if(!convWb || !convT2S){ el.textContent = ''; return; }
+  const ws = convWb.Sheets[document.getElementById('conv-sheet').value];
+  const startRow = Math.max(1, Number(document.getElementById('conv-start-row').value) || 1);
+  const srcC = Number(document.getElementById('conv-src').value);
+  const ref = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+  for(let r = startRow - 1; r <= Math.min(ref.e.r, startRow + 200); r++){
+    const cell = ws[XLSX.utils.encode_cell({ r, c: srcC })];
+    const v = cell && cell.v != null ? String(cell.v) : '';
+    if(v.trim()){
+      const conv = convT2S(v);
+      el.innerHTML = `예시(${r+1}행): <b>${escapeHtml(v.slice(0,28))}</b> → <b style="color:#4f46e5">${escapeHtml(conv.slice(0,28))}</b>`;
+      return;
+    }
+  }
+  el.textContent = '예시로 보여줄 값이 없습니다 (열/시작 행을 확인해주세요)';
+}
+
+async function handleConvFile(file){
+  if(!convT2S){ setConvStatus('<span style="color:#b91c1c">번체→간체 변환 라이브러리(OpenCC)를 불러오지 못했습니다. 인터넷 연결 확인 후 새로고침해주세요.</span>'); return; }
+  setConvStatus('파일 읽는 중...');
+  try{
+    const buf = await file.arrayBuffer();
+    // cellStyles: 서식 보존, cellFormula: 수식 보존 — 원본을 최대한 그대로 유지한 채 값만 채운다
+    convWb = XLSX.read(buf, { type:'array', cellStyles:true, cellFormula:true });
+    convFileName = file.name;
+    const sheetSel = document.getElementById('conv-sheet');
+    sheetSel.innerHTML = convWb.SheetNames.map(n=> `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+    // 'String' 시트가 있으면 기본 선택
+    if(convWb.SheetNames.includes('String')) sheetSel.value = 'String';
+    // 게임 스트링 시트는 1행 헤더 / 5행 데이터 시작이 기본
+    if(sheetSel.value === 'String'){
+      document.getElementById('conv-header-row').value = 1;
+      document.getElementById('conv-start-row').value = DATA_START_ROW;
+    }
+    document.getElementById('conv-setup').style.display = 'block';
+    document.getElementById('conv-drop-text').textContent = `현재 파일: ${file.name} — 다른 파일로 바꾸려면 클릭하거나 끌어다 놓으세요`;
+    convRefreshColumns();
+    setConvStatus(`파일 로드 완료: <b>${escapeHtml(file.name)}</b> · 시트 ${convWb.SheetNames.length}개 — 아래에서 변환할 열을 지정하세요`);
+  }catch(e){
+    setConvStatus('<span style="color:#b91c1c">오류: ' + escapeHtml(e.message) + '</span>');
+  }
+}
+
+document.getElementById('conv-sheet').addEventListener('change', convRefreshColumns);
+document.getElementById('conv-header-row').addEventListener('change', convRefreshColumns);
+document.getElementById('conv-start-row').addEventListener('change', convUpdatePreview);
+document.getElementById('conv-src').addEventListener('change', convUpdatePreview);
+
+document.getElementById('conv-run-btn').addEventListener('click', async ()=>{
+  if(!convWb || !convT2S) return;
+  const btn = document.getElementById('conv-run-btn');
+  const progress = document.getElementById('conv-progress'), bar = document.getElementById('conv-progress-bar');
+  const sheetName = document.getElementById('conv-sheet').value;
+  const startRow = Math.max(1, Number(document.getElementById('conv-start-row').value) || 1);
+  const srcC = Number(document.getElementById('conv-src').value);
+  const dstC = Number(document.getElementById('conv-dst').value);
+  const overwrite = document.getElementById('conv-overwrite').checked;
+
+  if(srcC === dstC && !confirm('원본 열과 결과 열이 같습니다. 원본 번체를 간체로 덮어쓸까요?')) return;
+
+  btn.disabled = true;
+  progress.classList.add('show');
+  bar.style.width = '10%';
+  setConvStatus('변환 중...');
+  const startedAt = Date.now();
+  ensureNotifyPermission();
+  try{
+    const ws = convWb.Sheets[sheetName];
+    const ref = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+    let converted = 0, changed = 0, skipped = 0;
+    for(let r = startRow - 1; r <= ref.e.r; r++){
+      const srcCell = ws[XLSX.utils.encode_cell({ r, c: srcC })];
+      const v = srcCell && srcCell.v != null ? String(srcCell.v) : '';
+      if(!v.trim()) continue;
+      const dstAddr = XLSX.utils.encode_cell({ r, c: dstC });
+      if(!overwrite && ws[dstAddr] && ws[dstAddr].v != null && String(ws[dstAddr].v).trim() !== ''){ skipped++; continue; }
+      const out = convT2S(v);
+      // 값만 기록(수식 제거) — 결과 열은 순수 텍스트로 남긴다
+      ws[dstAddr] = { t:'s', v: out };
+      converted++;
+      if(out !== v) changed++;
+      if(converted % 2000 === 0){
+        bar.style.width = (10 + Math.round((r - startRow + 1) / Math.max(1, ref.e.r - startRow + 1) * 80)) + '%';
+        await new Promise(res=>setTimeout(res, 0));
+      }
+    }
+    // 결과 열이 기존 범위 밖이면 시트 범위를 넓혀준다
+    if(dstC > ref.e.c){
+      ref.e.c = dstC;
+      ws['!ref'] = XLSX.utils.encode_range(ref);
+    }
+    bar.style.width = '95%';
+    const outName = convFileName.replace(/\.xlsx$/i, '') + '_간체변환.xlsx';
+    XLSX.writeFile(convWb, outName);
+    bar.style.width = '100%';
+    const dstLetter = XLSX.utils.encode_col(dstC), srcLetter = XLSX.utils.encode_col(srcC);
+    setConvStatus(`✅ 완료 — ${srcLetter}열 → ${dstLetter}열 <b>${converted.toLocaleString()}개</b> 변환(실제 글자가 바뀐 셀 ${changed.toLocaleString()}개${skipped ? ', 기존 값이 있어 건너뜀 ' + skipped.toLocaleString() + '개' : ''}) · 저장: <b>${escapeHtml(outName)}</b>`);
+    notifyDone('🔄 번체→간체 변환 완료', `${converted.toLocaleString()}개 셀 변환 — ${outName}`, startedAt);
+    setTimeout(()=>{ progress.classList.remove('show'); bar.style.width='0%'; }, 1500);
+  }catch(e){
+    progress.classList.remove('show');
+    setConvStatus('<span style="color:#b91c1c">변환 오류: ' + escapeHtml(e.message) + '</span>');
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+wireDrop('conv-drop','conv-input', handleConvFile);
 
 loadBaselineFromDb();
 
