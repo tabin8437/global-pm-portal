@@ -305,7 +305,7 @@ var DOC_URLS = {
   localization:  {preview:'https://docs.google.com/spreadsheets/d/1lUXRnwXK0ABi7ejxx_agQfAxKoMzhEzA/htmlview?gid=97953191',edit:'https://docs.google.com/spreadsheets/d/1lUXRnwXK0ABi7ejxx_agQfAxKoMzhEzA/edit?gid=97953191',extra:[
     {url:'rollback-checker.html',label:'롤백 검사기',icon:'ti-list-search',clr:'indigo',desc:'정상본 대비 번체/간체 롤백·변경 자동 검출'},
     {url:'https://docs.google.com/spreadsheets/d/100SwdEzMEDNX3WAcLyulkarC7bBVyihpp_a69wq02Ks/edit?gid=2114670632#gid=2114670632',label:'성우 녹음 대본',icon:'ti-microphone',clr:'purple',desc:'Odin_Query — 보이스 녹음용 대본 시트'},
-    {url:'https://kakaogames.agit.in/g/300093319/wall',label:'번역요청서-내부현지화셀',icon:'ti-file-description',clr:'blue',desc:'내부 현지화셀 번역 요청 게시판'}
+    {url:'https://kakaogames.agit.in/g/300093319/wall',label:'번역요청서-내부현지화셀',icon:'ti-file-description',clr:'blue',desc:'내부 현지화셀 번역 요청 게시판',noEmbed:true}
   ]},
   'shared-drive':{preview:'https://drive.google.com/drive/u/0/shared-drives',edit:'https://drive.google.com/drive/u/0/shared-drives'}
 };
@@ -737,21 +737,37 @@ function renderPage(id){
       c.innerHTML='<div class="doc-viewer"><div class="doc-toolbar"><span class="title"><i class="ti ti-table text-gray-400"></i> '+(pageNames[id]||id)+'</span><a href="'+doc.edit+'" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-external-link"></i> Google Drive에서 열기</a></div><div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px"><i class="ti ti-folder-open" style="font-size:48px;color:#d1d5db"></i><p style="font-size:13px;color:#9ca3af">폴더를 새 창에서 확인하세요</p></div></div>';
       return;
     }
-    // extra가 있으면 버튼 대신 카드 그리드로 노출 (보고/분석 목록과 같은 형태)
-    var cardsHtml='';
+    // extra가 있으면 보고/분석 목록과 같은 "미리보기 포함 카드" 형태로 노출
     if(doc.extra){
-      var items=doc.extra.concat([{url:doc.edit,label:(pageNames[id]||id)+' Q&A',icon:'ti-file-spreadsheet',clr:'emerald',desc:'문의·답변 정리 시트 (아래에서 바로 열람 가능)'}]);
-      cardsHtml='<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">'+items.map(function(e){
+      var items=doc.extra.concat([{url:doc.edit,preview:doc.preview,label:(pageNames[id]||id)+' Q&A',
+        icon:'ti-file-spreadsheet',clr:'emerald',desc:'문의·답변 정리 시트'}]);
+      var cards=items.map(function(e){
         var clr=e.clr||'gray';
-        return'<a href="'+e.url+'" target="_blank" class="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md hover:border-'+clr+'-300 transition-all block">'
-          +'<div class="flex items-start gap-3">'
+        var prev=e.noEmbed?'':(e.preview||toDocPreviewUrl(e.url));
+        var body=prev
+          ?'<div class="mt-3 rounded-lg overflow-hidden border border-gray-200" style="height:300px;position:relative">'
+            +'<iframe src="'+esc(prev)+'" loading="lazy" style="width:100%;height:100%;border:none;pointer-events:none"></iframe>'
+            +'<div style="position:absolute;inset:0;cursor:pointer" title="크게 보기" onclick="previewMeeting(\''+esc(e.url)+'\')"></div></div>'
+          :'<div class="mt-3 rounded-lg border border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-2" style="height:300px">'
+            +'<i class="ti '+e.icon+' text-3xl text-'+clr+'-300"></i>'
+            +'<span class="text-[11px] text-gray-400">미리보기를 지원하지 않는 페이지입니다</span>'
+            +'<a href="'+esc(e.url)+'" target="_blank" class="btn btn-sm btn-primary"><i class="ti ti-external-link"></i> 바로가기</a></div>';
+        return'<div class="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all hover:border-'+clr+'-200">'
+          +'<div class="flex items-start justify-between gap-2">'
+          +'<div class="flex items-center gap-2.5 min-w-0">'
           +'<div class="shrink-0 w-9 h-9 rounded-lg bg-'+clr+'-50 border border-'+clr+'-100 flex items-center justify-center"><i class="ti '+e.icon+' text-'+clr+'-600"></i></div>'
-          +'<div class="min-w-0 flex-1"><div class="font-bold text-sm text-gray-900 leading-snug flex items-center gap-1">'+esc(e.label)+'<i class="ti ti-external-link text-[11px] text-gray-300"></i></div>'
-          +(e.desc?'<div class="text-[11px] text-gray-500 mt-1 leading-relaxed">'+esc(e.desc)+'</div>':'')
-          +'</div></div></a>';
-      }).join('')+'</div>';
+          +'<div class="min-w-0"><div class="font-bold text-sm text-gray-900 leading-snug">'+esc(e.label)+'</div>'
+          +(e.desc?'<div class="text-[11px] text-gray-500 mt-0.5">'+esc(e.desc)+'</div>':'')+'</div></div>'
+          +'<div class="flex gap-1 shrink-0">'
+          +'<a href="'+esc(e.url)+'" target="_blank" class="btn btn-sm btn-ghost text-gray-400 hover:text-'+clr+'-600" title="새창열기"><i class="ti ti-external-link"></i></a>'
+          +(prev?'<button class="btn btn-sm btn-ghost text-gray-400 hover:text-'+clr+'-600" title="미리보기" onclick="previewMeeting(\''+esc(e.url)+'\')"><i class="ti ti-eye"></i></button>':'')
+          +'</div></div>'+body+'</div>';
+      }).join('');
+      c.innerHTML='<div class="card-header mb-3" style="padding:0"><span class="card-title text-sm"><i class="ti ti-language text-emerald-600"></i> '+(pageNames[id]||id)+' 목록</span></div>'
+        +'<div class="grid grid-cols-1 md:grid-cols-2 gap-4">'+cards+'</div>';
+      return;
     }
-    c.innerHTML=cardsHtml+'<div class="doc-viewer"><div class="doc-toolbar"><span class="title"><i class="ti ti-file-spreadsheet text-emerald-600"></i> '+(pageNames[id]||id)+' <span style="font-size:11px;color:#9ca3af;font-weight:400;margin-left:8px">읽기 전용</span></span><div style="display:flex;gap:6px"><a href="'+doc.edit+'" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-pencil"></i> 새창에서 편집</a></div></div><div class="doc-iframe-wrap"><iframe src="'+(doc.preview||doc.edit)+'"></iframe></div></div>';
+    c.innerHTML='<div class="doc-viewer"><div class="doc-toolbar"><span class="title"><i class="ti ti-file-spreadsheet text-emerald-600"></i> '+(pageNames[id]||id)+' <span style="font-size:11px;color:#9ca3af;font-weight:400;margin-left:8px">읽기 전용</span></span><div style="display:flex;gap:6px"><a href="'+doc.edit+'" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-pencil"></i> 새창에서 편집</a></div></div><div class="doc-iframe-wrap"><iframe src="'+(doc.preview||doc.edit)+'"></iframe></div></div>';
     return;
   }
   // Custom pages
