@@ -1633,6 +1633,7 @@ function applyKpiData(d){
     if(ins.feature) html+=bucket('ti-chart-bar','blue','주간 현재 특징','<p class="text-[12px] text-gray-700 leading-relaxed">'+esc(ins.feature)+'</p>');
     html+=bucket('ti-list-check','teal','좋은 점 · 문제점',goodBadHtml(ins.goodBad));
     html+=bucket('ti-bulb','purple','원인 후보',listHtml(ins.cause,'특이사항 없음'));
+    if(ins.schedule&&ins.schedule.length) html+=bucket('ti-calendar-stats','amber','글로벌 일정 점검',listHtml(ins.schedule,'예정된 일정 없음'));
     if(a.trend&&a.trend.length) html+=bucket('ti-speakerphone','rose','커뮤니티 동향',listHtml(a.trend,'특이사항 없음'));
     window._analysisCache='<div class="space-y-2.5">'+(a.period?'<div class="text-[10px] text-gray-400 font-semibold">📅 '+esc(a.period)+'</div>':'')+html+'</div>';
   } else if(d.analysis&&d.analysis.sections&&d.analysis.sections.length){
