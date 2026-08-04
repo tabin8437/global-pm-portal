@@ -878,23 +878,47 @@ function switchMilestoneTab(region){
 
 /* ── 통합 마일스톤 타임라인 페이지 ── */
 // 오늘 날짜 기준 "현재" 마일스톤 = 오늘이거나 오늘 직전의 가장 최근 행 (시트 하이라이트에 의존 안 함)
+function milestoneDate(t){
+  var m=String((t&&t.date)||'').match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  return m?new Date(+m[1],+m[2]-1,+m[3]):null;
+}
 function milestoneCurrentIdx(timeline){
   var today=new Date();today.setHours(0,0,0,0);
   var bi=-1,bt=-Infinity;
   (timeline||[]).forEach(function(t,i){
-    var m=String(t.date||'').match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
-    if(!m)return;
-    var tt=new Date(+m[1],+m[2]-1,+m[3]).getTime();
-    if(tt<=today.getTime()&&tt>bt){bt=tt;bi=i;}
+    var d=milestoneDate(t);if(!d)return;
+    if(d.getTime()<=today.getTime()&&d.getTime()>bt){bt=d.getTime();bi=i;}
   });
   return bi;
+}
+// 오늘 이후 가장 가까운(=다음 예정) 마일스톤
+function milestoneNextIdx(timeline){
+  var today=new Date();today.setHours(0,0,0,0);
+  var bi=-1,bt=Infinity;
+  (timeline||[]).forEach(function(t,i){
+    var d=milestoneDate(t);if(!d)return;
+    if(d.getTime()>today.getTime()&&d.getTime()<bt){bt=d.getTime();bi=i;}
+  });
+  return bi;
+}
+// 지난 마일스톤이 며칠 전인지 / 다음이 며칠 뒤인지
+function milestoneDayGap(t){
+  var d=milestoneDate(t);if(!d)return null;
+  var today=new Date();today.setHours(0,0,0,0);
+  return Math.round((d-today)/86400000);
 }
 function renderMilestonePage(){
   var c=document.getElementById('content-area');
   var timeline=window._milestoneTimeline||[];
   // 시트 하이라이트가 안 옮겨졌어도 오늘 기준으로 "현재"를 자동 판정
-  var curIdx=milestoneCurrentIdx(timeline);
-  if(curIdx!==-1) timeline.forEach(function(t,i){t.isCurrent=(i===curIdx);});
+  var curIdx=milestoneCurrentIdx(timeline), nextIdx=milestoneNextIdx(timeline);
+  timeline.forEach(function(t,i){
+    t.isCurrent=(i===curIdx);
+    t.isNext=(i===nextIdx);
+    var g=milestoneDayGap(t);
+    // 오늘이면 '오늘', 지났으면 'N일 전', 다음 예정이면 'N일 뒤'
+    t._badge = (g===0)?'● 오늘' : (t.isCurrent?'직전 ('+Math.abs(g)+'일 전)' : (t.isNext?'다음 ('+g+'일 뒤)':''));
+  });
   var regionClr={kr:'#ef4444',tw:'#3b82f6',jp:'#10b981',gl:'#a855f7'};
   var DOW_KR={Mon:'월',Tue:'화',Wed:'수',Thu:'목',Fri:'금',Sat:'토',Sun:'일'};
   function dateKr(s){
@@ -915,8 +939,10 @@ function renderMilestonePage(){
       var mp=t.month.split('-');
       sep='<tr><td colspan="5" class="px-3 pt-5 pb-1.5" style="background:#fafafa"><div class="text-xs font-bold text-gray-500 flex items-center gap-2"><i class="ti ti-calendar-event"></i><span>'+mp[0]+'년 '+mp[1]+'월</span><span class="flex-1 border-t border-gray-200"></span></div></td></tr>';
     }
-    return sep+'<tr class="milestone-row'+(t.isCurrent?' is-current':'')+'">'
-      +'<td class="px-3 py-2.5 whitespace-nowrap" style="border-left:3px solid '+(t.isCurrent?'#f59e0b':'transparent')+'"><div class="text-sm font-bold text-gray-900">'+esc(dateKr(t.date))+'</div>'+(t.isCurrent?'<div class="text-[11px] text-amber-600 font-bold mt-0.5">● 현재</div>':'')+(t.version?'<div class="text-[11px] text-gray-400 mt-0.5">'+esc(t.version)+'</div>':'')+'</td>'
+    var hi=t.isCurrent?'#f59e0b':(t.isNext?'#6366f1':'transparent');
+    var badgeCls=t.isNext&&!t.isCurrent?'text-indigo-600':'text-amber-600';
+    return sep+'<tr class="milestone-row'+(t.isCurrent?' is-current':'')+(t.isNext?' is-next':'')+'">'
+      +'<td class="px-3 py-2.5 whitespace-nowrap" style="border-left:3px solid '+hi+'"><div class="text-sm font-bold text-gray-900">'+esc(dateKr(t.date))+'</div>'+(t._badge?'<div class="text-[11px] '+badgeCls+' font-bold mt-0.5">'+esc(t._badge)+'</div>':'')+(t.version?'<div class="text-[11px] text-gray-400 mt-0.5">'+esc(t.version)+'</div>':'')+'</td>'
       +'<td class="px-3 py-2.5 border-l border-gray-100">'+cell(t.kr,regionClr.kr)+'</td>'
       +'<td class="px-3 py-2.5 border-l border-gray-100">'+cell(t.tw,regionClr.tw)+'</td>'
       +'<td class="px-3 py-2.5 border-l border-gray-100">'+cell(t.jp,regionClr.jp)+'</td>'
@@ -926,7 +952,7 @@ function renderMilestonePage(){
 
   c.innerHTML='<div class="card" style="padding:0;overflow:hidden;max-width:1320px;margin:0 auto">'
     +'<div class="card-header" style="padding:14px 16px"><span class="card-title"><i class="ti ti-route text-blue-500"></i> 통합 마일스톤 타임라인</span><a href="'+MILESTONE_SHEET_EDIT_URL+'" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-pencil"></i> 원본 시트 편집</a></div>'
-    +'<style>.milestone-row{border-bottom:1px solid #f3f4f6}.milestone-row:hover{background:#fafbff}.milestone-row.is-current{background:#fffbeb}.milestone-row.is-current:hover{background:#fef3c7}</style>'
+    +'<style>.milestone-row{border-bottom:1px solid #f3f4f6}.milestone-row:hover{background:#fafbff}.milestone-row.is-current{background:#fffbeb}.milestone-row.is-current:hover{background:#fef3c7}.milestone-row.is-next{background:#eef2ff}.milestone-row.is-next:hover{background:#e0e7ff}</style>'
     +'<div style="overflow-x:auto"><table class="text-xs border-collapse" style="width:100%;table-layout:fixed">'
     +'<thead><tr class="bg-gray-50 border-b border-gray-200"><th class="px-3 py-2.5 text-left text-sm text-gray-600 font-bold" style="width:120px">날짜</th>'
     +'<th class="px-3 py-2.5 text-left text-sm font-bold border-l border-gray-100" style="width:21.95%;color:'+regionClr.kr+'">🇰🇷 한국 <a href="https://docs.google.com/spreadsheets/d/1Ez5v4E_r-R8r6mZ9rUaSr--6_oshIy-9mXLzUXu9u10/edit?gid=1258372723#gid=1258372723" target="_blank" title="한국 원본 시트" style="color:#9ca3af;text-decoration:none"><i class="ti ti-external-link"></i></a></th>'
@@ -1373,7 +1399,9 @@ function renderKpiPage(){
     if(ann.plan){
       var bN=parseFloat(String(ann.achieve||'').replace(/[^0-9.]/g,''))||0;
       var bC=bN>=90?'emerald':bN>=80?'blue':'amber';
-      annualHtml2='<div class="mt-2.5 pt-2.5 border-t border-'+def.color+'-100"><div class="text-[10px] font-bold text-'+def.color+'-400 mb-1">📅 연간</div><div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">계획/추정</span><span class="text-[10px] font-bold text-gray-700">'+fmtNum(ann.plan*1000000)+' / '+fmtNum(ann.estimate*1000000)+'</span></div><div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">달성률</span><span class="text-[10px] font-bold text-'+bC+'-600">'+ann.achieve+'</span></div></div>';
+      annualHtml2='<div class="mt-2.5 pt-2.5 border-t border-'+def.color+'-100"><div class="text-[10px] font-bold text-'+def.color+'-400 mb-1">📅 연간</div><div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">계획/추정</span><span class="text-[10px] font-bold text-gray-700">'+fmtNum(ann.plan*1000000)+' / '+fmtNum(ann.estimate*1000000)+'</span></div><div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">달성률</span><span class="text-[10px] font-bold text-'+bC+'-600">'+ann.achieve+'</span></div>'
+        +(ann.cumulative?'<div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">누적매출</span><span class="text-[10px] font-bold text-gray-700">'+fmtNum(ann.cumulative*1000000)+(ann.cumulativePct?' <span class="text-[9px] font-bold text-'+bC+'-600">'+ann.cumulativePct+'</span>':'')+'</span></div>':'')
+        +'</div>';
     }
     return'<div class="card border-'+def.color+'-200 hover:shadow-md transition-all"><div class="flex items-center justify-between mb-2"><span class="font-bold text-sm text-'+def.color+'-700">'+def.label+'</span><span class="text-[10px] font-bold bg-'+def.color+'-50 text-'+def.color+'-600 px-2 py-0.5 rounded">전주비</span></div><div class="divide-y divide-gray-50">'+weeklyHtml+'</div>'+targetHtml2+monthlyHtml+annualHtml2+'</div>';
   }
