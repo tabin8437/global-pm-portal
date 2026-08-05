@@ -1402,8 +1402,8 @@ function renderMonthlyCharts(){
   if(!seriesList.length) return '';
   var svg=multiTrendSvg(seriesList,labels.map(function(l){return l.replace(/^\d{4}-/,'')+'월';}),fmtNum);
   if(!svg) return '';
-  return '<div class="card-header" style="padding:0;margin:18px 0 12px"><span class="card-title"><i class="ti ti-calendar-dollar text-amber-500"></i> 월별 누적매출 추이 <span class="text-[11px] text-gray-400 font-medium ml-1">권역별</span></span>'
-    +'<span class="text-[11px] text-gray-400 font-medium">최근 '+labels.length+'개월 · 이번 달은 진행 중</span></div>'
+  return '<div class="card-header" style="padding:0;margin:18px 0 12px"><span class="card-title"><i class="ti ti-calendar-dollar text-amber-500"></i> 월별 매출 추이 <span class="text-[11px] text-gray-400 font-medium ml-1">권역별 · '+(new Date().getFullYear())+'년</span></span>'
+    +'<span class="text-[11px] text-gray-400 font-medium">'+labels.length+'개월 · 이번 달은 진행 중</span></div>'
     +'<div class="card"><div class="flex items-center justify-end gap-2.5 flex-wrap mb-2">'+legend+'</div>'+svg+'</div>';
 }
 
