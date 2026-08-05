@@ -1374,6 +1374,39 @@ function renderTrendCharts(){
     +'<div class="grid grid-cols-1 md:grid-cols-2 gap-4">'+cards+'</div>';
 }
 
+// 권역별 월간 누적매출 추이 (시트에는 당월 누적만 있어 서버가 월별로 축적한 값을 쓴다)
+function renderMonthlyCharts(){
+  var byR=window._monthTrendCache;
+  if(!byR) return '';
+  var labelSet={};
+  TREND_REGIONS.forEach(function(r){ (byR[r.key]||[]).forEach(function(t){ if(t.period) labelSet[t.period]=1; }); });
+  var labels=Object.keys(labelSet).sort();
+  if(labels.length<2) {
+    // 아직 한 달치뿐이면 그래프 대신 안내만
+    if(!labels.length) return '';
+    return '<div class="card-header" style="padding:0;margin:18px 0 12px"><span class="card-title"><i class="ti ti-calendar-dollar text-amber-500"></i> 월별 누적매출 추이</span></div>'
+      +'<div class="card"><p class="text-[12px] text-gray-400 text-center py-6">'+esc(labels[0])+' 데이터만 쌓여 있습니다. 매달 한 점씩 누적되어 다음 달부터 그래프가 그려져요.</p></div>';
+  }
+  var seriesList=[],legend='';
+  TREND_REGIONS.forEach(function(r){
+    var arr=byR[r.key]||[]; if(!arr.length) return;
+    var map={}; arr.forEach(function(t){ var v=Number(t.revenue); map[t.period]=(v>0?v:null); });
+    var vals=labels.map(function(l){ return map.hasOwnProperty(l)?map[l]:null; });
+    if(!vals.some(function(v){return v!==null;})) return;
+    seriesList.push({label:r.label,color:r.color,values:vals});
+    var lastV=null; for(var i=vals.length-1;i>=0;i--){ if(vals[i]!==null){lastV=vals[i];break;} }
+    legend+='<span class="inline-flex items-center gap-1 text-[10px] font-bold" style="color:'+r.color+'">'
+      +'<span style="width:8px;height:8px;border-radius:2px;background:'+r.color+';display:inline-block"></span>'+r.label
+      +(lastV!==null?' <span class="text-gray-500">'+fmtNum(lastV)+'</span>':'')+'</span>';
+  });
+  if(!seriesList.length) return '';
+  var svg=multiTrendSvg(seriesList,labels.map(function(l){return l.replace(/^\d{4}-/,'')+'월';}),fmtNum);
+  if(!svg) return '';
+  return '<div class="card-header" style="padding:0;margin:18px 0 12px"><span class="card-title"><i class="ti ti-calendar-dollar text-amber-500"></i> 월별 누적매출 추이 <span class="text-[11px] text-gray-400 font-medium ml-1">권역별</span></span>'
+    +'<span class="text-[11px] text-gray-400 font-medium">최근 '+labels.length+'개월 · 이번 달은 진행 중</span></div>'
+    +'<div class="card"><div class="flex items-center justify-end gap-2.5 flex-wrap mb-2">'+legend+'</div>'+svg+'</div>';
+}
+
 /* ── AI ── */
 function renderKpiPage(){
   var c=document.getElementById('content-area');
@@ -1440,7 +1473,8 @@ function renderKpiPage(){
   var cardsHtml=defs.map(rCard).join('');
   c.innerHTML='<div class="card-header" style="padding:0;margin-bottom:12px"><span class="card-title"><i class="ti ti-trending-up text-emerald-500"></i> 전권역 주간 매출 추이</span><a href="https://drive.google.com/drive/folders/1lk_9pMhvy343Wx7J2sHbGIYRo2c-x7vQ" target="_blank" class="btn btn-sm"><i class="ti ti-folder"></i> 보고 폴더</a></div>'+
     '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">'+cardsHtml+'</div>'+
-    renderTrendCharts();
+    renderTrendCharts()+
+    renderMonthlyCharts();
 }
 
 function renderDevMeeting(){
