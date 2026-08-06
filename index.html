@@ -1388,23 +1388,36 @@ function renderMonthlyCharts(){
       +'<div class="card"><p class="text-[12px] text-gray-400 text-center py-6">'+esc(labels[0])+' 데이터만 쌓여 있습니다. 매달 한 점씩 누적되어 다음 달부터 그래프가 그려져요.</p></div>';
   }
   var seriesList=[],legend='';
-  TREND_REGIONS.forEach(function(r){
-    var arr=byR[r.key]||[]; if(!arr.length) return;
-    var map={}; arr.forEach(function(t){ var v=Number(t.revenue); map[t.period]=(v>0?v:null); });
-    var vals=labels.map(function(l){ return map.hasOwnProperty(l)?map[l]:null; });
-    if(!vals.some(function(v){return v!==null;})) return;
-    seriesList.push({label:r.label,color:r.color,values:vals});
-    var lastV=null; for(var i=vals.length-1;i>=0;i--){ if(vals[i]!==null){lastV=vals[i];break;} }
-    legend+='<span class="inline-flex items-center gap-1 text-[10px] font-bold" style="color:'+r.color+'">'
-      +'<span style="width:8px;height:8px;border-radius:2px;background:'+r.color+';display:inline-block"></span>'+r.label
-      +(lastV!==null?' <span class="text-gray-500">'+fmtNum(lastV)+'</span>':'')+'</span>';
-  });
-  if(!seriesList.length) return '';
-  var svg=multiTrendSvg(seriesList,labels.map(function(l){return l.replace(/^\d{4}-/,'')+'월';}),fmtNum);
-  if(!svg) return '';
+  var xLabels=labels.map(function(l){return l.replace(/^\d{4}-/,'')+'월';});
+
+  // 한국은 규모가 10배 이상 커서 같이 그리면 나머지가 바닥에 깔린다 → 카드를 분리한다
+  function chartFor(keys,title){
+    var series=[],lg='';
+    TREND_REGIONS.forEach(function(r){
+      if(keys.indexOf(r.key)===-1) return;
+      var arr=byR[r.key]||[]; if(!arr.length) return;
+      var map={}; arr.forEach(function(t){ var v=Number(t.revenue); map[t.period]=(v>0?v:null); });
+      var vals=labels.map(function(l){ return map.hasOwnProperty(l)?map[l]:null; });
+      if(!vals.some(function(v){return v!==null;})) return;
+      series.push({label:r.label,color:r.color,values:vals});
+      var lastV=null; for(var i=vals.length-1;i>=0;i--){ if(vals[i]!==null){lastV=vals[i];break;} }
+      lg+='<span class="inline-flex items-center gap-1 text-[10px] font-bold" style="color:'+r.color+'">'
+        +'<span style="width:8px;height:8px;border-radius:2px;background:'+r.color+';display:inline-block"></span>'+r.label
+        +(lastV!==null?' <span class="text-gray-500">'+fmtNum(lastV)+'</span>':'')+'</span>';
+    });
+    if(!series.length) return '';
+    var s=multiTrendSvg(series,xLabels,fmtNum);
+    if(!s) return '';
+    return '<div class="card"><div class="flex items-center justify-between gap-2 flex-wrap mb-2">'
+      +'<span class="text-xs font-bold text-gray-700">'+title+'</span>'
+      +'<div class="flex items-center gap-2.5 flex-wrap">'+lg+'</div></div>'+s+'</div>';
+  }
+
+  var cards=chartFor(['kr'],'🇰🇷 한국')+chartFor(['tw','jp','gl'],'🇹🇼 대만 · 🇯🇵 일본 · 🌐 글로벌');
+  if(!cards) return '';
   return '<div class="card-header" style="padding:0;margin:18px 0 12px"><span class="card-title"><i class="ti ti-calendar-dollar text-amber-500"></i> 월별 매출 추이 <span class="text-[11px] text-gray-400 font-medium ml-1">권역별 · '+(new Date().getFullYear())+'년</span></span>'
-    +'<span class="text-[11px] text-gray-400 font-medium">'+labels.length+'개월 · 이번 달은 진행 중</span></div>'
-    +'<div class="card"><div class="flex items-center justify-end gap-2.5 flex-wrap mb-2">'+legend+'</div>'+svg+'</div>';
+    +'<span class="text-[11px] text-gray-400 font-medium">'+labels.length+'개월 · 이번 달은 진행 중 · 규모 차이가 커서 분리 표시</span></div>'
+    +'<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">'+cards+'</div>';
 }
 
 /* ── AI ── */
