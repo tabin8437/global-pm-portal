@@ -1424,6 +1424,68 @@ function renderMonthlyCharts(){
     +'<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">'+cards+'</div>';
 }
 
+// 글로벌 일별 추이: 매출은 막대, PU·ARPPU·DAU는 선.
+// 지표마다 단위가 달라 선은 각자 범위로 정규화해 겹쳐 그리고, 값은 마우스오버로 확인한다.
+function renderDailyGlobal(){
+  var days=window._dailyGlobalCache||[];
+  if(days.length<2) return '';
+  var W=980,H=300,PL=64,PR=16,PT=18,PB=34;
+  var n=days.length;
+  var revs=days.map(function(d){return Number(d.revenue)||0;});
+  var maxRev=Math.max.apply(null,revs)||1;
+  var plotH=H-PT-PB, plotW=W-PL-PR;
+  var slot=plotW/n, bw=Math.max(6,Math.min(28,slot*0.55));
+  function cx(i){return PL+slot*(i+0.5);}
+  function byRev(v){return PT+plotH*(1-v/(maxRev*1.15));}
+
+  // 매출 축(왼쪽) 눈금
+  var grid='';
+  for(var g=0;g<=4;g++){
+    var gv=maxRev*1.15*g/4, gy=PT+plotH*(1-g/4);
+    grid+='<line x1="'+PL+'" y1="'+gy.toFixed(1)+'" x2="'+(W-PR)+'" y2="'+gy.toFixed(1)+'" stroke="#eef2f7"/>'
+      +'<text x="'+(PL-8)+'" y="'+(gy+3.2).toFixed(1)+'" font-size="9" fill="#9ca3af" text-anchor="end">'+esc(fmtNum(gv))+'</text>';
+  }
+  // 매출 막대
+  var bars=days.map(function(d,i){
+    var v=Number(d.revenue)||0, y=byRev(v), h=Math.max(0,PT+plotH-y);
+    return '<rect x="'+(cx(i)-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="2" fill="#8b5cf6" opacity="0.75">'
+      +'<title>'+esc(d.date)+' 매출 '+fmtNum(v)+'</title></rect>';
+  }).join('');
+
+  // 선 3종 (각자 min~max로 정규화)
+  var lineDefs=[{key:'dau',label:'DAU',color:'#10b981'},{key:'pu',label:'PU',color:'#14b8a6'},{key:'arppu',label:'ARPPU',color:'#f59e0b'}];
+  var lines='',legend='<span class="inline-flex items-center gap-1 text-[10px] font-bold" style="color:#8b5cf6">'
+    +'<span style="width:8px;height:8px;border-radius:2px;background:#8b5cf6;display:inline-block"></span>매출 '
+    +'<span class="text-gray-500">'+fmtNum(revs[n-1])+'</span></span>';
+  lineDefs.forEach(function(L){
+    var vs=days.map(function(d){return Number(d[L.key])||0;});
+    var mx=Math.max.apply(null,vs), mn=Math.min.apply(null,vs);
+    if(!mx) return;
+    var rg=(mx-mn)||mx||1;
+    var pts=vs.map(function(v,i){return cx(i).toFixed(1)+','+(PT+plotH*0.08+plotH*0.84*(1-(v-mn)/rg)).toFixed(1);});
+    var dots=vs.map(function(v,i){
+      var y=PT+plotH*0.08+plotH*0.84*(1-(v-mn)/rg);
+      return '<circle cx="'+cx(i).toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2.4" fill="#fff" stroke="'+L.color+'" stroke-width="1.6">'
+        +'<title>'+esc(days[i].date)+' '+L.label+' '+fmtNum(v)+'</title></circle>';
+    }).join('');
+    lines+='<path d="M'+pts.join(' L')+'" fill="none" stroke="'+L.color+'" stroke-width="2" stroke-linejoin="round"/>'+dots;
+    legend+='<span class="inline-flex items-center gap-1 text-[10px] font-bold" style="color:'+L.color+'">'
+      +'<span style="width:8px;height:8px;border-radius:2px;background:'+L.color+';display:inline-block"></span>'+L.label
+      +' <span class="text-gray-500">'+fmtNum(vs[n-1])+'</span></span>';
+  });
+
+  // x축(며칠 간격으로만 표기)
+  var step=Math.max(1,Math.ceil(n/12)),xl='';
+  for(var i2=0;i2<n;i2+=step){
+    xl+='<text x="'+cx(i2).toFixed(1)+'" y="'+(H-10)+'" font-size="9" fill="#9ca3af" text-anchor="middle">'+(+days[i2].date.slice(8,10))+'</text>';
+  }
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block">'+grid+bars+lines+xl+'</svg>';
+  var mLabel=(+days[0].date.slice(5,7))+'월';
+  return '<div class="card-header" style="padding:0;margin:18px 0 12px"><span class="card-title"><i class="ti ti-chart-histogram text-violet-500"></i> 글로벌 일별 추이 <span class="text-[11px] text-gray-400 font-medium ml-1">'+mLabel+' 1일~오늘</span></span>'
+    +'<span class="text-[11px] text-gray-400 font-medium">막대=매출(왼쪽 축) · 선=DAU·PU·ARPPU(값은 마우스오버)</span></div>'
+    +'<div class="card"><div class="flex items-center justify-end gap-2.5 flex-wrap mb-2">'+legend+'</div>'+svg+'</div>';
+}
+
 /* ── AI ── */
 function renderKpiPage(){
   var c=document.getElementById('content-area');
@@ -1491,7 +1553,8 @@ function renderKpiPage(){
   c.innerHTML='<div class="card-header" style="padding:0;margin-bottom:12px"><span class="card-title"><i class="ti ti-trending-up text-emerald-500"></i> 전권역 주간 매출 추이</span><a href="https://drive.google.com/drive/folders/1lk_9pMhvy343Wx7J2sHbGIYRo2c-x7vQ" target="_blank" class="btn btn-sm"><i class="ti ti-folder"></i> 보고 폴더</a></div>'+
     '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">'+cardsHtml+'</div>'+
     renderTrendCharts()+
-    renderMonthlyCharts();
+    renderMonthlyCharts()+
+    renderDailyGlobal();
 }
 
 function renderDevMeeting(){
@@ -1665,6 +1728,7 @@ function applyKpiData(d){
   if(d.weeklyTrend&&d.weeklyTrend.length) window._trendCache=d.weeklyTrend;
   if(d.weeklyTrendByRegion) window._trendByRegionCache=d.weeklyTrendByRegion;
   if(d.monthlyTrendByRegion) window._monthTrendCache=d.monthlyTrendByRegion;
+  if(d.dailyGlobal) window._dailyGlobalCache=d.dailyGlobal;
 
   // 마일스톤 동기화
   if(d.milestone&&d.milestone.date){
