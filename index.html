@@ -1481,9 +1481,29 @@ function renderDailyGlobal(){
   }
   var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block">'+grid+bars+lines+xl+'</svg>';
   var mLabel=(+days[0].date.slice(5,7))+'월';
+
+  // 같은 기간 비교: 당월 누적 vs 전월 동기 누적 (시트가 제공하는 값)
+  var m=window._monthlyRawCache||{},cmpHtml='';
+  if(m.revenue){
+    var curSum=revs.reduce(function(a,b){return a+b;},0)||m.revenue;
+    var prev=m.revenuePrev||0;
+    var chg=m.revenueChange||'';
+    var down=String(chg).indexOf('-')!==-1||String(chg).indexOf('▼')!==-1;
+    function chip(lb,val,cls){
+      return '<div class="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-center min-w-[104px]">'
+        +'<div class="text-[10px] text-gray-400 font-bold">'+lb+'</div>'
+        +'<div class="text-sm font-extrabold '+(cls||'text-gray-900')+' mt-0.5">'+val+'</div></div>';
+    }
+    cmpHtml='<div class="flex items-center gap-2 flex-wrap mb-3">'
+      +chip(mLabel+' 누적(1일~오늘)',fmtNum(curSum))
+      +(prev?chip('전월 동기 누적',fmtNum(prev)):'')
+      +(chg?chip('전월 동기 대비',chg,down?'text-blue-600':'text-red-500'):'')
+      +'</div>';
+  }
+
   return '<div class="card-header" style="padding:0;margin:18px 0 12px"><span class="card-title"><i class="ti ti-chart-histogram text-violet-500"></i> 글로벌 일별 추이 <span class="text-[11px] text-gray-400 font-medium ml-1">'+mLabel+' 1일~오늘</span></span>'
     +'<span class="text-[11px] text-gray-400 font-medium">막대=매출(왼쪽 축) · 선=DAU·PU·ARPPU(값은 마우스오버)</span></div>'
-    +'<div class="card"><div class="flex items-center justify-end gap-2.5 flex-wrap mb-2">'+legend+'</div>'+svg+'</div>';
+    +'<div class="card">'+cmpHtml+'<div class="flex items-center justify-end gap-2.5 flex-wrap mb-2">'+legend+'</div>'+svg+'</div>';
 }
 
 /* ── AI ── */
@@ -1729,6 +1749,7 @@ function applyKpiData(d){
   if(d.weeklyTrendByRegion) window._trendByRegionCache=d.weeklyTrendByRegion;
   if(d.monthlyTrendByRegion) window._monthTrendCache=d.monthlyTrendByRegion;
   if(d.dailyGlobal) window._dailyGlobalCache=d.dailyGlobal;
+  if(d.monthly) window._monthlyRawCache=d.monthly;
 
   // 마일스톤 동기화
   if(d.milestone&&d.milestone.date){
