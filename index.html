@@ -1445,18 +1445,47 @@ function renderDailyGlobal(){
     grid+='<line x1="'+PL+'" y1="'+gy.toFixed(1)+'" x2="'+(W-PR)+'" y2="'+gy.toFixed(1)+'" stroke="#eef2f7"/>'
       +'<text x="'+(PL-8)+'" y="'+(gy+3.2).toFixed(1)+'" font-size="9" fill="#9ca3af" text-anchor="end">'+esc(fmtNum(gv))+'</text>';
   }
-  // 매출 막대
-  var bars=days.map(function(d,i){
-    var v=Number(d.revenue)||0, y=byRev(v), h=Math.max(0,PT+plotH-y);
-    return '<rect x="'+(cx(i)-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="2" fill="#8b5cf6" opacity="0.75">'
-      +'<title>'+esc(d.date)+' 매출 '+fmtNum(v)+'</title></rect>';
-  }).join('');
+  // 비교군: 전월 동기(옅은 보라) · 작년 동월(회색) — 같은 "일자"끼리 맞춰 겹쳐 그린다
+  function dayMap(arr){ var m={}; (arr||[]).forEach(function(d){ m[+String(d.date).slice(8,10)]=Number(d.revenue)||0; }); return m; }
+  var prevMap=dayMap(window._dailyPrevCache), lyMap=dayMap(window._dailyLastYearCache);
+  var hasPrev=Object.keys(prevMap).length>0, hasLY=Object.keys(lyMap).length>0;
+  // 비교군 값도 y축 범위에 포함시켜야 잘리지 않는다
+  days.forEach(function(d){
+    var dn=+String(d.date).slice(8,10);
+    if(prevMap[dn]>maxRev) maxRev=prevMap[dn];
+    if(lyMap[dn]>maxRev) maxRev=lyMap[dn];
+  });
+
+  function barsFor(map,color,op,label){
+    if(!map) return '';
+    return days.map(function(d,i){
+      var dn=+String(d.date).slice(8,10), v=map[dn];
+      if(!v) return '';
+      var y=byRev(v), h=Math.max(0,PT+plotH-y);
+      return '<rect x="'+(cx(i)-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="2" fill="'+color+'" opacity="'+op+'">'
+        +'<title>'+label+' '+dn+'일 매출 '+fmtNum(v)+'</title></rect>';
+    }).join('');
+  }
+  // 뒤쪽(연한 색)부터 그려야 이번 달 막대가 위로 온다
+  var bars=barsFor(hasLY?lyMap:null,'#9ca3af',0.35,'작년 동월')
+    +barsFor(hasPrev?prevMap:null,'#c4b5fd',0.55,'전월 동기')
+    +days.map(function(d,i){
+      var v=Number(d.revenue)||0, y=byRev(v), h=Math.max(0,PT+plotH-y);
+      var w=hasPrev||hasLY?bw*0.62:bw;   // 비교군이 있으면 이번 달 막대를 좁혀 겹쳐 보이게
+      return '<rect x="'+(cx(i)-w/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="2" fill="#8b5cf6" opacity="0.9">'
+        +'<title>'+esc(d.date)+' 매출 '+fmtNum(v)+'</title></rect>';
+    }).join('');
 
   // 선 3종 (각자 min~max로 정규화)
   var lineDefs=[{key:'dau',label:'DAU',color:'#10b981'},{key:'pu',label:'PU',color:'#14b8a6'},{key:'arppu',label:'ARPPU',color:'#f59e0b'}];
-  var lines='',legend='<span class="inline-flex items-center gap-1 text-[10px] font-bold" style="color:#8b5cf6">'
-    +'<span style="width:8px;height:8px;border-radius:2px;background:#8b5cf6;display:inline-block"></span>매출 '
-    +'<span class="text-gray-500">'+fmtNum(revs[n-1])+'</span></span>';
+  function lgChip(color,label,val){
+    return '<span class="inline-flex items-center gap-1 text-[10px] font-bold" style="color:'+color+'">'
+      +'<span style="width:8px;height:8px;border-radius:2px;background:'+color+';display:inline-block"></span>'+label
+      +(val?' <span class="text-gray-500">'+val+'</span>':'')+'</span>';
+  }
+  var lines='',legend=lgChip('#8b5cf6','매출',fmtNum(revs[n-1]))
+    +(hasPrev?lgChip('#c4b5fd','전월 동기',''):'')
+    +(hasLY?lgChip('#9ca3af','작년 동월',''):'');
   lineDefs.forEach(function(L){
     var vs=days.map(function(d){return Number(d[L.key])||0;});
     var mx=Math.max.apply(null,vs), mn=Math.min.apply(null,vs);
@@ -1749,6 +1778,8 @@ function applyKpiData(d){
   if(d.weeklyTrendByRegion) window._trendByRegionCache=d.weeklyTrendByRegion;
   if(d.monthlyTrendByRegion) window._monthTrendCache=d.monthlyTrendByRegion;
   if(d.dailyGlobal) window._dailyGlobalCache=d.dailyGlobal;
+  if(d.dailyGlobalPrev) window._dailyPrevCache=d.dailyGlobalPrev;
+  if(d.dailyGlobalLastYear) window._dailyLastYearCache=d.dailyGlobalLastYear;
   if(d.monthly) window._monthlyRawCache=d.monthly;
 
   // 마일스톤 동기화
@@ -1809,6 +1840,7 @@ function applyKpiData(d){
     if(ins.feature) html+=bucket('ti-chart-bar','blue','주간 현재 특징','<p class="text-[12px] text-gray-700 leading-relaxed">'+esc(ins.feature)+'</p>');
     html+=bucket('ti-list-check','teal','좋은 점 · 문제점',goodBadHtml(ins.goodBad));
     html+=bucket('ti-bulb','purple','원인 후보',listHtml(ins.cause,'특이사항 없음'));
+    if(ins.monthly&&ins.monthly.length) html+=bucket('ti-calendar-dollar','indigo','월간 분석 (전달 · 이번 달)',listHtml(ins.monthly,'데이터 부족'));
     if(ins.schedule&&ins.schedule.length) html+=bucket('ti-calendar-stats','amber','글로벌 일정 점검',listHtml(ins.schedule,'예정된 일정 없음'));
     if(a.trend&&a.trend.length) html+=bucket('ti-speakerphone','rose','커뮤니티 동향',listHtml(a.trend,'특이사항 없음'));
     window._analysisCache='<div class="space-y-2.5">'+(a.period?'<div class="text-[10px] text-gray-400 font-semibold">📅 '+esc(a.period)+'</div>':'')+html+'</div>';
