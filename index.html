@@ -1332,6 +1332,10 @@ function renderTrendCharts(){
     (byR[r.key]||[]).forEach(function(t){var l=shortPeriod(t.period);if(l)labelSet[l]=1;});
   });
   var labels=Object.keys(labelSet).sort(function(a,b){return weekKeyOf(a)-weekKeyOf(b);});
+  // 최근 한 달(약 5주)치만 보여준다 — 오래된 스냅샷 라벨이 섞여 그래프가 짧아 보이는 것 방지
+  var cutoff=Date.now()-35*86400000;
+  var recent=labels.filter(function(l){var t=weekKeyOf(l);return t&&t>=cutoff;});
+  if(recent.length>=2) labels=recent;
   if(labels.length<2) return '';
 
   var metrics=[
