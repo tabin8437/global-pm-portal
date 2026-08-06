@@ -1448,7 +1448,10 @@ function renderDailyGlobal(){
   // 비교군: 전월 동기(옅은 보라) · 작년 동월(회색) — 같은 "일자"끼리 맞춰 겹쳐 그린다
   function dayMap(arr){ var m={}; (arr||[]).forEach(function(d){ m[+String(d.date).slice(8,10)]=Number(d.revenue)||0; }); return m; }
   var prevMap=dayMap(window._dailyPrevCache), lyMap=dayMap(window._dailyLastYearCache);
-  var hasPrev=Object.keys(prevMap).length>0, hasLY=Object.keys(lyMap).length>0;
+  // 화면에 표시 중인 "일자"와 겹치는 값이 실제로 있을 때만 비교군으로 인정한다
+  // (예: 전월 데이터가 30·31일뿐이면 1~5일 차트에는 그릴 것이 없으므로 범례도 띄우지 않음)
+  function overlaps(m){ return days.some(function(d){ return m[+String(d.date).slice(8,10)]>0; }); }
+  var hasPrev=overlaps(prevMap), hasLY=overlaps(lyMap);
   // 비교군 값도 y축 범위에 포함시켜야 잘리지 않는다
   days.forEach(function(d){
     var dn=+String(d.date).slice(8,10);
