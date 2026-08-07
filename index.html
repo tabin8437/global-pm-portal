@@ -1477,6 +1477,31 @@ function renderMonthlyCharts(){
     +'<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">'+cards+'</div>';
 }
 
+// 일별 차트 툴팁: 커서를 올린 날의 모든 값을 한 번에 보여준다
+function dgTip(ev,payload){
+  var box=document.getElementById('dg-tip'); if(!box) return;
+  var d; try{ d=JSON.parse(decodeURIComponent(payload)); }catch(e){ return; }
+  function row(lb,v,color){
+    return '<div><span style="display:inline-block;width:52px;color:#9ca3af">'+lb+'</span>'
+      +'<b style="color:'+(color||'#fff')+'">'+fmtNum(v)+'</b></div>';
+  }
+  var html='<div style="font-weight:700;margin-bottom:3px">'+esc(d.d)+'</div>'
+    +row('매출',d.rev,'#c4b5fd')
+    +(d.prev?row('전월',d.prev,'#ddd6fe'):'')
+    +(d.ly?row('전년',d.ly,'#e5e7eb'):'')
+    +'<div style="height:5px"></div>'
+    +row('DAU',d.dau,'#93c5fd')+row('PU',d.pu,'#5eead4')+row('ARPPU',d.arppu,'#fcd34d');
+  box.innerHTML=html;
+  box.style.display='block';
+  // 차트 안에서 커서 위치를 따라가되, 오른쪽 끝에서는 왼쪽으로 뒤집는다
+  var wrap=box.parentNode, r=wrap.getBoundingClientRect();
+  var x=ev.clientX-r.left+14, y=ev.clientY-r.top+12;
+  if(x+180>r.width) x=ev.clientX-r.left-180;
+  box.style.left=Math.max(4,x)+'px';
+  box.style.top=Math.max(4,y)+'px';
+}
+function dgTipHide(){ var b=document.getElementById('dg-tip'); if(b) b.style.display='none'; }
+
 // 글로벌 일별 추이: 매출은 막대, PU·ARPPU·DAU는 선.
 // 지표마다 단위가 달라 선은 각자 범위로 정규화해 겹쳐 그리고, 값은 마우스오버로 확인한다.
 function renderDailyGlobal(){
@@ -1568,7 +1593,19 @@ function renderDailyGlobal(){
   for(var i2=0;i2<n;i2+=step){
     xl+='<text x="'+cx(i2).toFixed(1)+'" y="'+(H-10)+'" font-size="9" fill="#9ca3af" text-anchor="middle">'+(+days[i2].date.slice(8,10))+'</text>';
   }
-  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block">'+grid+bars+lines+xl+'</svg>';
+  // 마우스를 올리면 그날 값 전부를 보여주는 투명 히트영역 + 세로 가이드
+  var hit='';
+  days.forEach(function(d,i){
+    var dn=+String(d.date).slice(8,10);
+    var info={d:d.date,rev:d.revenue,dau:d.dau,pu:d.pu,arppu:d.arppu,
+              prev:prevMap[dn]||0,ly:lyMap[dn]||0};
+    hit+='<rect x="'+(cx(i)-slot/2).toFixed(1)+'" y="'+PT+'" width="'+slot.toFixed(1)+'" height="'+plotH.toFixed(1)+'" fill="transparent" '
+      +'onmouseover="dgTip(event,\''+encodeURIComponent(JSON.stringify(info))+'\')" onmouseout="dgTipHide()" style="cursor:crosshair"/>';
+  });
+  var svg='<div style="position:relative">'
+    +'<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block">'+grid+bars+lines+xl+hit+'</svg>'
+    +'<div id="dg-tip" style="display:none;position:absolute;z-index:20;pointer-events:none;background:#111827;color:#fff;'
+    +'padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.6;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.25)"></div></div>';
   var mLabel=(+days[0].date.slice(5,7))+'월';
 
   // 같은 기간 비교: 당월 누적 vs 전월 동기 누적 (시트가 제공하는 값)
