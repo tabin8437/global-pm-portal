@@ -1481,14 +1481,17 @@ function renderMonthlyCharts(){
 function dgTip(ev,payload){
   var box=document.getElementById('dg-tip'); if(!box) return;
   var d; try{ d=JSON.parse(decodeURIComponent(payload)); }catch(e){ return; }
-  function row(lb,v,color){
+  // 반올림된 축약값(2.6만)이 아니라 정확한 숫자를 보여준다 — 날짜별 차이가 드러나야 하므로
+  function exact(v){ return Math.round(Number(v)||0).toLocaleString('ko-KR'); }
+  function row(lb,v,color,abbr){
+    var txt=abbr?(fmtNum(v)+' <span style="color:#6b7280">('+exact(v)+')</span>'):exact(v);
     return '<div><span style="display:inline-block;width:52px;color:#9ca3af">'+lb+'</span>'
-      +'<b style="color:'+(color||'#fff')+'">'+fmtNum(v)+'</b></div>';
+      +'<b style="color:'+(color||'#fff')+'">'+txt+'</b></div>';
   }
   var html='<div style="font-weight:700;margin-bottom:3px">'+esc(d.d)+'</div>'
-    +row('매출',d.rev,'#c4b5fd')
-    +(d.prev?row('전월',d.prev,'#ddd6fe'):'')
-    +(d.ly?row('전년',d.ly,'#e5e7eb'):'')
+    +row('매출',d.rev,'#c4b5fd',true)
+    +(d.prev?row('전월',d.prev,'#ddd6fe',true):'')
+    +(d.ly?row('전년',d.ly,'#e5e7eb',true):'')
     +'<div style="height:5px"></div>'
     +row('DAU',d.dau,'#93c5fd')+row('PU',d.pu,'#5eead4')+row('ARPPU',d.arppu,'#fcd34d');
   box.innerHTML=html;
