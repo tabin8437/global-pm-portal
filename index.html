@@ -1575,12 +1575,15 @@ function renderDailyGlobal(){
     +(hasLY?lgChip('#d1d5db','작년 동월',''):'');
   lineDefs.forEach(function(L){
     var vs=days.map(function(d){return Number(d[L.key])||0;});
-    var mx=Math.max.apply(null,vs), mn=Math.min.apply(null,vs);
+    var mx=Math.max.apply(null,vs);
     if(!mx) return;
-    var rg=(mx-mn)||mx||1;
-    var pts=vs.map(function(v,i){return cx(i).toFixed(1)+','+(PT+plotH*0.08+plotH*0.84*(1-(v-mn)/rg)).toFixed(1);});
+    // ⚠ 각 선을 min~max로 늘리면 2%밖에 안 변한 DAU도 급등락처럼 보인다.
+    //   0을 바닥으로 잡아 실제 변동 폭 그대로 보이게 한다.
+    var top=mx*1.1;
+    function ly(v){ return PT+plotH*0.06+plotH*0.9*(1-v/top); }
+    var pts=vs.map(function(v,i){return cx(i).toFixed(1)+','+ly(v).toFixed(1);});
     var dots=vs.map(function(v,i){
-      var y=PT+plotH*0.08+plotH*0.84*(1-(v-mn)/rg);
+      var y=ly(v);
       return '<circle cx="'+cx(i).toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2.4" fill="#fff" stroke="'+L.color+'" stroke-width="1.6">'
         +'<title>'+esc(days[i].date)+' '+L.label+' '+fmtNum(v)+'</title></circle>';
     }).join('');
