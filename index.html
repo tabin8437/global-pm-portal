@@ -1744,12 +1744,42 @@ function fetchKpiData(){
       }
     }
   }catch(e){}
-  fetch(KPI_API_URL+'?t='+Date.now()).then(function(r){return r.json();}).then(function(data){
-    if(data&&data.success){
-      try{localStorage.setItem(cacheKey,JSON.stringify({date:today,hour:hour,minute:new Date().getMinutes(),data:data}));}catch(e){}
-      applyKpiData(data);
+  // KPI API는 시트를 여러 개 갱신하느라 첫 응답이 20초 이상 걸릴 수 있다.
+  // 타임아웃 없이 두면 "불러오는 중"에서 영원히 멈추므로 재시도 + 실패 안내를 붙인다.
+  function attempt(tryNo){
+    var ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
+    var timer=setTimeout(function(){if(ctrl)ctrl.abort();},45000);
+    fetch(KPI_API_URL+'?t='+Date.now(),ctrl?{signal:ctrl.signal}:{})
+      .then(function(r){return r.json();})
+      .then(function(data){
+        clearTimeout(timer);
+        if(data&&data.success){
+          try{localStorage.setItem(cacheKey,JSON.stringify({date:today,hour:hour,minute:new Date().getMinutes(),data:data}));}catch(e){}
+          applyKpiData(data);
+        }else{ kpiLoadFailed('서버가 데이터를 반환하지 못했습니다.'); }
+      })
+      .catch(function(e){
+        clearTimeout(timer);
+        console.error('KPI 로드 실패(시도 '+tryNo+'/3):',e);
+        if(tryNo<3){ setTimeout(function(){attempt(tryNo+1);},1500*tryNo); }
+        else{ kpiLoadFailed('응답이 없습니다. 네트워크 또는 서버 상태를 확인해주세요.'); }
+      });
+  }
+  attempt(1);
+}
+
+// 로딩이 끝내 실패했을 때 "불러오는 중" 대신 이유와 재시도 버튼을 보여준다
+function kpiLoadFailed(msg){
+  var boxes=document.querySelectorAll('#analysis-body,#mt-list,#comp-cards,#content-area');
+  Array.prototype.forEach.call(boxes,function(el){
+    if(el&&/불러오는 중|로딩/.test(el.textContent||'')){
+      el.innerHTML='<div class="text-center py-8"><i class="ti ti-alert-circle text-3xl text-amber-400"></i>'
+        +'<p class="text-sm text-gray-500 mt-2">데이터를 불러오지 못했습니다.</p>'
+        +'<p class="text-[11px] text-gray-400 mt-1">'+esc(msg)+'</p>'
+        +'<button onclick="try{localStorage.removeItem(\'kpi_cache\')}catch(e){};location.reload()" '
+        +'class="btn btn-sm btn-primary mt-3"><i class="ti ti-refresh"></i> 다시 시도</button></div>';
     }
-  }).catch(function(){});
+  });
 }
 
 function applyKpiData(d){
