@@ -258,6 +258,7 @@ var SIDEBAR_MENU = [
   {id:'platform',icon:'ti-brand-apple',label:'iOS 관리'},
   {id:'competitor',icon:'ti-radar',label:'경쟁사 모니터링'},
   {section:'라이브 관리'},
+  {id:'metrics-analysis',icon:'ti-chart-arcs',label:'지표분석',type:'doc'},
   {id:'live-schedule',icon:'ti-calendar-time',label:'월던/컨텐츠 오픈시점'},
   {id:'event',icon:'ti-gift',label:'이벤트 & 보상안',type:'doc'},
   {id:'product',icon:'ti-package',label:'상품안',type:'doc'},
@@ -307,6 +308,7 @@ var DOC_URLS = {
     {url:'https://docs.google.com/spreadsheets/d/100SwdEzMEDNX3WAcLyulkarC7bBVyihpp_a69wq02Ks/edit?gid=2114670632#gid=2114670632',label:'성우 녹음 대본',icon:'ti-microphone',clr:'purple',desc:'Odin_Query — 보이스 녹음용 대본 시트'},
     {url:'https://kakaogames.agit.in/g/300093319/wall',label:'번역요청서-내부현지화셀',icon:'ti-file-description',clr:'blue',desc:'내부 현지화셀 번역 요청 게시판',noEmbed:true}
   ]},
+  'metrics-analysis':{preview:'https://docs.google.com/spreadsheets/d/1Ekqdj6ynfmPNpdRQYHo47APiIwPd60lmx1ONAujfewk/htmlview?gid=363462171',edit:'https://docs.google.com/spreadsheets/d/1Ekqdj6ynfmPNpdRQYHo47APiIwPd60lmx1ONAujfewk/edit?gid=363462171'},
   'shared-drive':{preview:'https://drive.google.com/drive/u/0/shared-drives',edit:'https://drive.google.com/drive/u/0/shared-drives'}
 };
 
@@ -705,7 +707,7 @@ function toggleGroup(el){
 /* ═══════════════════════════════════════════
    PAGE NAMES & NAV
    ═══════════════════════════════════════════ */
-var pageNames={dashboard:'종합 대시보드',milestone:'통합 마일스톤','live-schedule':'월던/컨텐츠 오픈시점',settlement:'정산 및 빌링 설계',event:'이벤트 & 보상안',product:'상품안',kpi:'전권역 주간 매출 추이 ','report-kpi':'주/월간 보고용 지표','server-migration':'서버이전/통합',platform:'iOS 관리',weekly:'주간회의 기록',report:'보고/분석',internal:'내부 회의',devmeeting:'개발사 미팅',localization:'현지화','shared-drive':'공유 드라이브','screenshot-spec':'마켓 스샷 규격',ai:'AI 도움말','admin-settings':'포탈 설정'};
+var pageNames={dashboard:'종합 대시보드',milestone:'통합 마일스톤','live-schedule':'월던/컨텐츠 오픈시점',settlement:'정산 및 빌링 설계',event:'이벤트 & 보상안',product:'상품안',kpi:'전권역 주간 매출 추이 ','report-kpi':'주/월간 보고용 지표','server-migration':'서버이전/통합',platform:'iOS 관리',weekly:'주간회의 기록',report:'보고/분석',internal:'내부 회의',devmeeting:'개발사 미팅',localization:'현지화','metrics-analysis':'지표분석','shared-drive':'공유 드라이브','screenshot-spec':'마켓 스샷 규격',ai:'AI 도움말','admin-settings':'포탈 설정'};
 
 function nav(id,el){
   closeMobileMenu();
