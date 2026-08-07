@@ -1519,21 +1519,21 @@ function renderDailyGlobal(){
   var mLabel=(+days[0].date.slice(5,7))+'월';
 
   // 같은 기간 비교: 당월 누적 vs 전월 동기 누적 (시트가 제공하는 값)
-  var m=window._monthlyRawCache||{},cmpHtml='';
-  if(m.revenue){
-    var curSum=revs.reduce(function(a,b){return a+b;},0)||m.revenue;
-    var prev=m.revenuePrev||0;
-    var chg=m.revenueChange||'';
-    var down=String(chg).indexOf('-')!==-1||String(chg).indexOf('▼')!==-1;
-    function chip(lb,val,cls){
-      return '<div class="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-center min-w-[104px]">'
-        +'<div class="text-[10px] text-gray-400 font-bold">'+lb+'</div>'
-        +'<div class="text-sm font-extrabold '+(cls||'text-gray-900')+' mt-0.5">'+val+'</div></div>';
-    }
+  var cmp=window._dailyCompareCache||{},m=window._monthlyRawCache||{},cmpHtml='';
+  function chip(lb,val,cls){
+    return '<div class="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-center min-w-[104px]">'
+      +'<div class="text-[10px] text-gray-400 font-bold">'+lb+'</div>'
+      +'<div class="text-sm font-extrabold '+(cls||'text-gray-900')+' mt-0.5">'+val+'</div></div>';
+  }
+  function sign(p){ return String(p).indexOf('-')!==-1?'text-blue-600':'text-red-500'; }
+  var curSum=cmp.cur||revs.reduce(function(a,b){return a+b;},0)||m.revenue||0;
+  if(curSum){
     cmpHtml='<div class="flex items-center gap-2 flex-wrap mb-3">'
       +chip(mLabel+' 누적(1일~오늘)',fmtNum(curSum))
-      +(prev?chip('전월 동기 누적',fmtNum(prev)):'')
-      +(chg?chip('전월 동기 대비',chg,down?'text-blue-600':'text-red-500'):'')
+      +(cmp.prev?chip('전월 동기 누적',fmtNum(cmp.prev)):'')
+      +(cmp.prevPct?chip('전월 동기 대비',cmp.prevPct,sign(cmp.prevPct)):'')
+      +(cmp.lastYear?chip('전년 동기 누적',fmtNum(cmp.lastYear)):'')
+      +(cmp.lastYearPct?chip('전년 동기 대비',cmp.lastYearPct,sign(cmp.lastYearPct)):'')
       +'</div>';
   }
 
@@ -1817,6 +1817,7 @@ function applyKpiData(d){
   if(d.dailyGlobal) window._dailyGlobalCache=d.dailyGlobal;
   if(d.dailyGlobalPrev) window._dailyPrevCache=d.dailyGlobalPrev;
   if(d.dailyGlobalLastYear) window._dailyLastYearCache=d.dailyGlobalLastYear;
+  if(d.dailyCompare) window._dailyCompareCache=d.dailyCompare;
   if(d.monthly) window._monthlyRawCache=d.monthly;
 
   // 마일스톤 동기화
