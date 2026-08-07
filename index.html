@@ -1474,7 +1474,7 @@ function renderDailyGlobal(){
     }).join('');
   }
   // 뒤쪽(연한 색)부터 그려야 이번 달 막대가 위로 온다
-  var bars=barsFor(hasLY?lyMap:null,'#9ca3af',0.35,'작년 동월')
+  var bars=barsFor(hasLY?lyMap:null,'#e5e7eb',0.7,'작년 동월')
     +barsFor(hasPrev?prevMap:null,'#c4b5fd',0.55,'전월 동기')
     +days.map(function(d,i){
       var v=Number(d.revenue)||0, y=byRev(v), h=Math.max(0,PT+plotH-y);
@@ -1484,7 +1484,10 @@ function renderDailyGlobal(){
     }).join('');
 
   // 선 3종 (각자 min~max로 정규화)
-  var lineDefs=[{key:'dau',label:'DAU',color:'#10b981'},{key:'pu',label:'PU',color:'#14b8a6'},{key:'arppu',label:'ARPPU',color:'#f59e0b'}];
+  // DAU는 매출·비교막대와 확실히 구분되도록 파랑, PU·ARPPU는 점선으로 구분
+  var lineDefs=[{key:'dau',label:'DAU',color:'#2563eb',dash:''},
+                {key:'pu',label:'PU',color:'#0d9488',dash:'5 4'},
+                {key:'arppu',label:'ARPPU',color:'#f59e0b',dash:'2 3'}];
   function lgChip(color,label,val){
     return '<span class="inline-flex items-center gap-1 text-[10px] font-bold" style="color:'+color+'">'
       +'<span style="width:8px;height:8px;border-radius:2px;background:'+color+';display:inline-block"></span>'+label
@@ -1492,7 +1495,7 @@ function renderDailyGlobal(){
   }
   var lines='',legend=lgChip('#8b5cf6','매출',fmtNum(revs[n-1]))
     +(hasPrev?lgChip('#c4b5fd','전월 동기',''):'')
-    +(hasLY?lgChip('#9ca3af','작년 동월',''):'');
+    +(hasLY?lgChip('#d1d5db','작년 동월',''):'');
   lineDefs.forEach(function(L){
     var vs=days.map(function(d){return Number(d[L.key])||0;});
     var mx=Math.max.apply(null,vs), mn=Math.min.apply(null,vs);
@@ -1504,7 +1507,8 @@ function renderDailyGlobal(){
       return '<circle cx="'+cx(i).toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2.4" fill="#fff" stroke="'+L.color+'" stroke-width="1.6">'
         +'<title>'+esc(days[i].date)+' '+L.label+' '+fmtNum(v)+'</title></circle>';
     }).join('');
-    lines+='<path d="M'+pts.join(' L')+'" fill="none" stroke="'+L.color+'" stroke-width="2" stroke-linejoin="round"/>'+dots;
+    lines+='<path d="M'+pts.join(' L')+'" fill="none" stroke="'+L.color+'" stroke-width="2" stroke-linejoin="round"'
+      +(L.dash?' stroke-dasharray="'+L.dash+'"':'')+'/>'+dots;
     legend+='<span class="inline-flex items-center gap-1 text-[10px] font-bold" style="color:'+L.color+'">'
       +'<span style="width:8px;height:8px;border-radius:2px;background:'+L.color+';display:inline-block"></span>'+L.label
       +' <span class="text-gray-500">'+fmtNum(vs[n-1])+'</span></span>';
