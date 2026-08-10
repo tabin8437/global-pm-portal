@@ -1654,6 +1654,19 @@ function renderKpiPage(){
     var isD=(change||'').indexOf('▼')!==-1||(change||'').indexOf('-')!==-1;
     return'<div class="py-1 flex items-center justify-between"><span class="text-[11px] text-gray-500">'+label+'</span><div class="flex items-center gap-1.5"><span class="text-xs font-bold text-gray-900">'+fmtNum(val)+'</span>'+(change?'<span class="text-[10px] font-bold '+(isD?'text-blue-600':'text-red-500')+'">'+change+'</span>':'')+'</div></div>';
   }
+  // 당월 누적 매출 기준 실제 달성률 (계획 대비 / 추정 대비)
+  // actual: 원 단위, planM/estM: 백만원 단위
+  function cumRateHtml(actual,planM,estM){
+    if(!actual)return'';
+    function one(label,tgtM){
+      if(!tgtM)return'';
+      var pct=actual/(tgtM*1000000)*100;
+      var c=pct>=100?'emerald':pct>=90?'blue':pct>=70?'amber':'red';
+      return'<div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">'+label+'</span><span class="text-[10px] font-bold text-'+c+'-600">'+pct.toFixed(1)+'%</span></div>';
+    }
+    return'<div class="mt-1 pt-1 border-t border-dashed border-gray-200"><div class="text-[9px] text-gray-400 mb-0.5">누적매출 기준</div>'
+      +one('계획 대비',planM)+one('추정 대비',estM)+'</div>';
+  }
   function rCard(def){
     var d=regions[def.key];
     if(!d||!d.weekly||!d.weekly.dau) return'<div class="card border-'+def.color+'-200"><div class="font-bold text-sm text-'+def.color+'-700 mb-3">'+def.label+'</div><p class="text-xs text-gray-400 text-center py-4">데이터 로딩 중</p></div>';
@@ -1668,7 +1681,10 @@ function renderKpiPage(){
     if(tgt.plan){
       var aN=parseFloat(String(tgt.achieve||'').replace(/[^0-9.]/g,''))||0;
       var aC=aN>=100?'emerald':aN>=90?'blue':aN>=80?'amber':'red';
-      targetHtml2='<div class="mt-2.5 pt-2.5 border-t border-'+def.color+'-100"><div class="text-[10px] font-bold text-'+def.color+'-400 mb-1">🎯 '+mon+'월 목표</div><div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">계획/추정</span><span class="text-[10px] font-bold text-gray-700">'+fmtNum(tgt.plan*1000000)+' / '+fmtNum(tgt.estimate*1000000)+'</span></div><div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">달성률</span><span class="text-[10px] font-bold text-'+aC+'-600">'+tgt.achieve+'</span></div></div>';
+      // 시트의 '달성률'은 추정÷계획(=목표 대비 얼마나 보수적으로 잡았나)이라 실적이 아니다.
+      // 그래서 당월 누적 매출 기준 실제 달성률을 계획/추정 각각에 대해 함께 보여준다.
+      targetHtml2='<div class="mt-2.5 pt-2.5 border-t border-'+def.color+'-100"><div class="text-[10px] font-bold text-'+def.color+'-400 mb-1">🎯 '+mon+'월 목표</div><div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">계획/추정</span><span class="text-[10px] font-bold text-gray-700">'+fmtNum(tgt.plan*1000000)+' / '+fmtNum(tgt.estimate*1000000)+'</span></div><div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">추정/계획</span><span class="text-[10px] font-bold text-'+aC+'-600">'+tgt.achieve+'</span></div>'
+        +cumRateHtml(m.revenue,tgt.plan,tgt.estimate)+'</div>';
     }
     var annualHtml2='';
     if(ann.plan){
@@ -1685,7 +1701,7 @@ function renderKpiPage(){
     var mt=an.monthlyTarget;
     var achNum=parseFloat(String(mt.achieve||'').replace(/[^0-9.]/g,''))||0;
     var achClr=achNum>=100?'emerald':achNum>=90?'blue':achNum>=80?'amber':'red';
-    targetHtml='<div class="card"><div class="font-bold text-sm text-gray-800 mb-3"><i class="ti ti-target text-indigo-500"></i> '+mon+'월 목표</div><div class="grid grid-cols-3 gap-3 text-center"><div class="bg-gray-50 p-3 rounded-xl"><div class="text-[10px] text-gray-400 font-bold">계획</div><div class="text-base font-extrabold text-gray-900 mt-1">'+fmtNum(mt.plan*1000000)+'</div></div><div class="bg-gray-50 p-3 rounded-xl"><div class="text-[10px] text-gray-400 font-bold">추정</div><div class="text-base font-extrabold text-gray-900 mt-1">'+fmtNum(mt.estimate*1000000)+'</div></div><div class="bg-'+achClr+'-50 p-3 rounded-xl"><div class="text-[10px] text-'+achClr+'-600 font-bold">달성률</div><div class="text-base font-extrabold text-'+achClr+'-700 mt-1">'+mt.achieve+'</div></div></div></div>';
+    targetHtml='<div class="card"><div class="font-bold text-sm text-gray-800 mb-3"><i class="ti ti-target text-indigo-500"></i> '+mon+'월 목표</div><div class="grid grid-cols-3 gap-3 text-center"><div class="bg-gray-50 p-3 rounded-xl"><div class="text-[10px] text-gray-400 font-bold">계획</div><div class="text-base font-extrabold text-gray-900 mt-1">'+fmtNum(mt.plan*1000000)+'</div></div><div class="bg-gray-50 p-3 rounded-xl"><div class="text-[10px] text-gray-400 font-bold">추정</div><div class="text-base font-extrabold text-gray-900 mt-1">'+fmtNum(mt.estimate*1000000)+'</div></div><div class="bg-'+achClr+'-50 p-3 rounded-xl"><div class="text-[10px] text-'+achClr+'-600 font-bold">추정/계획</div><div class="text-base font-extrabold text-'+achClr+'-700 mt-1">'+mt.achieve+'</div></div></div></div>';
   }
   var annualHtml='';
   if(an.quarterly&&an.quarterly.length){
@@ -1949,7 +1965,19 @@ function applyKpiData(d){
       var mt=an.monthlyTarget;
       var achNum=parseFloat(String(mt.achieve||'').replace(/[^0-9.]/g,''))||0;
       var achColor=achNum>=100?'emerald':achNum>=90?'blue':achNum>=80?'amber':'red';
-      window._monthTargetHtml='<div class="flex items-center gap-2 flex-wrap"><span class="text-[11px] text-gray-400">계획 <b class="text-gray-700">'+fmtNum(mt.plan*1000000)+'</b></span><span class="text-[11px] text-gray-400">추정 <b class="text-gray-700">'+fmtNum(mt.estimate*1000000)+'</b></span><span class="text-[11px] font-bold text-'+achColor+'-600 bg-'+achColor+'-50 px-2 py-0.5 rounded-md">달성 '+mt.achieve+'</span></div>';
+      // 전권역 당월 누적 매출 → 계획/추정 대비 실제 달성률을 함께 표기
+      var tCum=(d.monthly&&d.monthly.revenue)||0;
+      if(!tCum&&d.regions)['kr','tw','jp','gl'].forEach(function(k){
+        var rr=d.regions[k]; if(rr&&rr.monthly&&rr.monthly.revenue)tCum+=rr.monthly.revenue;});
+      function cumChip(label,tgtM){
+        if(!tCum||!tgtM)return'';
+        var p=tCum/(tgtM*1000000)*100;
+        var cc=p>=100?'emerald':p>=90?'blue':p>=70?'amber':'red';
+        return'<span class="text-[11px] font-bold text-'+cc+'-600 bg-'+cc+'-50 px-2 py-0.5 rounded-md">'+label+' '+p.toFixed(1)+'%</span>';
+      }
+      window._monthTargetHtml='<div class="flex items-center gap-2 flex-wrap"><span class="text-[11px] text-gray-400">계획 <b class="text-gray-700">'+fmtNum(mt.plan*1000000)+'</b></span><span class="text-[11px] text-gray-400">추정 <b class="text-gray-700">'+fmtNum(mt.estimate*1000000)+'</b></span><span class="text-[11px] font-bold text-'+achColor+'-600 bg-'+achColor+'-50 px-2 py-0.5 rounded-md">추정/계획 '+mt.achieve+'</span>'
+        +(tCum?'<span class="text-[11px] text-gray-400">누적 <b class="text-gray-700">'+fmtNum(tCum)+'</b></span>':'')
+        +cumChip('계획대비',mt.plan)+cumChip('추정대비',mt.estimate)+'</div>';
     }
   }
 
