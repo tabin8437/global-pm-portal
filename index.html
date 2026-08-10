@@ -149,6 +149,48 @@ body.is-admin .admin-only{display:flex}
 .mobile-menu .mobile-nav-item:active{background:var(--bg-secondary)}
 .mobile-menu .mobile-nav-item i{font-size:18px;width:24px;text-align:center;color:var(--text-tertiary)}
 .mobile-menu-footer{padding:16px 20px;border-top:1px solid var(--border);font-size:13px;color:var(--text-tertiary)}
+/* ── 가독성 폴리싱 ──
+   디자인(색·레이아웃)은 그대로 두고, 눈에 부담되는 부분만 손봤다.
+   Tailwind CDN이 나중에 주입되므로 유틸리티를 덮어쓸 때는 .card로 한 단계 더 좁힌다. */
+
+/* 1) 줄간격 + 숫자 자릿수 고정 — 표·카드에서 숫자가 흔들리지 않게 */
+body{line-height:1.5}
+.card,.kpi-card,table{font-variant-numeric:tabular-nums}
+
+/* 2) 너무 작은 글자에 하한선. 9px는 사실상 안 읽힌다 */
+.card .text-\[9px\]{font-size:10px;line-height:1.35}
+.card .text-\[10px\]{font-size:11px;line-height:1.4}
+.card .text-\[11px\]{font-size:11.5px;line-height:1.45}
+
+/* 3) 흐린 회색 대비 보강 (WCAG 기준으로 4.5:1에 근접하게) */
+.card .text-gray-400{color:#79818f}
+.card .text-gray-500{color:#5a6371}
+
+/* 4) 카드 리듬 — 제목과 본문 사이 숨통, 지표 행은 조금 더 여유 */
+.card-header{margin-bottom:15px}
+.card-title{letter-spacing:-.2px}
+.card .divide-y>div{padding-top:3px;padding-bottom:3px}
+
+/* 5) 표: 헤더 고정 시 경계가 사라지지 않게, 행 hover로 눈이 따라가게 */
+table thead th{position:sticky;top:0;background:#f3f4f6;box-shadow:inset 0 -1px 0 var(--border)}
+table tbody tr{transition:background .1s}
+table tbody tr:hover{background:#f9fafb}
+
+/* 6) 스크롤바 — 기본 굵은 회색 막대가 화면을 갈라놓는다 */
+.content,.sidebar-nav,.detail-box,.ai-msgs,.overflow-x-auto{scrollbar-width:thin;scrollbar-color:#cbd5e1 transparent}
+.content::-webkit-scrollbar,.sidebar-nav::-webkit-scrollbar,.detail-box::-webkit-scrollbar,.ai-msgs::-webkit-scrollbar,.overflow-x-auto::-webkit-scrollbar{width:9px;height:9px}
+.content::-webkit-scrollbar-thumb,.sidebar-nav::-webkit-scrollbar-thumb,.detail-box::-webkit-scrollbar-thumb,.ai-msgs::-webkit-scrollbar-thumb,.overflow-x-auto::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:6px;border:2px solid transparent;background-clip:content-box}
+.content::-webkit-scrollbar-thumb:hover{background:#94a3b8;background-clip:content-box}
+.content::-webkit-scrollbar-track{background:transparent}
+
+/* 7) 키보드 포커스가 보이게 (탭 이동 시에만) */
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+::selection{background:rgba(16,185,129,.18)}
+
+/* 8) 링크/버튼 눌림 피드백 */
+.btn:active{transform:translateY(1px)}
+.nav-item.active{box-shadow:inset 0 0 0 1px rgba(16,185,129,.12)}
+
 @media(max-width:768px){
   .sidebar{display:none}
   .mobile-menu-btn{display:block}
@@ -1664,27 +1706,34 @@ function renderKpiPage(){
       var c=pct>=100?'emerald':pct>=90?'blue':pct>=70?'amber':'red';
       return'<div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">'+label+'</span><span class="text-[10px] font-bold text-'+c+'-600">'+pct.toFixed(1)+'%</span></div>';
     }
-    return'<div class="mt-1 pt-1 border-t border-dashed border-gray-200"><div class="text-[9px] text-gray-400 mb-0.5">누적매출 기준</div>'
-      +one('계획 대비',planM)+one('추정 대비',estM)+'</div>';
+    return one('계획 대비',planM)+one('추정 대비',estM);
+  }
+  // '당월 누적 매출' 한 줄 (전월비 뱃지 포함)
+  function cumRevRow(m){
+    if(!m||!m.revenue)return'';
+    var dn=(m.revenueChange||'').indexOf('▼')!==-1||(m.revenueChange||'').indexOf('-')!==-1;
+    return'<div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">당월 누적</span>'
+      +'<span class="flex items-center gap-1"><span class="text-[11px] font-extrabold text-gray-900">'+fmtNum(m.revenue)+'</span>'
+      +(m.revenueChange?'<span class="text-[9px] font-bold '+(dn?'text-blue-600':'text-red-500')+'">'+m.revenueChange+'</span>':'')+'</span></div>';
   }
   function rCard(def){
     var d=regions[def.key];
     if(!d||!d.weekly||!d.weekly.dau) return'<div class="card border-'+def.color+'-200"><div class="font-bold text-sm text-'+def.color+'-700 mb-3">'+def.label+'</div><p class="text-xs text-gray-400 text-center py-4">데이터 로딩 중</p></div>';
     var w=d.weekly,ch=w.change||{},m=d.monthly||{};
     var weeklyHtml=mk('DAU',w.dau,ch.dau)+mk('NRU',w.nru,ch.nru)+mk('WAU',w.wau,ch.wau)+mk('매출',w.revenue,ch.revenue)+mk('PU',w.pu,ch.pu)+mk('ARPPU',w.arppu,ch.arppu);
-    var monthlyHtml='';
-    if(m.revenue) monthlyHtml='<div class="mt-2.5 pt-2.5 border-t border-'+def.color+'-100"><div class="text-[10px] font-bold text-'+def.color+'-400 mb-1">📊 당월 누적</div>'
-      +'<div class="py-1 flex items-center justify-between"><span class="text-[11px] text-gray-500">매출</span><div class="flex items-center gap-1.5"><span class="text-xs font-bold text-gray-900">'+fmtNum(m.revenue)+'</span>'+(m.revenueChange?'<span class="text-[9px] text-gray-400 mr-0.5">전월비</span><span class="text-[10px] font-bold '+(m.revenueChange.indexOf('▼')!==-1||m.revenueChange.indexOf('-')!==-1?'text-blue-600':'text-red-500')+'">'+m.revenueChange+'</span>':'')+'</div></div>'
-      +'</div>';
     var tgt=d.target||{},ann=d.annual||{};
-    var targetHtml2='';
+    // 목표 블록 순서: 계획/추정 → 추정/계획 → (구분선) → 당월 누적 → 계획 대비 → 추정 대비
+    // 누적 실적을 달성률 바로 위에 두어 "얼마 벌어서 몇 %"가 한눈에 읽히게 한다.
+    var monthlyHtml='',targetHtml2='';
     if(tgt.plan){
       var aN=parseFloat(String(tgt.achieve||'').replace(/[^0-9.]/g,''))||0;
       var aC=aN>=100?'emerald':aN>=90?'blue':aN>=80?'amber':'red';
-      // 시트의 '달성률'은 추정÷계획(=목표 대비 얼마나 보수적으로 잡았나)이라 실적이 아니다.
-      // 그래서 당월 누적 매출 기준 실제 달성률을 계획/추정 각각에 대해 함께 보여준다.
+      var actualBlock=m.revenue?'<div class="mt-1.5 pt-1.5 border-t border-dashed border-gray-200">'+cumRevRow(m)+cumRateHtml(m.revenue,tgt.plan,tgt.estimate)+'</div>':'';
       targetHtml2='<div class="mt-2.5 pt-2.5 border-t border-'+def.color+'-100"><div class="text-[10px] font-bold text-'+def.color+'-400 mb-1">🎯 '+mon+'월 목표</div><div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">계획/추정</span><span class="text-[10px] font-bold text-gray-700">'+fmtNum(tgt.plan*1000000)+' / '+fmtNum(tgt.estimate*1000000)+'</span></div><div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">추정/계획</span><span class="text-[10px] font-bold text-'+aC+'-600">'+tgt.achieve+'</span></div>'
-        +cumRateHtml(m.revenue,tgt.plan,tgt.estimate)+'</div>';
+        +actualBlock+'</div>';
+    } else if(m.revenue){
+      // 목표가 없는 권역은 당월 누적만 따로 보여준다
+      monthlyHtml='<div class="mt-2.5 pt-2.5 border-t border-'+def.color+'-100"><div class="text-[10px] font-bold text-'+def.color+'-400 mb-1">📊 당월 누적</div>'+cumRevRow(m)+'</div>';
     }
     var annualHtml2='';
     if(ann.plan){
