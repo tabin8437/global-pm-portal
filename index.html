@@ -2076,6 +2076,7 @@ function renderCompetitor(){
 
   c.innerHTML='<div class="card-header mb-3" style="padding:0"><span class="card-title text-sm"><i class="ti ti-radar text-violet-500"></i> 경쟁사 모니터링</span>'
     +'<div class="flex items-center gap-2">'+updatedLabel
+    +'<button id="comp-clear-btn" class="btn btn-sm btn-secondary" onclick="clearCompetitorRecords()"><i class="ti ti-trash"></i> 기록 정리</button>'
     +'<button id="comp-collect-btn" class="btn btn-sm btn-primary" onclick="collectCompetitorNow()"><i class="ti ti-refresh"></i> 지금 수집</button></div></div>'
     +filterHtml
     +marketHtml
@@ -2101,6 +2102,31 @@ function collectCompetitorNow(){
     .catch(function(e){
       if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-refresh"></i> 지금 수집';}
       alert('수집 실패: '+e.message);
+    });
+}
+
+// 쌓인 경쟁사 기록 삭제 — 기간을 고르게 하고, 되돌릴 수 없으므로 한 번 더 확인받는다
+function clearCompetitorRecords(){
+  var ans=prompt('며칠 지난 기록을 지울까요?\n\n숫자 입력 = 그보다 오래된 기록만 삭제 (예: 7 → 7일 전 것부터)\n0 입력 = 전체 삭제','7');
+  if(ans===null)return;
+  var days=parseInt(ans,10);
+  if(isNaN(days)||days<0){alert('숫자를 입력해 주세요.');return;}
+  var what=days===0?'경쟁사 기록 전체':(days+'일보다 오래된 기록');
+  if(!confirm(what+'를 삭제합니다.\n되돌릴 수 없어요. 진행할까요?'))return;
+
+  var btn=document.getElementById('comp-clear-btn');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2 animate-spin"></i> 정리 중...';}
+  fetch(KPI_API_URL+'?action=competitor_clear&days='+days+'&t='+Date.now())
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d||!d.ok)throw new Error((d&&d.error)||'알 수 없는 오류');
+      try{localStorage.removeItem('kpi_cache');}catch(e){}
+      alert('총 '+d.total+'건을 삭제했어요.');
+      location.reload();
+    })
+    .catch(function(e){
+      if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-trash"></i> 기록 정리';}
+      alert('삭제 실패: '+e.message);
     });
 }
 
