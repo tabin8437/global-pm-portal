@@ -2062,10 +2062,23 @@ function renderCompetitor(){
       +'<ul>'+artHtml+'</ul></div>';
   }).join('');
 
+  // 등록 경쟁작에 안 걸리는 시장 전반 신호를 맨 위에 한두 줄로
+  var mk=data.market,marketHtml='';
+  if(mk&&mk.text){
+    marketHtml='<div class="mb-4 rounded-xl border border-violet-200 bg-violet-50/70 px-4 py-3">'
+      +'<div class="flex items-start gap-2">'
+      +'<i class="ti ti-bulb text-violet-500 text-base mt-0.5 shrink-0"></i>'
+      +'<div class="min-w-0"><div class="text-[11px] font-bold text-violet-700 mb-0.5">한국 MMORPG 시장 특이사항</div>'
+      +'<div class="text-[13px] text-gray-700 leading-relaxed">'+esc(mk.text)+'</div>'
+      +(mk.source?'<div class="text-[10px] text-gray-400 mt-1 truncate" title="'+esc(mk.source)+'">근거: '+esc(mk.source)+'</div>':'')
+      +'</div></div></div>';
+  }
+
   c.innerHTML='<div class="card-header mb-3" style="padding:0"><span class="card-title text-sm"><i class="ti ti-radar text-violet-500"></i> 경쟁사 모니터링</span>'
     +'<div class="flex items-center gap-2">'+updatedLabel
     +'<button id="comp-collect-btn" class="btn btn-sm btn-primary" onclick="collectCompetitorNow()"><i class="ti ti-refresh"></i> 지금 수집</button></div></div>'
     +filterHtml
+    +marketHtml
     +'<div id="comp-cards" class="grid grid-cols-1 lg:grid-cols-2 gap-4">'+cardsHtml+'</div>';
 }
 
