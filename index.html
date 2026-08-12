@@ -1938,6 +1938,14 @@ function udRenderChart(){
     html+='<div class="mt-5 pt-4 border-t border-dashed border-gray-200">'
       +udChartBlock_('zoom',zoomTitle,slice(zoomRange,buckets),slice(zoomRange,valsA),slice(zoomRange,valsB),rowA,rowB,pctMode,metricHex,axisLabel,true)+'</div>';
   }
+
+  // 전투력: 4만부터 실제 최댓값까지 구간별 인원수를 표로도 제공 (차트는 12만에서 잘랐지만 표는 끝까지)
+  // 원본 시트가 5,000단위로만 쌓이므로 표도 5,000단위 그대로 — 1,000단위로 더 잘게 보려면
+  // 원본 SQL/시트의 구간 폭 자체를 1,000단위로 바꿔야 한다.
+  if(window._udMetric==='power'){
+    var tblRange=udResolveRange_(buckets,{fromValue:40000});
+    if(tblRange) html+=udDistTable_(slice(tblRange,buckets),slice(tblRange,rowA.values),rowB?slice(tblRange,rowB.values):null,rowA,rowB);
+  }
   wrap.innerHTML=html;
 }
 
@@ -2013,6 +2021,39 @@ function udChartBlock_(chartId,title,buckets,valsA,valsB,rowA,rowB,pctMode,metri
 function udBucketLabel_(b){
   var n=Number(b);
   return(b!==''&&!isNaN(n))?n.toLocaleString('ko-KR'):String(b);
+}
+
+// 구간별 인원수 표 (전투력 전용) — 원본 시트가 5,000단위로 쌓이므로 그 폭 그대로 범위를 표기한다
+function udDistTable_(buckets,valsA,valsB,rowA,rowB){
+  var rows=buckets.map(function(b,i){
+    var n=Number(b);
+    var rangeLabel=isNaN(n)?udBucketLabel_(b):(n.toLocaleString('ko-KR')+' ~ '+(n+4999).toLocaleString('ko-KR'));
+    var a=valsA[i]||0, bV=valsB?(valsB[i]||0):null;
+    var diff=bV!=null?a-bV:null;
+    return'<tr><td class="p-2 border-r text-gray-700">'+esc(rangeLabel)+'</td>'
+      +'<td class="p-2 border-r text-right font-bold text-gray-900">'+a.toLocaleString('ko-KR')+'</td>'
+      +(valsB?'<td class="p-2 border-r text-right text-gray-500">'+bV.toLocaleString('ko-KR')+'</td>'
+        +'<td class="p-2 text-right font-bold '+(diff<0?'text-blue-600':diff>0?'text-red-500':'text-gray-400')+'">'+(diff>0?'+':'')+diff.toLocaleString('ko-KR')+'</td>':'')
+      +'</tr>';
+  }).join('');
+  var sumA=valsA.reduce(function(x,y){return x+y;},0);
+  var sumB=valsB?valsB.reduce(function(x,y){return x+y;},0):null;
+  var sumDiff=sumB!=null?sumA-sumB:null;
+  var totalRow='<tr class="bg-gray-50 font-bold"><td class="p-2 border-r border-t-2 border-gray-300">표시구간 합계</td>'
+    +'<td class="p-2 border-r border-t-2 border-gray-300 text-right">'+sumA.toLocaleString('ko-KR')+'</td>'
+    +(valsB?'<td class="p-2 border-r border-t-2 border-gray-300 text-right text-gray-500">'+sumB.toLocaleString('ko-KR')+'</td>'
+      +'<td class="p-2 border-t-2 border-gray-300 text-right '+(sumDiff<0?'text-blue-600':sumDiff>0?'text-red-500':'')+'">'+(sumDiff>0?'+':'')+sumDiff.toLocaleString('ko-KR')+'</td>':'')
+    +'</tr>';
+  return'<div class="mt-5 pt-4 border-t border-dashed border-gray-200">'
+    +'<div class="text-[11px] font-bold text-gray-700 mb-2">전투력 4만 이상 구간별 인원수 <span class="font-normal text-gray-400">(5,000단위 원본 그대로)</span></div>'
+    +'<div class="overflow-x-auto border rounded-xl" style="max-height:360px;overflow-y:auto">'
+    +'<table class="w-full text-left border-collapse text-xs">'
+    +'<thead class="sticky top-0 bg-gray-100 z-10"><tr>'
+    +'<th class="p-2 font-bold text-gray-700 border-b border-r">전투력 구간</th>'
+    +'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">'+esc(rowA.label)+' 인원수</th>'
+    +(valsB?'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">'+esc(rowB.label)+' 인원수</th>'
+      +'<th class="p-2 font-bold text-gray-700 border-b text-right">증감</th>':'')
+    +'</tr></thead><tbody class="divide-y">'+rows+totalRow+'</tbody></table></div></div>';
 }
 
 function udTip(ev,idx,chartId){
