@@ -1778,11 +1778,12 @@ function renderKpiPage(){
 
 /* ═══════════════════════════════════════════
    유저 분포 — 누적PU당일접속 / 전투력별DAU / 레벨별DAU
-   스택 막대(구간 누적)로 그려 "총량"과 "구성비"를 한 번에 보여주고,
-   주간/월간 토글로 최근 12개 구간을 비교한다. 값은 마우스오버로 확인.
+   구간(결제금액·전투력·레벨)을 x축에 둔 라인차트로, "기준 기간" vs "비교 기간" 두 시점의
+   분포 모양을 겹쳐 보여준다. 레벨(100구간)까지 있어 색상별 범례 대신 2계열 비교로 설계.
+   주간/월간 토글 + 기간 선택 드롭다운으로 임의의 두 구간을 비교한다.
    ═══════════════════════════════════════════ */
-var UD_HEX=['#8b5cf6','#3b82f6','#10b981','#f59e0b','#ef4444','#6366f1','#ec4899','#14b8a6','#f97316','#06b6d4','#84cc16','#d946ef'];
 var UD_TABS=[{key:'pu',icon:'ti-coin',clr:'violet'},{key:'power',icon:'ti-swords',clr:'red'},{key:'level',icon:'ti-chart-bar',clr:'blue'}];
+var UD_METRIC_HEX={pu:'#7c3aed',power:'#dc2626',level:'#2563eb'};
 
 function renderUserDist(){
   var c=document.getElementById('content-area');
@@ -1801,21 +1802,47 @@ function renderUserDist(){
   }
   window._udMetric=window._udMetric&&d.sets[window._udMetric]?window._udMetric:(UD_TABS.filter(function(o){return d.sets[o.key];})[0]||{}).key;
   window._udMode=window._udMode||'weekly';
+  window._udValueMode=window._udValueMode||'count';
+
+  var cur=d.sets[window._udMetric];
+  var rows=(window._udMode==='weekly'?cur.weekly:cur.monthly)||[];
+  udEnsureCompare_(rows.length);
 
   var tabs=UD_TABS.filter(function(o){return d.sets[o.key];}).map(function(o){
     var s=d.sets[o.key],active=window._udMetric===o.key;
     return'<button class="btn btn-sm'+(active?' btn-primary':'')+'" onclick="udSetMetric(\''+o.key+'\')"><i class="ti '+o.icon+'"></i> '+esc(s.label)+'</button>';
   }).join('');
-  var modeToggle='<div class="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">'
-    +['weekly','monthly'].map(function(m){
-      var active=window._udMode===m;
-      return'<button class="btn btn-sm" style="border:none;'+(active?'background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:700':'background:transparent;color:#9ca3af')+'" onclick="udSetMode(\''+m+'\')">'+(m==='weekly'?'주간':'월간')+'</button>';
+  function seg(group,opts,cur2){
+    return'<div class="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">'+opts.map(function(o){
+      var active=cur2===o.v;
+      return'<button class="btn btn-sm" style="border:none;'+(active?'background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:700':'background:transparent;color:#9ca3af')+'" onclick="'+group+'(\''+o.v+'\')">'+o.l+'</button>';
     }).join('')+'</div>';
+  }
+  var modeToggle=seg('udSetMode',[{v:'weekly',l:'주간'},{v:'monthly',l:'월간'}],window._udMode);
+  var valueToggle=seg('udSetValueMode',[{v:'count',l:'유저수'},{v:'pct',l:'비중%'}],window._udValueMode);
+
+  var periodOpts=rows.map(function(r,i){return'<option value="'+i+'">'+esc(r.label)+'</option>';}).join('');
+  var periodPickers='<div class="flex items-center gap-2 flex-wrap text-[11px] text-gray-500">'
+    +'<span class="inline-flex items-center gap-1.5"><span style="width:9px;height:9px;border-radius:2px;background:'+UD_METRIC_HEX[window._udMetric]+';display:inline-block"></span>기준 '
+    +'<select class="!w-auto !py-1 !px-2 text-[11px]" onchange="udSetCompare(\'a\',this.value)">'+periodOpts+'</select></span>'
+    +'<span class="inline-flex items-center gap-1.5"><span style="width:9px;height:9px;border-radius:2px;background:#cbd5e1;display:inline-block"></span>비교 '
+    +'<select class="!w-auto !py-1 !px-2 text-[11px]" onchange="udSetCompare(\'b\',this.value)">'+periodOpts+'</select></span></div>';
+  // select에 현재 선택값 반영 (렌더 직후 DOM에서 세팅)
+  window._udPickerSync=true;
 
   c.innerHTML='<div class="card-header" style="padding:0;margin-bottom:12px"><span class="card-title"><i class="ti ti-users-group text-indigo-500"></i> 유저 분포</span>'
     +'<button class="btn btn-sm" onclick="udRefresh()" title="새로고침"><i class="ti ti-refresh"></i></button></div>'
-    +'<div class="card"><div class="flex items-center justify-between flex-wrap gap-2 mb-1"><div class="flex gap-1.5 flex-wrap">'+tabs+'</div>'+modeToggle+'</div>'
+    +'<div class="card"><div class="flex items-center justify-between flex-wrap gap-2 mb-2"><div class="flex gap-1.5 flex-wrap">'+tabs+'</div>'
+    +'<div class="flex items-center gap-2 flex-wrap">'+valueToggle+modeToggle+'</div></div>'
+    +'<div class="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-gray-100">'+periodPickers
+    +'<span class="text-[10px] text-gray-400">'+esc(cur.tab)+' · 일평균 기준 최근 '+rows.length+(window._udMode==='weekly'?'주':'개월')+'</span></div>'
     +'<div id="ud-chart-wrap"></div></div>';
+
+  var selA=c.querySelector('select[onchange^="udSetCompare(\'a\'"]');
+  var selB=c.querySelector('select[onchange^="udSetCompare(\'b\'"]');
+  if(selA) selA.value=window._udCompare.aIdx;
+  if(selB) selB.value=window._udCompare.bIdx;
+
   udRenderChart();
 }
 
@@ -1829,8 +1856,21 @@ function udFetch(){
     });
 }
 function udRefresh(){ window._userDistCache=null; renderUserDist(); }
-function udSetMetric(k){ window._udMetric=k; renderUserDist(); }
-function udSetMode(m){ window._udMode=m; renderUserDist(); }
+function udSetMetric(k){ window._udMetric=k; window._udCompare=null; renderUserDist(); }
+function udSetMode(m){ window._udMode=m; window._udCompare=null; renderUserDist(); }
+function udSetValueMode(m){ window._udValueMode=m; renderUserDist(); }
+function udSetCompare(which,idx){
+  window._udCompare=window._udCompare||{};
+  window._udCompare[which==='a'?'aIdx':'bIdx']=parseInt(idx,10);
+  udRenderChart();
+}
+// 기간(주/월) 개수가 바뀌면(=지표·모드 전환) 기준=최신, 비교=직전으로 되돌린다
+function udEnsureCompare_(n){
+  var cmp=window._udCompare;
+  if(!cmp||cmp.aIdx==null||cmp.bIdx==null||cmp.aIdx>=n||cmp.bIdx>=n){
+    window._udCompare={aIdx:Math.max(0,n-1),bIdx:Math.max(0,n-2)};
+  }
+}
 
 function udRenderChart(){
   var d=window._userDistCache, cur=d.sets[window._udMetric];
@@ -1839,61 +1879,96 @@ function udRenderChart(){
   var rows=(window._udMode==='weekly'?cur.weekly:cur.monthly)||[];
   if(!rows.length){ wrap.innerHTML='<p class="text-xs text-gray-400 text-center py-10">표시할 구간이 없습니다</p>'; return; }
   var buckets=cur.buckets;
-  window._udRowsCache=rows; window._udBucketsCache=buckets;
+  udEnsureCompare_(rows.length);
+  var rowA=rows[window._udCompare.aIdx], rowB=rows[window._udCompare.bIdx];
+  if(!rowA) rowA=rows[rows.length-1];
 
-  var W=980,H=340,PL=56,PR=16,PT=18,PB=40;
-  var n=rows.length, plotH=H-PT-PB, plotW=W-PL-PR;
-  var slot=plotW/n, bw=Math.max(10,Math.min(46,slot*0.62));
-  var totals=rows.map(function(r){return r.values.reduce(function(a,b){return a+b;},0);});
-  var maxTotal=Math.max.apply(null,totals)||1, top=maxTotal*1.12;
-  function cx(i){ return PL+slot*(i+0.5); }
-  function h(v){ return plotH*(v/top); }
+  // 분포 모양 비교가 목적이므로 x축은 "구간"(전투력·레벨·결제구간), y축은 유저수(또는 비중%)
+  var pctMode=window._udValueMode==='pct';
+  function seriesVals(row){
+    if(!row) return buckets.map(function(){return 0;});
+    if(!pctMode) return row.values;
+    var total=row.values.reduce(function(a,b){return a+b;},0)||1;
+    return row.values.map(function(v){return v/total*100;});
+  }
+  var valsA=seriesVals(rowA), valsB=rowB?seriesVals(rowB):null;
+  window._udChartCache={buckets:buckets,rowA:rowA,rowB:rowB,valsA:valsA,valsB:valsB,pctMode:pctMode,metric:window._udMetric};
+
+  var W=980,H=320,PL=52,PR=16,PT=18,PB=46;
+  var n=buckets.length, plotH=H-PT-PB, plotW=W-PL-PR;
+  var slot=n>1?plotW/(n-1):plotW;
+  var maxV=Math.max.apply(null,valsA.concat(valsB||[]))||1, top=maxV*1.15;
+  function cx(i){ return n>1?PL+slot*i:PL+plotW/2; }
+  function cy(v){ return PT+plotH*(1-v/top); }
 
   var grid='';
   for(var g=0;g<=4;g++){
     var gv=top*g/4, gy=PT+plotH*(1-g/4);
     grid+='<line x1="'+PL+'" y1="'+gy.toFixed(1)+'" x2="'+(W-PR)+'" y2="'+gy.toFixed(1)+'" stroke="#eef2f7"/>'
-      +'<text x="'+(PL-8)+'" y="'+(gy+3.2).toFixed(1)+'" font-size="9" fill="#9ca3af" text-anchor="end">'+esc(fmtNum(gv))+'</text>';
+      +'<text x="'+(PL-8)+'" y="'+(gy+3.2).toFixed(1)+'" font-size="9" fill="#9ca3af" text-anchor="end">'+esc(pctMode?gv.toFixed(1)+'%':fmtNum(gv))+'</text>';
   }
 
-  var bars='';
-  rows.forEach(function(r,i){
-    var x=cx(i)-bw/2, yTop=PT+plotH, segs='';
-    r.values.forEach(function(v,bi){
-      if(v<=0) return;
-      var segH=h(v);
-      yTop-=segH;
-      segs+='<rect x="'+x.toFixed(1)+'" y="'+yTop.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0,segH).toFixed(1)+'" fill="'+UD_HEX[bi%UD_HEX.length]+'" rx="1.5"/>';
-    });
-    bars+='<g onmousemove="udTip(event,'+i+')" onmouseleave="udTipHide()" style="cursor:pointer">'
-      +'<rect x="'+x.toFixed(1)+'" y="'+PT+'" width="'+bw.toFixed(1)+'" height="'+plotH+'" fill="transparent"/>'  // 히트영역(막대 사이 빈틈까지 포함)
-      +segs+'</g>'
-      +'<text x="'+cx(i).toFixed(1)+'" y="'+(PT+plotH+16)+'" font-size="9.5" fill="#6b7280" text-anchor="middle">'+esc(r.label)+'</text>';
-  });
+  function linePath(vals){
+    return vals.map(function(v,i){ return (i===0?'M':'L')+cx(i).toFixed(1)+' '+cy(v).toFixed(1); }).join('');
+  }
+  function areaPath(vals){
+    return linePath(vals)+'L'+cx(vals.length-1).toFixed(1)+' '+(PT+plotH)+'L'+cx(0).toFixed(1)+' '+(PT+plotH)+'Z';
+  }
+  var metricHex=UD_METRIC_HEX[window._udMetric]||'#7c3aed';
+  var lines='';
+  if(valsB) lines+='<path d="'+areaPath(valsB)+'" fill="#cbd5e1" opacity=".18"/>'
+    +'<path d="'+linePath(valsB)+'" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4,3"/>';
+  lines+='<path d="'+areaPath(valsA)+'" fill="'+metricHex+'" opacity=".14"/>'
+    +'<path d="'+linePath(valsA)+'" fill="none" stroke="'+metricHex+'" stroke-width="2.25"/>';
 
-  var legend=buckets.map(function(b,i){
-    return'<span class="inline-flex items-center gap-1 text-[10px] text-gray-600"><span style="width:8px;height:8px;border-radius:2px;background:'+UD_HEX[i%UD_HEX.length]+';display:inline-block"></span>'+esc(b)+'</span>';
-  }).join('');
+  // x축 라벨: 구간이 많으면(전투력 36, 레벨 100) 촘촘해지므로 10~12개만 골라 표시
+  var step=Math.max(1,Math.ceil(n/12));
+  var xLabels='';
+  for(var i=0;i<n;i+=step){
+    xLabels+='<text x="'+cx(i).toFixed(1)+'" y="'+(PT+plotH+16)+'" font-size="9" fill="#9ca3af" text-anchor="middle">'+esc(udBucketLabel_(buckets[i]))+'</text>';
+  }
+
+  // 히트영역(구간별 세로 밴드) — 마우스오버 시 정확한 구간 값을 툴팁으로
+  var hit='';
+  for(var hi=0;hi<n;hi++){
+    var bx=(hi===0?PL:cx(hi)-slot/2), bw2=(n>1?slot:plotW);
+    hit+='<rect x="'+bx.toFixed(1)+'" y="'+PT+'" width="'+bw2.toFixed(1)+'" height="'+plotH+'" fill="transparent" onmousemove="udTip(event,'+hi+')" onmouseleave="udTipHide()" style="cursor:crosshair"/>';
+  }
+
+  var totalA=rowA.values.reduce(function(a,b){return a+b;},0);
+  var totalB=rowB?rowB.values.reduce(function(a,b){return a+b;},0):0;
+  var diffPct=rowB&&totalB?((totalA-totalB)/totalB*100):null;
+  var diffChip=diffPct==null?'':'<span class="text-[10px] font-bold '+(diffPct<0?'text-blue-600':'text-red-500')+' bg-gray-50 px-1.5 py-0.5 rounded">'+(diffPct>=0?'▲':'▼')+Math.abs(diffPct).toFixed(1)+'%</span>';
 
   wrap.innerHTML='<div class="flex items-center justify-between flex-wrap gap-2 mt-3 mb-2">'
-    +'<div class="flex items-center gap-3 flex-wrap">'+legend+'</div>'
-    +'<span class="text-[10px] text-gray-400">일평균 · '+esc(rows[rows.length-1].label)+' 기준 최근 '+rows.length+(window._udMode==='weekly'?'주':'개월')+'</span></div>'
-    +'<div style="position:relative"><svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto" onmouseleave="udTipHide()">'+grid+bars+'</svg>'
-    +'<div id="ud-tip" style="display:none;position:absolute;pointer-events:none;background:#111827;color:#fff;font-size:11px;line-height:1.5;padding:8px 10px;border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,.25);z-index:20;min-width:150px;max-width:240px"></div></div>';
+    +'<div class="flex items-center gap-3 flex-wrap text-[11px] text-gray-600">'
+    +'<span class="inline-flex items-center gap-1.5"><span style="width:16px;height:2.5px;background:'+metricHex+';display:inline-block;border-radius:2px"></span>'+esc(rowA.label)+' 합계 <b>'+fmtNum(totalA)+'</b></span>'
+    +(rowB?'<span class="inline-flex items-center gap-1.5"><span style="width:16px;height:2.5px;background:#94a3b8;display:inline-block;border-radius:2px;background-image:repeating-linear-gradient(90deg,#94a3b8 0 3px,transparent 3px 6px)"></span>'+esc(rowB.label)+' 합계 <b>'+fmtNum(totalB)+'</b></span>'+diffChip:'')
+    +'</div><span class="text-[10px] text-gray-400">x축: '+(window._udMetric==='pu'?'결제금액 구간':window._udMetric==='power'?'전투력 구간':'레벨 구간')+'</span></div>'
+    +'<div style="position:relative"><svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto" onmouseleave="udTipHide()">'+grid+lines+xLabels+hit+'</svg>'
+    +'<div id="ud-tip" style="display:none;position:absolute;pointer-events:none;background:#111827;color:#fff;font-size:11px;line-height:1.5;padding:8px 10px;border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,.25);z-index:20;min-width:140px;max-width:240px"></div></div>';
+}
+
+// 전투력/레벨 구간 라벨을 읽기 좋게 (숫자면 천단위 콤마)
+function udBucketLabel_(b){
+  var n=Number(b);
+  return(b!==''&&!isNaN(n))?n.toLocaleString('ko-KR'):String(b);
 }
 
 function udTip(ev,idx){
   var box=document.getElementById('ud-tip'); if(!box) return;
-  var rows=window._udRowsCache||[], buckets=window._udBucketsCache||[];
-  var r=rows[idx]; if(!r) return;
-  var total=r.values.reduce(function(a,b){return a+b;},0);
-  var lines=buckets.map(function(b,i){
-    var v=r.values[i]||0, pct=total?Math.round(v/total*100):0;
-    if(!v) return'';
-    return'<div style="display:flex;justify-content:space-between;gap:12px"><span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:2px;background:'+UD_HEX[i%UD_HEX.length]+';display:inline-block"></span>'+esc(b)+'</span><span style="font-weight:700">'+fmtNum(v)+' <span style="opacity:.6">('+pct+'%)</span></span></div>';
-  }).join('');
-  box.innerHTML='<div style="font-weight:800;margin-bottom:4px">'+esc(r.label)+' <span style="opacity:.55;font-weight:400">· 일평균</span></div>'+lines
-    +'<div style="border-top:1px solid rgba(255,255,255,.15);margin-top:5px;padding-top:5px;display:flex;justify-content:space-between"><span style="opacity:.7">합계</span><span style="font-weight:800">'+fmtNum(total)+'</span></div>';
+  var s=window._udChartCache; if(!s) return;
+  var b=s.buckets[idx]; if(b==null) return;
+  var vA=s.valsA[idx]||0, vB=s.valsB?(s.valsB[idx]||0):null;
+  var fmt=function(v){ return s.pctMode?v.toFixed(1)+'%':fmtNum(v); };
+  var diffLine='';
+  if(vB!=null){
+    var diff=vA-vB;
+    diffLine='<div style="display:flex;justify-content:space-between;gap:12px;opacity:.75"><span>비교</span><span style="font-weight:700">'+fmt(vB)+'</span></div>'
+      +'<div style="border-top:1px solid rgba(255,255,255,.15);margin-top:4px;padding-top:4px;display:flex;justify-content:space-between;gap:12px"><span style="opacity:.7">증감</span><span style="font-weight:800;color:'+(diff<0?'#93c5fd':'#fca5a5')+'">'+(diff>=0?'+':'')+fmt(diff)+'</span></div>';
+  }
+  box.innerHTML='<div style="font-weight:800;margin-bottom:4px">'+esc(udBucketLabel_(b))+'</div>'
+    +'<div style="display:flex;justify-content:space-between;gap:12px"><span>기준</span><span style="font-weight:700">'+fmt(vA)+'</span></div>'+diffLine;
   box.style.display='block';
   var wrap=box.parentNode, rect=wrap.getBoundingClientRect();
   var x=ev.clientX-rect.left+14, y=ev.clientY-rect.top+12;
