@@ -296,6 +296,7 @@ var SIDEBAR_MENU = [
   {id:'milestone',icon:'ti-clock',label:'통합 마일스톤',type:'doc'},
   {section:'사업 지표'},
   {id:'kpi',icon:'ti-trending-up',label:'전권역 주간 매출 추이'},
+  {id:'user-dist',icon:'ti-users-group',label:'유저 분포 (PU/전투력/레벨)'},
   {id:'report-kpi',icon:'ti-presentation',label:'주/월간 보고용 지표',type:'doc'},
   {id:'platform',icon:'ti-brand-apple',label:'iOS 관리'},
   {id:'competitor',icon:'ti-radar',label:'경쟁사 모니터링'},
@@ -749,7 +750,7 @@ function toggleGroup(el){
 /* ═══════════════════════════════════════════
    PAGE NAMES & NAV
    ═══════════════════════════════════════════ */
-var pageNames={dashboard:'종합 대시보드',milestone:'통합 마일스톤','live-schedule':'월던/컨텐츠 오픈시점',settlement:'정산 및 빌링 설계',event:'이벤트 & 보상안',product:'상품안',kpi:'전권역 주간 매출 추이 ','report-kpi':'주/월간 보고용 지표','server-migration':'서버이전/통합',platform:'iOS 관리',weekly:'주간회의 기록',report:'보고/분석',internal:'내부 회의',devmeeting:'개발사 미팅',localization:'현지화','metrics-analysis':'지표분석','shared-drive':'공유 드라이브','screenshot-spec':'마켓 스샷 규격',ai:'AI 도움말','admin-settings':'포탈 설정'};
+var pageNames={dashboard:'종합 대시보드',milestone:'통합 마일스톤','live-schedule':'월던/컨텐츠 오픈시점',settlement:'정산 및 빌링 설계',event:'이벤트 & 보상안',product:'상품안',kpi:'전권역 주간 매출 추이 ','user-dist':'유저 분포','report-kpi':'주/월간 보고용 지표','server-migration':'서버이전/통합',platform:'iOS 관리',weekly:'주간회의 기록',report:'보고/분석',internal:'내부 회의',devmeeting:'개발사 미팅',localization:'현지화','metrics-analysis':'지표분석','shared-drive':'공유 드라이브','screenshot-spec':'마켓 스샷 규격',ai:'AI 도움말','admin-settings':'포탈 설정'};
 
 function nav(id,el){
   closeMobileMenu();
@@ -824,6 +825,7 @@ function renderPage(id){
     report:function(){renderArchive('report');},
     internal:function(){renderArchive('internal');},
     kpi:renderKpiPage,
+    'user-dist':renderUserDist,
     devmeeting:renderDevMeeting,
     'screenshot-spec':renderSpecs,
     ai:renderAI,
@@ -1773,6 +1775,133 @@ function renderKpiPage(){
     renderMonthlyCharts()+
     renderDailyGlobal();
 }
+
+/* ═══════════════════════════════════════════
+   유저 분포 — 누적PU당일접속 / 전투력별DAU / 레벨별DAU
+   스택 막대(구간 누적)로 그려 "총량"과 "구성비"를 한 번에 보여주고,
+   주간/월간 토글로 최근 12개 구간을 비교한다. 값은 마우스오버로 확인.
+   ═══════════════════════════════════════════ */
+var UD_HEX=['#8b5cf6','#3b82f6','#10b981','#f59e0b','#ef4444','#6366f1','#ec4899','#14b8a6','#f97316','#06b6d4','#84cc16','#d946ef'];
+var UD_TABS=[{key:'pu',icon:'ti-coin',clr:'violet'},{key:'power',icon:'ti-swords',clr:'red'},{key:'level',icon:'ti-chart-bar',clr:'blue'}];
+
+function renderUserDist(){
+  var c=document.getElementById('content-area');
+  if(!window._userDistCache){
+    c.innerHTML='<div class="card"><p class="text-xs text-gray-400 text-center py-10"><i class="ti ti-loader-2 animate-spin"></i> 유저 분포 데이터 불러오는 중...</p></div>';
+    udFetch();
+    return;
+  }
+  var d=window._userDistCache;
+  if(!d||!d.ok){
+    var hint=d&&d.tabs?'<div class="text-[11px] text-gray-400 mt-2">시트 내 탭: '+esc(d.tabs.join(', '))+'</div>':'';
+    c.innerHTML='<div class="card"><div class="text-center py-10"><i class="ti ti-alert-triangle text-amber-500" style="font-size:28px"></i>'
+      +'<p class="text-xs text-gray-500 mt-2">데이터를 불러오지 못했습니다'+(d&&d.error?' ('+esc(d.error)+')':'')+'</p>'+hint
+      +'<button class="btn btn-sm btn-primary mt-3" onclick="udRefresh()"><i class="ti ti-refresh"></i> 다시 시도</button></div></div>';
+    return;
+  }
+  window._udMetric=window._udMetric&&d.sets[window._udMetric]?window._udMetric:(UD_TABS.filter(function(o){return d.sets[o.key];})[0]||{}).key;
+  window._udMode=window._udMode||'weekly';
+
+  var tabs=UD_TABS.filter(function(o){return d.sets[o.key];}).map(function(o){
+    var s=d.sets[o.key],active=window._udMetric===o.key;
+    return'<button class="btn btn-sm'+(active?' btn-primary':'')+'" onclick="udSetMetric(\''+o.key+'\')"><i class="ti '+o.icon+'"></i> '+esc(s.label)+'</button>';
+  }).join('');
+  var modeToggle='<div class="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">'
+    +['weekly','monthly'].map(function(m){
+      var active=window._udMode===m;
+      return'<button class="btn btn-sm" style="border:none;'+(active?'background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:700':'background:transparent;color:#9ca3af')+'" onclick="udSetMode(\''+m+'\')">'+(m==='weekly'?'주간':'월간')+'</button>';
+    }).join('')+'</div>';
+
+  c.innerHTML='<div class="card-header" style="padding:0;margin-bottom:12px"><span class="card-title"><i class="ti ti-users-group text-indigo-500"></i> 유저 분포</span>'
+    +'<button class="btn btn-sm" onclick="udRefresh()" title="새로고침"><i class="ti ti-refresh"></i></button></div>'
+    +'<div class="card"><div class="flex items-center justify-between flex-wrap gap-2 mb-1"><div class="flex gap-1.5 flex-wrap">'+tabs+'</div>'+modeToggle+'</div>'
+    +'<div id="ud-chart-wrap"></div></div>';
+  udRenderChart();
+}
+
+function udFetch(){
+  fetch(KPI_API_URL+'?action=user_dist&t='+Date.now())
+    .then(function(r){return r.json();})
+    .then(function(d){ window._userDistCache=d; if(currentPage==='user-dist') renderUserDist(); })
+    .catch(function(e){
+      window._userDistCache={ok:false,error:e.message};
+      if(currentPage==='user-dist') renderUserDist();
+    });
+}
+function udRefresh(){ window._userDistCache=null; renderUserDist(); }
+function udSetMetric(k){ window._udMetric=k; renderUserDist(); }
+function udSetMode(m){ window._udMode=m; renderUserDist(); }
+
+function udRenderChart(){
+  var d=window._userDistCache, cur=d.sets[window._udMetric];
+  var wrap=document.getElementById('ud-chart-wrap');
+  if(!cur){ wrap.innerHTML='<p class="text-xs text-gray-400 text-center py-10">표시할 데이터가 없습니다</p>'; return; }
+  var rows=(window._udMode==='weekly'?cur.weekly:cur.monthly)||[];
+  if(!rows.length){ wrap.innerHTML='<p class="text-xs text-gray-400 text-center py-10">표시할 구간이 없습니다</p>'; return; }
+  var buckets=cur.buckets;
+  window._udRowsCache=rows; window._udBucketsCache=buckets;
+
+  var W=980,H=340,PL=56,PR=16,PT=18,PB=40;
+  var n=rows.length, plotH=H-PT-PB, plotW=W-PL-PR;
+  var slot=plotW/n, bw=Math.max(10,Math.min(46,slot*0.62));
+  var totals=rows.map(function(r){return r.values.reduce(function(a,b){return a+b;},0);});
+  var maxTotal=Math.max.apply(null,totals)||1, top=maxTotal*1.12;
+  function cx(i){ return PL+slot*(i+0.5); }
+  function h(v){ return plotH*(v/top); }
+
+  var grid='';
+  for(var g=0;g<=4;g++){
+    var gv=top*g/4, gy=PT+plotH*(1-g/4);
+    grid+='<line x1="'+PL+'" y1="'+gy.toFixed(1)+'" x2="'+(W-PR)+'" y2="'+gy.toFixed(1)+'" stroke="#eef2f7"/>'
+      +'<text x="'+(PL-8)+'" y="'+(gy+3.2).toFixed(1)+'" font-size="9" fill="#9ca3af" text-anchor="end">'+esc(fmtNum(gv))+'</text>';
+  }
+
+  var bars='';
+  rows.forEach(function(r,i){
+    var x=cx(i)-bw/2, yTop=PT+plotH, segs='';
+    r.values.forEach(function(v,bi){
+      if(v<=0) return;
+      var segH=h(v);
+      yTop-=segH;
+      segs+='<rect x="'+x.toFixed(1)+'" y="'+yTop.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0,segH).toFixed(1)+'" fill="'+UD_HEX[bi%UD_HEX.length]+'" rx="1.5"/>';
+    });
+    bars+='<g onmousemove="udTip(event,'+i+')" onmouseleave="udTipHide()" style="cursor:pointer">'
+      +'<rect x="'+x.toFixed(1)+'" y="'+PT+'" width="'+bw.toFixed(1)+'" height="'+plotH+'" fill="transparent"/>'  // 히트영역(막대 사이 빈틈까지 포함)
+      +segs+'</g>'
+      +'<text x="'+cx(i).toFixed(1)+'" y="'+(PT+plotH+16)+'" font-size="9.5" fill="#6b7280" text-anchor="middle">'+esc(r.label)+'</text>';
+  });
+
+  var legend=buckets.map(function(b,i){
+    return'<span class="inline-flex items-center gap-1 text-[10px] text-gray-600"><span style="width:8px;height:8px;border-radius:2px;background:'+UD_HEX[i%UD_HEX.length]+';display:inline-block"></span>'+esc(b)+'</span>';
+  }).join('');
+
+  wrap.innerHTML='<div class="flex items-center justify-between flex-wrap gap-2 mt-3 mb-2">'
+    +'<div class="flex items-center gap-3 flex-wrap">'+legend+'</div>'
+    +'<span class="text-[10px] text-gray-400">일평균 · '+esc(rows[rows.length-1].label)+' 기준 최근 '+rows.length+(window._udMode==='weekly'?'주':'개월')+'</span></div>'
+    +'<div style="position:relative"><svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto" onmouseleave="udTipHide()">'+grid+bars+'</svg>'
+    +'<div id="ud-tip" style="display:none;position:absolute;pointer-events:none;background:#111827;color:#fff;font-size:11px;line-height:1.5;padding:8px 10px;border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,.25);z-index:20;min-width:150px;max-width:240px"></div></div>';
+}
+
+function udTip(ev,idx){
+  var box=document.getElementById('ud-tip'); if(!box) return;
+  var rows=window._udRowsCache||[], buckets=window._udBucketsCache||[];
+  var r=rows[idx]; if(!r) return;
+  var total=r.values.reduce(function(a,b){return a+b;},0);
+  var lines=buckets.map(function(b,i){
+    var v=r.values[i]||0, pct=total?Math.round(v/total*100):0;
+    if(!v) return'';
+    return'<div style="display:flex;justify-content:space-between;gap:12px"><span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:2px;background:'+UD_HEX[i%UD_HEX.length]+';display:inline-block"></span>'+esc(b)+'</span><span style="font-weight:700">'+fmtNum(v)+' <span style="opacity:.6">('+pct+'%)</span></span></div>';
+  }).join('');
+  box.innerHTML='<div style="font-weight:800;margin-bottom:4px">'+esc(r.label)+' <span style="opacity:.55;font-weight:400">· 일평균</span></div>'+lines
+    +'<div style="border-top:1px solid rgba(255,255,255,.15);margin-top:5px;padding-top:5px;display:flex;justify-content:space-between"><span style="opacity:.7">합계</span><span style="font-weight:800">'+fmtNum(total)+'</span></div>';
+  box.style.display='block';
+  var wrap=box.parentNode, rect=wrap.getBoundingClientRect();
+  var x=ev.clientX-rect.left+14, y=ev.clientY-rect.top+12;
+  if(x+240>rect.width) x=ev.clientX-rect.left-240;
+  box.style.left=Math.max(4,x)+'px';
+  box.style.top=Math.max(4,y)+'px';
+}
+function udTipHide(){ var b=document.getElementById('ud-tip'); if(b) b.style.display='none'; }
 
 function renderDevMeeting(){
   document.getElementById('content-area').innerHTML='<div class="doc-viewer"><div class="doc-toolbar"><span class="title"><i class="ti ti-code text-purple-500"></i> 개발사 회의록 <span style="font-size:11px;color:#9ca3af;font-weight:400;margin-left:8px">읽기 전용 · 탭 이동 가능</span></span><a href="https://docs.google.com/spreadsheets/d/1JvOfFWcvssvFZP91OFvtd66SThG1XxKAJSf3hJ6FEVw/edit?gid=1146934928" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-pencil"></i> 새창에서 편집</a></div><div class="doc-iframe-wrap"><iframe src="https://docs.google.com/spreadsheets/d/1JvOfFWcvssvFZP91OFvtd66SThG1XxKAJSf3hJ6FEVw/htmlview?gid=1146934928"></iframe></div></div>';
