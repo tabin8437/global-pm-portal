@@ -1874,26 +1874,29 @@ function udEnsureCompare_(n){
 
 // 저액/저구간 쪽 유저수가 압도적으로 많아 전체 분포에서는 꼬리 쪽이 눌려 보이므로,
 // PU·전투력은 특정 구간부터(전투력은 ~구간까지) 잘라서 보여주는 확대 차트를 하나 더 그린다.
+// 전투력은 12만 이후가 전부 0이라 "전체 분포" 쪽도 같은 12만에서 끊어 위아래 축을 맞춘다.
 // 레벨은 별도 확대 없이 전체 분포만 보여준다.
-var UD_ZOOM={ pu:{fromLabel:'3만원 이하'}, power:{fromValue:40000,toValue:120000} };
-function udZoomRange_(buckets,metric){
-  var cfg=UD_ZOOM[metric];
-  if(!cfg) return null;
+var UD_RANGE={
+  pu:    { zoom: {fromLabel:'3만원 이하'} },
+  power: { main: {toValue:120000}, zoom: {fromValue:40000,toValue:120000} }
+};
+function udResolveRange_(buckets,spec){
+  if(!spec) return null;
   var start=0,end=buckets.length-1;
-  if(cfg.fromLabel){
-    var idx=buckets.indexOf(cfg.fromLabel);
+  if(spec.fromLabel){
+    var idx=buckets.indexOf(spec.fromLabel);
     if(idx<0) return null;
     start=idx;
   }
-  if(cfg.fromValue!=null){
+  if(spec.fromValue!=null){
     var s=-1;
-    for(var i=0;i<buckets.length;i++){ var n=Number(buckets[i]); if(!isNaN(n)&&n>=cfg.fromValue){ s=i; break; } }
+    for(var i=0;i<buckets.length;i++){ var n=Number(buckets[i]); if(!isNaN(n)&&n>=spec.fromValue){ s=i; break; } }
     if(s<0) return null;
     start=s;
   }
-  if(cfg.toValue!=null){
+  if(spec.toValue!=null){
     var e=-1;
-    for(var j=buckets.length-1;j>=0;j--){ var n2=Number(buckets[j]); if(!isNaN(n2)&&n2<=cfg.toValue){ e=j; break; } }
+    for(var j=buckets.length-1;j>=0;j--){ var n2=Number(buckets[j]); if(!isNaN(n2)&&n2<=spec.toValue){ e=j; break; } }
     if(e>=start) end=e;
   }
   return(start>0||end<buckets.length-1)?{start:start,end:end}:null;
@@ -1921,18 +1924,19 @@ function udRenderChart(){
   var valsA=seriesVals(rowA), valsB=rowB?seriesVals(rowB):null;
   var metricHex=UD_METRIC_HEX[window._udMetric]||'#7c3aed';
   var axisLabel=window._udMetric==='pu'?'결제금액 구간':window._udMetric==='power'?'전투력 구간':'레벨 구간';
+  function slice(range,arr){ return range&&arr?arr.slice(range.start,range.end+1):arr; }
 
+  var rangeCfg=UD_RANGE[window._udMetric]||{};
   window._udChartCache={};
-  var html=udChartBlock_('main','전체 분포',buckets,valsA,valsB,rowA,rowB,pctMode,metricHex,axisLabel);
 
-  var zoom=udZoomRange_(buckets,window._udMetric);
-  if(zoom){
-    var zb=buckets.slice(zoom.start,zoom.end+1);
-    var zvA=valsA.slice(zoom.start,zoom.end+1);
-    var zvB=valsB?valsB.slice(zoom.start,zoom.end+1):null;
+  var mainRange=udResolveRange_(buckets,rangeCfg.main);
+  var html=udChartBlock_('main','전체 분포',slice(mainRange,buckets),slice(mainRange,valsA),slice(mainRange,valsB),rowA,rowB,pctMode,metricHex,axisLabel);
+
+  var zoomRange=udResolveRange_(buckets,rangeCfg.zoom);
+  if(zoomRange){
     var zoomTitle=(window._udMetric==='pu'?'3만원 이하 이후':'전투력 4만~12만')+' 확대';
     html+='<div class="mt-5 pt-4 border-t border-dashed border-gray-200">'
-      +udChartBlock_('zoom',zoomTitle,zb,zvA,zvB,rowA,rowB,pctMode,metricHex,axisLabel,true)+'</div>';
+      +udChartBlock_('zoom',zoomTitle,slice(zoomRange,buckets),slice(zoomRange,valsA),slice(zoomRange,valsB),rowA,rowB,pctMode,metricHex,axisLabel,true)+'</div>';
   }
   wrap.innerHTML=html;
 }
@@ -1961,11 +1965,18 @@ function udChartBlock_(chartId,title,buckets,valsA,valsB,rowA,rowB,pctMode,metri
   function areaPath(vals){
     return linePath(vals)+'L'+cx(vals.length-1).toFixed(1)+' '+(PT+plotH)+'L'+cx(0).toFixed(1)+' '+(PT+plotH)+'Z';
   }
+  // 점이 너무 촘촘하면(레벨 100구간) 뭉개지므로 구간 간격에 비례해 반지름을 줄인다
+  var dotR=Math.max(1.5,Math.min(3,slot*0.16));
+  function dots(vals,color,r){
+    return vals.map(function(v,i){ return'<circle cx="'+cx(i).toFixed(1)+'" cy="'+cy(v).toFixed(1)+'" r="'+r.toFixed(1)+'" fill="'+color+'" stroke="#fff" stroke-width="1"/>'; }).join('');
+  }
   var lines='';
   if(valsB) lines+='<path d="'+areaPath(valsB)+'" fill="#cbd5e1" opacity=".18"/>'
-    +'<path d="'+linePath(valsB)+'" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4,3"/>';
+    +'<path d="'+linePath(valsB)+'" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4,3"/>'
+    +dots(valsB,'#94a3b8',dotR*0.85);
   lines+='<path d="'+areaPath(valsA)+'" fill="'+metricHex+'" opacity=".14"/>'
-    +'<path d="'+linePath(valsA)+'" fill="none" stroke="'+metricHex+'" stroke-width="2.25"/>';
+    +'<path d="'+linePath(valsA)+'" fill="none" stroke="'+metricHex+'" stroke-width="2.25"/>'
+    +dots(valsA,metricHex,dotR);
 
   // x축 라벨: 구간이 많으면(전투력 36, 레벨 100) 촘촘해지므로 10~12개만 골라 표시
   var step=Math.max(1,Math.ceil(n/12));
