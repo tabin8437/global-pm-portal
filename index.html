@@ -1939,12 +1939,38 @@ function udRenderChart(){
       +udChartBlock_('zoom',zoomTitle,slice(zoomRange,buckets),slice(zoomRange,valsA),slice(zoomRange,valsB),rowA,rowB,pctMode,metricHex,axisLabel,true)+'</div>';
   }
 
-  // 전투력: 4만부터 실제 최댓값까지 구간별 인원수를 표로도 제공 (차트는 12만에서 잘랐지만 표는 끝까지)
+  // 표는 주간/월간 토글과 무관하게 "이번달 vs 지난달"을 항상 같이 보여준다 (전월대비 참고용 고정 컬럼)
+  var monthly=cur.monthly||[];
+  var monA=monthly[monthly.length-1], monB=monthly[monthly.length-2];
+
+  // 전투력: 4만~12만 구간별 인원수를 표로도 제공 (차트와 같은 범위)
   // 원본 시트가 5,000단위로만 쌓이므로 표도 5,000단위 그대로 — 1,000단위로 더 잘게 보려면
   // 원본 SQL/시트의 구간 폭 자체를 1,000단위로 바꿔야 한다.
   if(window._udMetric==='power'){
     var tblRange=udResolveRange_(buckets,{fromValue:40000,toValue:120000});
-    if(tblRange) html+=udDistTable_(slice(tblRange,buckets),slice(tblRange,rowA.values),rowB?slice(tblRange,rowB.values):null,rowA,rowB);
+    if(tblRange) html+=udDistTable_({
+      title:'전투력 4만~12만 구간별 인원수', note:'(5,000단위 원본 그대로)',
+      buckets:slice(tblRange,buckets),
+      labelFn:function(b){ var n=Number(b); return n.toLocaleString('ko-KR')+' ~ '+(n+4999).toLocaleString('ko-KR'); },
+      weekA:slice(tblRange,rowA.values), weekB:rowB?slice(tblRange,rowB.values):null,
+      weekLabelA:rowA.label, weekLabelB:rowB?rowB.label:null,
+      monA:monA?slice(tblRange,monA.values):null, monB:monB?slice(tblRange,monB.values):null,
+      monLabelA:monA?monA.label:null, monLabelB:monB?monB.label:null
+    });
+  }
+
+  // PU: 결제금액 구간을 1그룹부터 순서대로 번호를 붙여 표로 제공 (TOTAL_UCNT는 합계라 그룹에서 제외)
+  if(window._udMetric==='pu'){
+    var gRange=buckets[0]==='TOTAL_UCNT'?{start:1,end:buckets.length-1}:{start:0,end:buckets.length-1};
+    html+=udDistTable_({
+      title:'결제금액 구간별 인원수', note:'',
+      buckets:slice(gRange,buckets),
+      labelFn:function(b,i){ return(i+1)+'그룹 · '+b; },
+      weekA:slice(gRange,rowA.values), weekB:rowB?slice(gRange,rowB.values):null,
+      weekLabelA:rowA.label, weekLabelB:rowB?rowB.label:null,
+      monA:monA?slice(gRange,monA.values):null, monB:monB?slice(gRange,monB.values):null,
+      monLabelA:monA?monA.label:null, monLabelB:monB?monB.label:null
+    });
   }
   wrap.innerHTML=html;
 }
@@ -2030,36 +2056,47 @@ function udDiffArrow_(diff){
   return'<span class="'+(up?'text-red-500':'text-blue-600')+'">'+(up?'▲':'▼')+Math.abs(diff).toLocaleString('ko-KR')+'</span>';
 }
 
-// 구간별 인원수 표 (전투력 전용) — 원본 시트가 5,000단위로 쌓이므로 그 폭 그대로 범위를 표기한다
-function udDistTable_(buckets,valsA,valsB,rowA,rowB){
+// 구간별 인원수 표 — 기준/비교(주간·월간 토글에 연동) 컬럼 + 이번달/지난달(항상 고정) 컬럼을 함께 보여준다.
+// opts: {title, note, buckets, labelFn(b,i), weekA, weekB, weekLabelA, weekLabelB, monA, monB, monLabelA, monLabelB}
+function udDistTable_(opts){
+  var buckets=opts.buckets, weekA=opts.weekA, weekB=opts.weekB, monA=opts.monA, monB=opts.monB;
+  var hasWeekB=!!weekB, hasMon=!!(monA&&monB);
+
+  function cell(v,cls){ return'<td class="p-2 border-r text-right'+(cls?' '+cls:'')+'">'+v.toLocaleString('ko-KR')+'</td>'; }
   var rows=buckets.map(function(b,i){
-    var n=Number(b);
-    var rangeLabel=isNaN(n)?udBucketLabel_(b):(n.toLocaleString('ko-KR')+' ~ '+(n+4999).toLocaleString('ko-KR'));
-    var a=valsA[i]||0, bV=valsB?(valsB[i]||0):null;
-    var diff=bV!=null?a-bV:null;
-    return'<tr><td class="p-2 border-r text-gray-700">'+esc(rangeLabel)+'</td>'
-      +'<td class="p-2 border-r text-right font-bold text-gray-900">'+a.toLocaleString('ko-KR')+'</td>'
-      +(valsB?'<td class="p-2 border-r text-right text-gray-500">'+bV.toLocaleString('ko-KR')+'</td>'
-        +'<td class="p-2 text-right font-bold">'+udDiffArrow_(diff)+'</td>':'')
+    var wa=weekA[i]||0, wb=hasWeekB?(weekB[i]||0):null;
+    var ma=hasMon?(monA[i]||0):null, mb=hasMon?(monB[i]||0):null;
+    return'<tr><td class="p-2 border-r text-gray-700">'+esc(opts.labelFn(b,i))+'</td>'
+      +cell(wa,'font-bold text-gray-900')
+      +(hasWeekB?cell(wb,'text-gray-500')+'<td class="p-2 border-r text-right font-bold">'+udDiffArrow_(wa-wb)+'</td>':'')
+      +(hasMon?cell(mb,'text-gray-500')+cell(ma,'font-bold text-gray-900')+'<td class="p-2 text-right font-bold">'+udDiffArrow_(ma-mb)+'</td>':'')
       +'</tr>';
   }).join('');
-  var sumA=valsA.reduce(function(x,y){return x+y;},0);
-  var sumB=valsB?valsB.reduce(function(x,y){return x+y;},0):null;
-  var sumDiff=sumB!=null?sumA-sumB:null;
+
+  function sum(arr){ return arr?arr.reduce(function(x,y){return x+y;},0):null; }
+  var sWA=sum(weekA), sWB=sum(weekB), sMA=sum(monA), sMB=sum(monB);
   var totalRow='<tr class="bg-gray-50 font-bold"><td class="p-2 border-r border-t-2 border-gray-300">표시구간 합계</td>'
-    +'<td class="p-2 border-r border-t-2 border-gray-300 text-right">'+sumA.toLocaleString('ko-KR')+'</td>'
-    +(valsB?'<td class="p-2 border-r border-t-2 border-gray-300 text-right text-gray-500">'+sumB.toLocaleString('ko-KR')+'</td>'
-      +'<td class="p-2 border-t-2 border-gray-300 text-right">'+udDiffArrow_(sumDiff)+'</td>':'')
+    +'<td class="p-2 border-r border-t-2 border-gray-300 text-right">'+sWA.toLocaleString('ko-KR')+'</td>'
+    +(hasWeekB?'<td class="p-2 border-r border-t-2 border-gray-300 text-right text-gray-500">'+sWB.toLocaleString('ko-KR')+'</td>'
+      +'<td class="p-2 border-r border-t-2 border-gray-300 text-right">'+udDiffArrow_(sWA-sWB)+'</td>':'')
+    +(hasMon?'<td class="p-2 border-r border-t-2 border-gray-300 text-right text-gray-500">'+sMB.toLocaleString('ko-KR')+'</td>'
+      +'<td class="p-2 border-r border-t-2 border-gray-300 text-right">'+sMA.toLocaleString('ko-KR')+'</td>'
+      +'<td class="p-2 border-t-2 border-gray-300 text-right">'+udDiffArrow_(sMA-sMB)+'</td>':'')
     +'</tr>';
+
+  var thWeek='<th class="p-2 font-bold text-gray-700 border-b border-r text-right">'+esc(opts.weekLabelA)+' 인원수</th>'
+    +(hasWeekB?'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">'+esc(opts.weekLabelB)+' 인원수</th>'
+      +'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">증감</th>':'');
+  var thMon=hasMon?'<th class="p-2 font-bold text-gray-700 border-b border-r text-right bg-violet-50">'+esc(opts.monLabelB)+' 인원수</th>'
+    +'<th class="p-2 font-bold text-gray-700 border-b border-r text-right bg-violet-50">'+esc(opts.monLabelA)+' 인원수</th>'
+    +'<th class="p-2 font-bold text-gray-700 border-b text-right bg-violet-50">전월대비</th>':'';
+
   return'<div class="mt-5 pt-4 border-t border-dashed border-gray-200">'
-    +'<div class="text-[11px] font-bold text-gray-700 mb-2">전투력 4만~12만 구간별 인원수 <span class="font-normal text-gray-400">(5,000단위 원본 그대로)</span></div>'
-    +'<div class="overflow-x-auto border rounded-xl" style="max-height:360px;overflow-y:auto">'
+    +'<div class="text-[11px] font-bold text-gray-700 mb-2">'+esc(opts.title)+(opts.note?' <span class="font-normal text-gray-400">'+esc(opts.note)+'</span>':'')+'</div>'
+    +'<div class="overflow-x-auto border rounded-xl" style="max-height:420px;overflow-y:auto">'
     +'<table class="w-full text-left border-collapse text-xs">'
     +'<thead class="sticky top-0 bg-gray-100 z-10"><tr>'
-    +'<th class="p-2 font-bold text-gray-700 border-b border-r">전투력 구간</th>'
-    +'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">'+esc(rowA.label)+' 인원수</th>'
-    +(valsB?'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">'+esc(rowB.label)+' 인원수</th>'
-      +'<th class="p-2 font-bold text-gray-700 border-b text-right">증감</th>':'')
+    +'<th class="p-2 font-bold text-gray-700 border-b border-r">구간</th>'+thWeek+thMon
     +'</tr></thead><tbody class="divide-y">'+rows+totalRow+'</tbody></table></div></div>';
 }
 
