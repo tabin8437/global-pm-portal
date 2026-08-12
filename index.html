@@ -1872,6 +1872,33 @@ function udEnsureCompare_(n){
   }
 }
 
+// 저액/저구간 쪽 유저수가 압도적으로 많아 전체 분포에서는 꼬리 쪽이 눌려 보이므로,
+// PU·전투력은 특정 구간부터(전투력은 ~구간까지) 잘라서 보여주는 확대 차트를 하나 더 그린다.
+// 레벨은 별도 확대 없이 전체 분포만 보여준다.
+var UD_ZOOM={ pu:{fromLabel:'3만원 이하'}, power:{fromValue:40000,toValue:120000} };
+function udZoomRange_(buckets,metric){
+  var cfg=UD_ZOOM[metric];
+  if(!cfg) return null;
+  var start=0,end=buckets.length-1;
+  if(cfg.fromLabel){
+    var idx=buckets.indexOf(cfg.fromLabel);
+    if(idx<0) return null;
+    start=idx;
+  }
+  if(cfg.fromValue!=null){
+    var s=-1;
+    for(var i=0;i<buckets.length;i++){ var n=Number(buckets[i]); if(!isNaN(n)&&n>=cfg.fromValue){ s=i; break; } }
+    if(s<0) return null;
+    start=s;
+  }
+  if(cfg.toValue!=null){
+    var e=-1;
+    for(var j=buckets.length-1;j>=0;j--){ var n2=Number(buckets[j]); if(!isNaN(n2)&&n2<=cfg.toValue){ e=j; break; } }
+    if(e>=start) end=e;
+  }
+  return(start>0||end<buckets.length-1)?{start:start,end:end}:null;
+}
+
 function udRenderChart(){
   var d=window._userDistCache, cur=d.sets[window._udMetric];
   var wrap=document.getElementById('ud-chart-wrap');
@@ -1892,9 +1919,29 @@ function udRenderChart(){
     return row.values.map(function(v){return v/total*100;});
   }
   var valsA=seriesVals(rowA), valsB=rowB?seriesVals(rowB):null;
-  window._udChartCache={buckets:buckets,rowA:rowA,rowB:rowB,valsA:valsA,valsB:valsB,pctMode:pctMode,metric:window._udMetric};
+  var metricHex=UD_METRIC_HEX[window._udMetric]||'#7c3aed';
+  var axisLabel=window._udMetric==='pu'?'결제금액 구간':window._udMetric==='power'?'전투력 구간':'레벨 구간';
 
-  var W=980,H=320,PL=52,PR=16,PT=18,PB=46;
+  window._udChartCache={};
+  var html=udChartBlock_('main','전체 분포',buckets,valsA,valsB,rowA,rowB,pctMode,metricHex,axisLabel);
+
+  var zoom=udZoomRange_(buckets,window._udMetric);
+  if(zoom){
+    var zb=buckets.slice(zoom.start,zoom.end+1);
+    var zvA=valsA.slice(zoom.start,zoom.end+1);
+    var zvB=valsB?valsB.slice(zoom.start,zoom.end+1):null;
+    var zoomTitle=(window._udMetric==='pu'?'3만원 이하 이후':'전투력 4만~12만')+' 확대';
+    html+='<div class="mt-5 pt-4 border-t border-dashed border-gray-200">'
+      +udChartBlock_('zoom',zoomTitle,zb,zvA,zvB,rowA,rowB,pctMode,metricHex,axisLabel,true)+'</div>';
+  }
+  wrap.innerHTML=html;
+}
+
+// 차트 하나(전체/확대 공용)를 그려 HTML을 반환하고, 툴팁이 참조할 데이터를 chartId로 캐싱한다.
+function udChartBlock_(chartId,title,buckets,valsA,valsB,rowA,rowB,pctMode,metricHex,axisLabel,isZoom){
+  window._udChartCache[chartId]={buckets:buckets,valsA:valsA,valsB:valsB,pctMode:pctMode};
+
+  var W=980,H=isZoom?240:320,PL=52,PR=16,PT=18,PB=46;
   var n=buckets.length, plotH=H-PT-PB, plotW=W-PL-PR;
   var slot=n>1?plotW/(n-1):plotW;
   var maxV=Math.max.apply(null,valsA.concat(valsB||[]))||1, top=maxV*1.15;
@@ -1914,7 +1961,6 @@ function udRenderChart(){
   function areaPath(vals){
     return linePath(vals)+'L'+cx(vals.length-1).toFixed(1)+' '+(PT+plotH)+'L'+cx(0).toFixed(1)+' '+(PT+plotH)+'Z';
   }
-  var metricHex=UD_METRIC_HEX[window._udMetric]||'#7c3aed';
   var lines='';
   if(valsB) lines+='<path d="'+areaPath(valsB)+'" fill="#cbd5e1" opacity=".18"/>'
     +'<path d="'+linePath(valsB)+'" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4,3"/>';
@@ -1932,21 +1978,24 @@ function udRenderChart(){
   var hit='';
   for(var hi=0;hi<n;hi++){
     var bx=(hi===0?PL:cx(hi)-slot/2), bw2=(n>1?slot:plotW);
-    hit+='<rect x="'+bx.toFixed(1)+'" y="'+PT+'" width="'+bw2.toFixed(1)+'" height="'+plotH+'" fill="transparent" onmousemove="udTip(event,'+hi+')" onmouseleave="udTipHide()" style="cursor:crosshair"/>';
+    hit+='<rect x="'+bx.toFixed(1)+'" y="'+PT+'" width="'+bw2.toFixed(1)+'" height="'+plotH+'" fill="transparent" onmousemove="udTip(event,'+hi+',\''+chartId+'\')" onmouseleave="udTipHide(\''+chartId+'\')" style="cursor:crosshair"/>';
   }
 
-  var totalA=rowA.values.reduce(function(a,b){return a+b;},0);
-  var totalB=rowB?rowB.values.reduce(function(a,b){return a+b;},0):0;
-  var diffPct=rowB&&totalB?((totalA-totalB)/totalB*100):null;
+  var sumA=valsA.reduce(function(a,b){return a+b;},0);
+  var sumB=valsB?valsB.reduce(function(a,b){return a+b;},0):0;
+  var totalLabel=isZoom?'표시구간 합':'합계';
+  var diffPct=valsB&&sumB?((sumA-sumB)/sumB*100):null;
   var diffChip=diffPct==null?'':'<span class="text-[10px] font-bold '+(diffPct<0?'text-blue-600':'text-red-500')+' bg-gray-50 px-1.5 py-0.5 rounded">'+(diffPct>=0?'▲':'▼')+Math.abs(diffPct).toFixed(1)+'%</span>';
+  var sumFmt=function(v){ return pctMode?v.toFixed(1)+'%':fmtNum(v); };
 
-  wrap.innerHTML='<div class="flex items-center justify-between flex-wrap gap-2 mt-3 mb-2">'
+  return'<div class="flex items-center justify-between flex-wrap gap-2 '+(isZoom?'mb-2':'mt-3 mb-2')+'">'
     +'<div class="flex items-center gap-3 flex-wrap text-[11px] text-gray-600">'
-    +'<span class="inline-flex items-center gap-1.5"><span style="width:16px;height:2.5px;background:'+metricHex+';display:inline-block;border-radius:2px"></span>'+esc(rowA.label)+' 합계 <b>'+fmtNum(totalA)+'</b></span>'
-    +(rowB?'<span class="inline-flex items-center gap-1.5"><span style="width:16px;height:2.5px;background:#94a3b8;display:inline-block;border-radius:2px;background-image:repeating-linear-gradient(90deg,#94a3b8 0 3px,transparent 3px 6px)"></span>'+esc(rowB.label)+' 합계 <b>'+fmtNum(totalB)+'</b></span>'+diffChip:'')
-    +'</div><span class="text-[10px] text-gray-400">x축: '+(window._udMetric==='pu'?'결제금액 구간':window._udMetric==='power'?'전투력 구간':'레벨 구간')+'</span></div>'
-    +'<div style="position:relative"><svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto" onmouseleave="udTipHide()">'+grid+lines+xLabels+hit+'</svg>'
-    +'<div id="ud-tip" style="display:none;position:absolute;pointer-events:none;background:#111827;color:#fff;font-size:11px;line-height:1.5;padding:8px 10px;border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,.25);z-index:20;min-width:140px;max-width:240px"></div></div>';
+    +'<span class="font-bold text-gray-700">'+esc(title)+'</span>'
+    +'<span class="inline-flex items-center gap-1.5"><span style="width:16px;height:2.5px;background:'+metricHex+';display:inline-block;border-radius:2px"></span>'+esc(rowA.label)+' '+totalLabel+' <b>'+sumFmt(sumA)+'</b></span>'
+    +(rowB?'<span class="inline-flex items-center gap-1.5"><span style="width:16px;height:2.5px;background:#94a3b8;display:inline-block;border-radius:2px;background-image:repeating-linear-gradient(90deg,#94a3b8 0 3px,transparent 3px 6px)"></span>'+esc(rowB.label)+' '+totalLabel+' <b>'+sumFmt(sumB)+'</b></span>'+diffChip:'')
+    +'</div>'+(isZoom?'':'<span class="text-[10px] text-gray-400">x축: '+esc(axisLabel)+'</span>')+'</div>'
+    +'<div style="position:relative"><svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto" onmouseleave="udTipHide(\''+chartId+'\')">'+grid+lines+xLabels+hit+'</svg>'
+    +'<div id="ud-tip-'+chartId+'" style="display:none;position:absolute;pointer-events:none;background:#111827;color:#fff;font-size:11px;line-height:1.5;padding:8px 10px;border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,.25);z-index:20;min-width:140px;max-width:240px"></div></div>';
 }
 
 // 전투력/레벨 구간 라벨을 읽기 좋게 (숫자면 천단위 콤마)
@@ -1955,9 +2004,9 @@ function udBucketLabel_(b){
   return(b!==''&&!isNaN(n))?n.toLocaleString('ko-KR'):String(b);
 }
 
-function udTip(ev,idx){
-  var box=document.getElementById('ud-tip'); if(!box) return;
-  var s=window._udChartCache; if(!s) return;
+function udTip(ev,idx,chartId){
+  var box=document.getElementById('ud-tip-'+chartId); if(!box) return;
+  var s=window._udChartCache&&window._udChartCache[chartId]; if(!s) return;
   var b=s.buckets[idx]; if(b==null) return;
   var vA=s.valsA[idx]||0, vB=s.valsB?(s.valsB[idx]||0):null;
   var fmt=function(v){ return s.pctMode?v.toFixed(1)+'%':fmtNum(v); };
@@ -1976,7 +2025,7 @@ function udTip(ev,idx){
   box.style.left=Math.max(4,x)+'px';
   box.style.top=Math.max(4,y)+'px';
 }
-function udTipHide(){ var b=document.getElementById('ud-tip'); if(b) b.style.display='none'; }
+function udTipHide(chartId){ var b=document.getElementById('ud-tip-'+chartId); if(b) b.style.display='none'; }
 
 function renderDevMeeting(){
   document.getElementById('content-area').innerHTML='<div class="doc-viewer"><div class="doc-toolbar"><span class="title"><i class="ti ti-code text-purple-500"></i> 개발사 회의록 <span style="font-size:11px;color:#9ca3af;font-weight:400;margin-left:8px">읽기 전용 · 탭 이동 가능</span></span><a href="https://docs.google.com/spreadsheets/d/1JvOfFWcvssvFZP91OFvtd66SThG1XxKAJSf3hJ6FEVw/edit?gid=1146934928" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-pencil"></i> 새창에서 편집</a></div><div class="doc-iframe-wrap"><iframe src="https://docs.google.com/spreadsheets/d/1JvOfFWcvssvFZP91OFvtd66SThG1XxKAJSf3hJ6FEVw/htmlview?gid=1146934928"></iframe></div></div>';
