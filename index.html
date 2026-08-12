@@ -1785,6 +1785,31 @@ function renderKpiPage(){
 var UD_TABS=[{key:'pu',icon:'ti-coin',clr:'violet'},{key:'power',icon:'ti-swords',clr:'red'},{key:'level',icon:'ti-chart-bar',clr:'blue'}];
 var UD_METRIC_HEX={pu:'#7c3aed',power:'#dc2626',level:'#2563eb'};
 
+// 결제금액 세분 구간(1만원 이하~1억원 초과)을 업무상 보는 7개 그룹으로 묶는다.
+// upto는 원본 버킷 라벨과 정확히 일치해야 그 구간에서 그룹을 끊는다.
+var UD_PU_GROUPS=[
+  {label:'1만원~10만원', upto:'10만원 이하'},
+  {label:'~500만원',    upto:'500만원 이하'},
+  {label:'~1000만원',   upto:'1000만원 이하'},
+  {label:'~3000만원',   upto:'3000만원 이하'},
+  {label:'~5000만원',   upto:'5000만원 이하'},
+  {label:'~1억원',      upto:'1억원 이하'},
+  {label:'1억원 초과',   upto:'1억원 초과'}
+];
+// buckets 순서대로 훑다가 UD_PU_GROUPS의 upto 라벨을 만날 때마다 그룹을 하나 닫아 합산값을 쌓는다.
+// upto와 매칭되지 않는 라벨이 남으면(원본 구간명이 바뀐 경우) 마지막 그룹에 합쳐 데이터 유실을 막는다.
+function udGroupPuValues_(buckets,arr){
+  if(!arr) return null;
+  var out=[], gi=0, sum=0;
+  buckets.forEach(function(b,i){
+    sum+=arr[i]||0;
+    if(gi<UD_PU_GROUPS.length-1 && b===UD_PU_GROUPS[gi].upto){ out.push(sum); sum=0; gi++; }
+  });
+  out.push(sum);   // 마지막 그룹(또는 매칭 안 된 잔여분)
+  while(out.length<UD_PU_GROUPS.length) out.push(0);
+  return out;
+}
+
 function renderUserDist(){
   var c=document.getElementById('content-area');
   if(!window._userDistCache){
@@ -1959,16 +1984,21 @@ function udRenderChart(){
     });
   }
 
-  // PU: 결제금액 구간을 1그룹부터 순서대로 번호를 붙여 표로 제공 (TOTAL_UCNT는 합계라 그룹에서 제외)
+  // PU: 세분화된 결제금액 구간(1만원 이하~1억원 초과)을 요청받은 7개 그룹으로 묶어 표로 제공
+  // TOTAL_UCNT는 합계값이라 그룹 합산에서 제외
   if(window._udMetric==='pu'){
     var gRange=buckets[0]==='TOTAL_UCNT'?{start:1,end:buckets.length-1}:{start:0,end:buckets.length-1};
+    var gBuckets=slice(gRange,buckets);
+    var groupLabels=UD_PU_GROUPS.map(function(g){ return g.label; });
     html+=udDistTable_({
       title:'결제금액 구간별 인원수', note:'',
-      buckets:slice(gRange,buckets),
-      labelFn:function(b,i){ return(i+1)+'그룹 · '+b; },
-      weekA:slice(gRange,rowA.values), weekB:rowB?slice(gRange,rowB.values):null,
+      buckets:groupLabels,
+      labelFn:function(lb,i){ return(i+1)+'그룹 · '+lb; },
+      weekA:udGroupPuValues_(gBuckets,slice(gRange,rowA.values)),
+      weekB:rowB?udGroupPuValues_(gBuckets,slice(gRange,rowB.values)):null,
       weekLabelA:rowA.label, weekLabelB:rowB?rowB.label:null,
-      monA:monA?slice(gRange,monA.values):null, monB:monB?slice(gRange,monB.values):null,
+      monA:monA?udGroupPuValues_(gBuckets,slice(gRange,monA.values)):null,
+      monB:monB?udGroupPuValues_(gBuckets,slice(gRange,monB.values)):null,
       monLabelA:monA?monA.label:null, monLabelB:monB?monB.label:null
     });
   }
