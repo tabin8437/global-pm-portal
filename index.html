@@ -1989,16 +1989,19 @@ function udRenderChart(){
   if(window._udMetric==='pu'){
     var gRange=buckets[0]==='TOTAL_UCNT'?{start:1,end:buckets.length-1}:{start:0,end:buckets.length-1};
     var gBuckets=slice(gRange,buckets);
-    var groupLabels=UD_PU_GROUPS.map(function(g){ return g.label; });
+    // UD_PU_GROUPS는 합산 로직상 저액→고액 순으로 정의돼 있지만, 표시는 1그룹=고액(1억원 초과) 순으로
+    // 뒤집는다 — 결제 규모가 큰 유저 그룹일수록 우선순위가 높다는 업무상 통념에 맞춤.
+    function rev(arr){ return arr?arr.slice().reverse():arr; }
+    var groupLabels=rev(UD_PU_GROUPS.map(function(g){ return g.label; }));
     html+=udDistTable_({
-      title:'결제금액 구간별 인원수', note:'',
+      title:'결제금액 구간별 인원수', note:'1그룹=고액 → 7그룹=저액',
       buckets:groupLabels,
       labelFn:function(lb,i){ return(i+1)+'그룹 · '+lb; },
-      weekA:udGroupPuValues_(gBuckets,slice(gRange,rowA.values)),
-      weekB:rowB?udGroupPuValues_(gBuckets,slice(gRange,rowB.values)):null,
+      weekA:rev(udGroupPuValues_(gBuckets,slice(gRange,rowA.values))),
+      weekB:rowB?rev(udGroupPuValues_(gBuckets,slice(gRange,rowB.values))):null,
       weekLabelA:rowA.label, weekLabelB:rowB?rowB.label:null,
-      monA:monA?udGroupPuValues_(gBuckets,slice(gRange,monA.values)):null,
-      monB:monB?udGroupPuValues_(gBuckets,slice(gRange,monB.values)):null,
+      monA:monA?rev(udGroupPuValues_(gBuckets,slice(gRange,monA.values))):null,
+      monB:monB?rev(udGroupPuValues_(gBuckets,slice(gRange,monB.values))):null,
       monLabelA:monA?monA.label:null, monLabelB:monB?monB.label:null
     });
   }
