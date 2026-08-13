@@ -1529,14 +1529,16 @@ function dgTip(ev,payload){
   function exact(v){ return Math.round(Number(v)||0).toLocaleString('ko-KR'); }
   function row(lb,v,color,abbr){
     var txt=abbr?(fmtNum(v)+' <span style="color:#6b7280">('+exact(v)+')</span>'):exact(v);
-    return '<div><span style="display:inline-block;width:52px;color:#9ca3af">'+lb+'</span>'
+    return '<div><span style="display:inline-block;width:60px;color:#9ca3af">'+lb+'</span>'
       +'<b style="color:'+(color||'#fff')+'">'+txt+'</b></div>';
   }
   var html='<div style="font-weight:700;margin-bottom:3px">'+esc(d.d)+'</div>'
-    +row('매출',d.rev,'#c4b5fd',true)
-    +(d.prev?row('전월',d.prev,'#ddd6fe',true):'')
-    +(d.ly?row('전년',d.ly,'#e5e7eb',true):'')
+    +row('누적매출',d.cum,'#c4b5fd',true)
+    +(d.target?row('목표누적',d.target,'#e5e7eb',true):'')
+    +(d.prev?row('전월누적',d.prev,'#ddd6fe',true):'')
+    +(d.ly?row('전년누적',d.ly,'#e5e7eb',true):'')
     +'<div style="height:5px"></div>'
+    +row('당일매출',d.rev,'#c4b5fd',true)
     +row('DAU',d.dau,'#93c5fd')+row('PU',d.pu,'#5eead4')+row('ARPPU',d.arppu,'#fcd34d');
   box.innerHTML=html;
   box.style.display='block';
@@ -1549,14 +1551,14 @@ function dgTip(ev,payload){
 }
 function dgTipHide(){ var b=document.getElementById('dg-tip'); if(b) b.style.display='none'; }
 
-// 글로벌 일별 추이: 매출은 막대, PU·ARPPU·DAU는 선, 목표매출은 월말까지 이어지는 점선.
-// 지표마다 단위가 달라 선은 각자 범위로 정규화해 겹쳐 그리고, 값은 마우스오버로 확인한다.
+// 글로벌 일별 추이: 매출은 "누적" 선그래프(실적 vs 목표), PU·ARPPU·DAU는 일별 값 선.
+// 목표매출은 요일 패턴·메이저 업데이트 가중치를 반영한 곡선을 누적해 월말까지 이어그린다.
 function renderDailyGlobal(){
   var days=window._dailyGlobalCache||[];
   if(days.length<2) return '';
   var W=980,H=300,PL=64,PR=16,PT=18,PB=34;
   var n=days.length;
-  // x축은 "오늘까지"가 아니라 이번 달 마지막 날까지 미리 펼쳐두고, 막대·선은 실제 값이 있는 날짜까지만 그린다.
+  // x축은 "오늘까지"가 아니라 이번 달 마지막 날까지 미리 펼쳐두고, 선은 실제 값이 있는 날짜까지만 그린다.
   var totalSlots=window._dailyTargetDays||n;
   var targetPerDay=window._dailyTargetPerDay||0;
   // 요일 패턴(목요일 점검 등)·메이저 업데이트 가중치가 반영된 일별 목표 곡선.
@@ -1565,25 +1567,25 @@ function renderDailyGlobal(){
     ? window._dailyTargetCurve
     : (targetPerDay?Array(totalSlots).fill(targetPerDay):null);
   var revs=days.map(function(d){return Number(d.revenue)||0;});
-  var maxRev=Math.max.apply(null,revs.concat(targetCurve||[]))||1;
-  var plotH=H-PT-PB, plotW=W-PL-PR;
-  var slot=plotW/totalSlots, bw=Math.max(4,Math.min(28,slot*0.55));
-  function cx(i){return PL+slot*(i+0.5);}
-  function byRev(v){return PT+plotH*(1-v/(maxRev*1.15));}
 
-  // 비교군: 전월 동기(옅은 보라) · 작년 동월(회색) — 같은 "일자"끼리 맞춰 겹쳐 그린다
+  function cumulate(arr){ var s=0; return (arr||[]).map(function(v){ s+=(Number(v)||0); return s; }); }
+  var cumThis=cumulate(revs);                          // n개(오늘까지) — 실선
+  var cumTarget=targetCurve?cumulate(targetCurve):null; // totalSlots개(월말까지) — 점선
+
+  // 비교군: 전월 동기(옅은 보라) · 작년 동월(회색) — 같은 "일자"끼리 맞춰 오늘까지만 누적한다
   function dayMap(arr){ var m={}; (arr||[]).forEach(function(d){ m[+String(d.date).slice(8,10)]=Number(d.revenue)||0; }); return m; }
   var prevMap=dayMap(window._dailyPrevCache), lyMap=dayMap(window._dailyLastYearCache);
-  // 화면에 표시 중인 "일자"와 겹치는 값이 실제로 있을 때만 비교군으로 인정한다
-  // (예: 전월 데이터가 30·31일뿐이면 1~5일 차트에는 그릴 것이 없으므로 범례도 띄우지 않음)
   function overlaps(m){ return days.some(function(d){ return m[+String(d.date).slice(8,10)]>0; }); }
   var hasPrev=overlaps(prevMap), hasLY=overlaps(lyMap);
-  // 비교군·목표선 값도 y축 범위에 포함시켜야 그리드를 그리기 전에 최종 스케일이 잡히고, 잘리지 않는다
-  days.forEach(function(d){
-    var dn=+String(d.date).slice(8,10);
-    if(prevMap[dn]>maxRev) maxRev=prevMap[dn];
-    if(lyMap[dn]>maxRev) maxRev=lyMap[dn];
-  });
+  function cumMap(map,count){ var s=0,out=[]; for(var i=1;i<=count;i++){ s+=(map[i]||0); out.push(s); } return out; }
+  var cumPrev=hasPrev?cumMap(prevMap,n):null;
+  var cumLY=hasLY?cumMap(lyMap,n):null;
+
+  var maxRev=Math.max.apply(null,cumThis.concat(cumTarget||[]).concat(cumPrev||[]).concat(cumLY||[]))||1;
+  var plotH=H-PT-PB, plotW=W-PL-PR;
+  var slot=plotW/totalSlots;
+  function cx(i){return PL+slot*(i+0.5);}
+  function byRev(v){return PT+plotH*(1-v/(maxRev*1.15));}
 
   // 매출 축(왼쪽) 눈금 — maxRev가 최종 확정된 뒤에 그려야 목표선·비교군까지 스케일에 맞는다
   var grid='';
@@ -1593,7 +1595,7 @@ function renderDailyGlobal(){
       +'<text x="'+(PL-8)+'" y="'+(gy+3.2).toFixed(1)+'" font-size="9" fill="#9ca3af" text-anchor="end">'+esc(fmtNum(gv))+'</text>';
   }
 
-  // 메이저 업데이트 날짜 — 배경에 옅은 세로 가이드로 표시해 실제 매출이 그 날 튀었는지 눈으로 대조한다
+  // 메이저 업데이트 날짜 — 배경에 옅은 세로 가이드로 표시해 그 날 이후 누적선이 얼마나 꺾였는지 대조한다
   var majorDays=(window._glMajorUpdateDays||[]).filter(function(d){return d>=1&&d<=totalSlots;});
   var majorMarkers=majorDays.map(function(d){
     var x=cx(d-1).toFixed(1);
@@ -1601,54 +1603,44 @@ function renderDailyGlobal(){
       +'<circle cx="'+x+'" cy="'+(PT-3)+'" r="2.6" fill="#f59e0b"><title>'+d+'일 메이저 업데이트</title></circle>';
   }).join('');
 
-  function barsFor(map,color,op,label){
-    if(!map) return '';
-    return days.map(function(d,i){
-      var dn=+String(d.date).slice(8,10), v=map[dn];
-      if(!v) return '';
-      var y=byRev(v), h=Math.max(0,PT+plotH-y);
-      return '<rect x="'+(cx(i)-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="2" fill="'+color+'" opacity="'+op+'">'
-        +'<title>'+label+' '+dn+'일 매출 '+fmtNum(v)+'</title></rect>';
+  function linePath(vals){ return vals.map(function(v,i){return (i===0?'M':'L')+cx(i).toFixed(1)+' '+byRev(v).toFixed(1);}).join(' '); }
+  function dotsFor(vals,color,r,label){
+    return vals.map(function(v,i){
+      return '<circle cx="'+cx(i).toFixed(1)+'" cy="'+byRev(v).toFixed(1)+'" r="'+r+'" fill="'+color+'"><title>'+(i+1)+'일 '+label+' 누적 '+fmtNum(v)+'</title></circle>';
     }).join('');
   }
-  // 뒤쪽(연한 색)부터 그려야 이번 달 막대가 위로 온다
-  var bars=barsFor(hasLY?lyMap:null,'#e5e7eb',0.7,'작년 동월')
-    +barsFor(hasPrev?prevMap:null,'#c4b5fd',0.55,'전월 동기')
-    +days.map(function(d,i){
-      var v=Number(d.revenue)||0, y=byRev(v), h=Math.max(0,PT+plotH-y);
-      var w=hasPrev||hasLY?bw*0.62:bw;   // 비교군이 있으면 이번 달 막대를 좁혀 겹쳐 보이게
-      return '<rect x="'+(cx(i)-w/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="2" fill="#8b5cf6" opacity="0.9">'
-        +'<title>'+esc(d.date)+' 매출 '+fmtNum(v)+'</title></rect>';
-    }).join('');
-
-  // 선 3종 (각자 min~max로 정규화)
-  // DAU는 매출·비교막대와 확실히 구분되도록 파랑, PU·ARPPU는 점선으로 구분
-  var lineDefs=[{key:'dau',label:'DAU',color:'#2563eb',dash:''},
-                {key:'pu',label:'PU',color:'#0d9488',dash:'5 4'},
-                {key:'arppu',label:'ARPPU',color:'#f59e0b',dash:'2 3'}];
   function lgChip(color,label,val){
     return '<span class="inline-flex items-center gap-1 text-[10px] font-bold" style="color:'+color+'">'
       +'<span style="width:8px;height:8px;border-radius:2px;background:'+color+';display:inline-block"></span>'+label
       +(val?' <span class="text-gray-500">'+val+'</span>':'')+'</span>';
   }
-  // 목표매출 — 요일 패턴·메이저 업데이트 가중치를 반영해 재배분한 곡선을 월말까지 이어지는
-  // 점선 그래프로 그린다(평평한 기준선이 아니라 실제 기복이 있는 선그래프).
-  var targetLine='';
-  if(targetCurve){
-    var tPts=targetCurve.map(function(v,i){return cx(i).toFixed(1)+','+byRev(v).toFixed(1);});
-    var tDots=targetCurve.map(function(v,i){
-      var isMajor=majorDays.indexOf(i+1)!==-1;
-      return '<circle cx="'+cx(i).toFixed(1)+'" cy="'+byRev(v).toFixed(1)+'" r="'+(isMajor?3:2)+'" fill="'+(isMajor?'#f59e0b':'#1f2937')+'">'
-        +'<title>'+(i+1)+'일 목표매출 '+fmtNum(v)+(isMajor?' (메이저 업데이트)':'')+'</title></circle>';
-    }).join('');
-    targetLine='<path d="M'+tPts.join(' L')+'" fill="none" stroke="#1f2937" stroke-width="1.6" stroke-dasharray="6 4" opacity=".8"/>'+tDots;
-  }
 
-  var lines='',legend=lgChip('#8b5cf6','매출',fmtNum(revs[n-1]))
-    +(hasPrev?lgChip('#c4b5fd','전월 동기',''):'')
-    +(hasLY?lgChip('#d1d5db','작년 동월',''):'')
-    +(targetCurve?lgChip('#1f2937','목표매출(오늘)',fmtNum(targetCurve[n-1]||targetCurve[Math.min(n,totalSlots)-1])):'')
+  // 누적 매출: 작년 동월 → 전월 동기 → 목표(점선, 월말까지) → 이번 달 실적(진하게, 맨 위) 순으로 그린다
+  var revLines='';
+  if(cumLY) revLines+='<path d="'+linePath(cumLY)+'" fill="none" stroke="#9ca3af" stroke-width="1.6" stroke-dasharray="2 3" opacity=".7"/>'+dotsFor(cumLY,'#9ca3af',2,'작년 동월');
+  if(cumPrev) revLines+='<path d="'+linePath(cumPrev)+'" fill="none" stroke="#c4b5fd" stroke-width="1.8" opacity=".85"/>'+dotsFor(cumPrev,'#c4b5fd',2,'전월 동기');
+  var targetLine='';
+  if(cumTarget){
+    var tDots=cumTarget.map(function(v,i){
+      var isMajor=majorDays.indexOf(i+1)!==-1;
+      return '<circle cx="'+cx(i).toFixed(1)+'" cy="'+byRev(v).toFixed(1)+'" r="'+(isMajor?3:1.8)+'" fill="'+(isMajor?'#f59e0b':'#1f2937')+'">'
+        +'<title>'+(i+1)+'일 목표매출 누적 '+fmtNum(v)+(isMajor?' (메이저 업데이트)':'')+'</title></circle>';
+    }).join('');
+    targetLine='<path d="'+linePath(cumTarget)+'" fill="none" stroke="#1f2937" stroke-width="1.8" stroke-dasharray="6 4" opacity=".8"/>'+tDots;
+  }
+  revLines+=targetLine+'<path d="'+linePath(cumThis)+'" fill="none" stroke="#8b5cf6" stroke-width="2.6"/>'+dotsFor(cumThis,'#8b5cf6',2.8,'매출');
+
+  var lines='',legend=lgChip('#8b5cf6','매출(누적)',fmtNum(cumThis[n-1]))
+    +(hasPrev?lgChip('#c4b5fd','전월 동기(누적)',fmtNum(cumPrev[n-1])):'')
+    +(hasLY?lgChip('#9ca3af','작년 동월(누적)',fmtNum(cumLY[n-1])):'')
+    +(cumTarget?lgChip('#1f2937','목표매출(누적)',fmtNum(cumTarget[n-1]||cumTarget[Math.min(n,totalSlots)-1])):'')
     +(majorDays.length?lgChip('#f59e0b','메이저 업데이트',majorDays.join(', ')+'일'):'');
+
+  // 선 3종(일별 값, 각자 min~max로 정규화) — DAU·PU·ARPPU는 누적 개념이 아니므로 그대로 일별 값을 쓴다
+  // DAU는 매출과 확실히 구분되도록 파랑, PU·ARPPU는 점선으로 구분
+  var lineDefs=[{key:'dau',label:'DAU',color:'#2563eb',dash:''},
+                {key:'pu',label:'PU',color:'#0d9488',dash:'5 4'},
+                {key:'arppu',label:'ARPPU',color:'#f59e0b',dash:'2 3'}];
   lineDefs.forEach(function(L){
     var vs=days.map(function(d){return Number(d[L.key])||0;});
     var mx=Math.max.apply(null,vs);
@@ -1678,14 +1670,14 @@ function renderDailyGlobal(){
   // 마우스를 올리면 그날 값 전부를 보여주는 투명 히트영역 + 세로 가이드
   var hit='';
   days.forEach(function(d,i){
-    var dn=+String(d.date).slice(8,10);
     var info={d:d.date,rev:d.revenue,dau:d.dau,pu:d.pu,arppu:d.arppu,
-              prev:prevMap[dn]||0,ly:lyMap[dn]||0};
+              cum:cumThis[i],target:cumTarget?cumTarget[i]:0,
+              prev:cumPrev?cumPrev[i]:0,ly:cumLY?cumLY[i]:0};
     hit+='<rect x="'+(cx(i)-slot/2).toFixed(1)+'" y="'+PT+'" width="'+slot.toFixed(1)+'" height="'+plotH.toFixed(1)+'" fill="transparent" '
       +'onmouseover="dgTip(event,\''+encodeURIComponent(JSON.stringify(info))+'\')" onmouseout="dgTipHide()" style="cursor:crosshair"/>';
   });
   var svg='<div style="position:relative">'
-    +'<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block">'+grid+majorMarkers+bars+targetLine+lines+xl+hit+'</svg>'
+    +'<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block">'+grid+majorMarkers+revLines+lines+xl+hit+'</svg>'
     +'<div id="dg-tip" style="display:none;position:absolute;z-index:20;pointer-events:none;background:#111827;color:#fff;'
     +'padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.6;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.25)"></div></div>';
   var mLabel=(+days[0].date.slice(5,7))+'월';
@@ -1710,7 +1702,7 @@ function renderDailyGlobal(){
   }
 
   return '<div class="card-header" style="padding:0;margin:18px 0 12px"><span class="card-title"><i class="ti ti-chart-histogram text-violet-500"></i> 글로벌 일별 추이 <span class="text-[11px] text-gray-400 font-medium ml-1">'+mLabel+' 1일~'+totalSlots+'일 · 실적은 오늘까지</span></span>'
-    +'<span class="text-[11px] text-gray-400 font-medium">막대=매출(왼쪽 축) · 선=DAU·PU·ARPPU · 점선=목표매출(값은 마우스오버)</span></div>'
+    +'<span class="text-[11px] text-gray-400 font-medium">굵은 선=누적매출 · 검정 점선=목표매출(누적) · 가는 선=DAU·PU·ARPPU(값은 마우스오버)</span></div>'
     +'<div class="card">'+cmpHtml+'<div class="flex items-center justify-end gap-2.5 flex-wrap mb-2">'+legend+'</div>'+svg+'</div>';
 }
 
