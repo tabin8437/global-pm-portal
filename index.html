@@ -1559,8 +1559,13 @@ function renderDailyGlobal(){
   // x축은 "오늘까지"가 아니라 이번 달 마지막 날까지 미리 펼쳐두고, 막대·선은 실제 값이 있는 날짜까지만 그린다.
   var totalSlots=window._dailyTargetDays||n;
   var targetPerDay=window._dailyTargetPerDay||0;
+  // 요일 패턴(목요일 점검 등)·메이저 업데이트 가중치가 반영된 일별 목표 곡선.
+  // 아직 백엔드가 곡선을 안 주면(구버전) 평균치로 평평하게 채워 하위호환한다.
+  var targetCurve=(window._dailyTargetCurve&&window._dailyTargetCurve.length===totalSlots)
+    ? window._dailyTargetCurve
+    : (targetPerDay?Array(totalSlots).fill(targetPerDay):null);
   var revs=days.map(function(d){return Number(d.revenue)||0;});
-  var maxRev=Math.max.apply(null,revs.concat([targetPerDay]))||1;
+  var maxRev=Math.max.apply(null,revs.concat(targetCurve||[]))||1;
   var plotH=H-PT-PB, plotW=W-PL-PR;
   var slot=plotW/totalSlots, bw=Math.max(4,Math.min(28,slot*0.55));
   function cx(i){return PL+slot*(i+0.5);}
@@ -1626,20 +1631,23 @@ function renderDailyGlobal(){
       +'<span style="width:8px;height:8px;border-radius:2px;background:'+color+';display:inline-block"></span>'+label
       +(val?' <span class="text-gray-500">'+val+'</span>':'')+'</span>';
   }
-  // 목표매출(일별 페이스) — 월 추정 목표를 일수로 균등 배분한 값을 월말까지 이어지는 수평 점선으로.
-  // 실적 막대가 이 선 위/아래인지로 그날그날 페이스를 바로 볼 수 있다.
+  // 목표매출 — 요일 패턴·메이저 업데이트 가중치를 반영해 재배분한 곡선을 월말까지 이어지는
+  // 점선 그래프로 그린다(평평한 기준선이 아니라 실제 기복이 있는 선그래프).
   var targetLine='';
-  if(targetPerDay){
-    var ty=byRev(targetPerDay).toFixed(1);
-    var tx1=cx(0).toFixed(1), tx2=cx(totalSlots-1).toFixed(1);
-    targetLine='<line x1="'+tx1+'" y1="'+ty+'" x2="'+tx2+'" y2="'+ty+'" stroke="#1f2937" stroke-width="1.6" stroke-dasharray="6 4" opacity=".75">'
-      +'<title>목표매출(일별 페이스) '+fmtNum(targetPerDay)+'</title></line>';
+  if(targetCurve){
+    var tPts=targetCurve.map(function(v,i){return cx(i).toFixed(1)+','+byRev(v).toFixed(1);});
+    var tDots=targetCurve.map(function(v,i){
+      var isMajor=majorDays.indexOf(i+1)!==-1;
+      return '<circle cx="'+cx(i).toFixed(1)+'" cy="'+byRev(v).toFixed(1)+'" r="'+(isMajor?3:2)+'" fill="'+(isMajor?'#f59e0b':'#1f2937')+'">'
+        +'<title>'+(i+1)+'일 목표매출 '+fmtNum(v)+(isMajor?' (메이저 업데이트)':'')+'</title></circle>';
+    }).join('');
+    targetLine='<path d="M'+tPts.join(' L')+'" fill="none" stroke="#1f2937" stroke-width="1.6" stroke-dasharray="6 4" opacity=".8"/>'+tDots;
   }
 
   var lines='',legend=lgChip('#8b5cf6','매출',fmtNum(revs[n-1]))
     +(hasPrev?lgChip('#c4b5fd','전월 동기',''):'')
     +(hasLY?lgChip('#d1d5db','작년 동월',''):'')
-    +(targetPerDay?lgChip('#1f2937','목표매출(일별)',fmtNum(targetPerDay)):'')
+    +(targetCurve?lgChip('#1f2937','목표매출(오늘)',fmtNum(targetCurve[n-1]||targetCurve[Math.min(n,totalSlots)-1])):'')
     +(majorDays.length?lgChip('#f59e0b','메이저 업데이트',majorDays.join(', ')+'일'):'');
   lineDefs.forEach(function(L){
     var vs=days.map(function(d){return Number(d[L.key])||0;});
@@ -2388,6 +2396,7 @@ function applyKpiData(d){
   if(d.monthly) window._monthlyRawCache=d.monthly;
   if(d.dailyTargetPerDay) window._dailyTargetPerDay=d.dailyTargetPerDay;
   if(d.dailyTargetDays) window._dailyTargetDays=d.dailyTargetDays;
+  if(d.dailyTargetCurve) window._dailyTargetCurve=d.dailyTargetCurve;
   window._glMajorUpdateDays=d.glMajorUpdateDays||[];
 
   // 마일스톤 동기화
