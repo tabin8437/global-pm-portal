@@ -2039,7 +2039,29 @@ function udRenderChart(){
       monLabelA:monA?monA.label:null, monLabelB:monB?monB.label:null
     });
   }
+
+  // 챕터별 진도·CP&PAY는 아직 원본 데이터가 며칠 안 돼서 주간/월간 비교보다
+  // "일별 원본을 그대로 쌓아" 보여주는 표가 더 유용하다 — 매일 미러가 돌 때마다 한 줄씩 늘어난다.
+  if((window._udMetric==='chapter'||window._udMetric==='segment')&&cur.daily&&cur.daily.length){
+    html+=udDailyLogTable_(cur.buckets,cur.daily,window._udMetric==='segment');
+  }
   wrap.innerHTML=html;
+}
+
+// 일별 원본 로그 표 — 기간 비교가 아니라 "쌓인 날짜만큼" 그대로 나열한다(최신이 위).
+function udDailyLogTable_(buckets,daily,isSegment){
+  var rows=daily.slice().sort(function(a,b){ return a.date<b.date?1:-1; }).map(function(r){
+    return '<tr><td class="p-2 border-r text-gray-700 font-bold">'+esc(r.date)+'</td>'
+      +buckets.map(function(b,i){ return'<td class="p-2 border-r text-right">'+((r.values[i]||0).toLocaleString('ko-KR'))+'</td>'; }).join('')
+      +'</tr>';
+  }).join('');
+  var head=buckets.map(function(b){ return'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">'+esc(udBucketLabel_(b))+'</th>'; }).join('');
+  return'<div class="mt-5 pt-4 border-t border-dashed border-gray-200">'
+    +'<div class="text-[11px] font-bold text-gray-700 mb-2">일별 원본 <span class="font-normal text-gray-400">(미러가 돌 때마다 하루씩 쌓입니다'+(isSegment?' · 항목끼리는 조건이 겹쳐 합계 없음':'')+')</span></div>'
+    +'<div class="overflow-x-auto border rounded-xl" style="max-height:360px;overflow-y:auto">'
+    +'<table class="w-full text-left border-collapse text-xs">'
+    +'<thead class="sticky top-0 bg-gray-100 z-10"><tr><th class="p-2 font-bold text-gray-700 border-b border-r">날짜</th>'+head+'</tr></thead>'
+    +'<tbody class="divide-y">'+rows+'</tbody></table></div></div>';
 }
 
 // 차트 하나(전체/확대 공용)를 그려 HTML을 반환하고, 툴팁이 참조할 데이터를 chartId로 캐싱한다.
