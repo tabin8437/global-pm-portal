@@ -1973,7 +1973,7 @@ function udRenderChart(){
   }
   var valsA=seriesVals(rowA), valsB=rowB?seriesVals(rowB):null;
   var metricHex=UD_METRIC_HEX[window._udMetric]||'#7c3aed';
-  var axisLabelMap={pu:'결제금액 구간',power:'전투력 구간',level:'레벨 구간',chapter:'챕터',segment:'세그먼트'};
+  var axisLabelMap={pu:'결제금액 구간',power:'전투력 구간',level:'레벨 구간',chapter:'챕터',segment:'CP&PAY 항목'};
   var axisLabel=axisLabelMap[window._udMetric]||'구간';
   function slice(range,arr){ return range&&arr?arr.slice(range.start,range.end+1):arr; }
 
@@ -1981,7 +1981,15 @@ function udRenderChart(){
   window._udChartCache={};
 
   var mainRange=udResolveRange_(buckets,rangeCfg.main);
-  var html=udChartBlock_('main','전체 분포',slice(mainRange,buckets),slice(mainRange,valsA),slice(mainRange,valsB),rowA,rowB,pctMode,metricHex,axisLabel);
+  var html;
+  if(window._udMetric==='segment'){
+    // CP&PAY 항목은 서로 다른(일부 교집합) 조건별 인원수라 차트로 이으면 왜곡되고,
+    // 규모 차이도 커서(Lv40+ 2만대 vs 둘다_북미 수백대) 공유축 그래프 자체가 안 맞는다.
+    // → 항목별 숫자 카드로 대신한다.
+    html=udStatCards_(slice(mainRange,buckets),slice(mainRange,valsA),slice(mainRange,valsB),rowA,rowB,pctMode,metricHex);
+  }else{
+    html=udChartBlock_('main','전체 분포',slice(mainRange,buckets),slice(mainRange,valsA),slice(mainRange,valsB),rowA,rowB,pctMode,metricHex,axisLabel,false,window._udMetric==='chapter');
+  }
 
   var zoomRange=udResolveRange_(buckets,rangeCfg.zoom);
   if(zoomRange){
@@ -2035,14 +2043,15 @@ function udRenderChart(){
 }
 
 // 차트 하나(전체/확대 공용)를 그려 HTML을 반환하고, 툴팁이 참조할 데이터를 chartId로 캐싱한다.
-function udChartBlock_(chartId,title,buckets,valsA,valsB,rowA,rowB,pctMode,metricHex,axisLabel,isZoom){
+function udChartBlock_(chartId,title,buckets,valsA,valsB,rowA,rowB,pctMode,metricHex,axisLabel,isZoom,barMode){
   window._udChartCache[chartId]={buckets:buckets,valsA:valsA,valsB:valsB,pctMode:pctMode};
 
   var W=980,H=isZoom?240:320,PL=52,PR=16,PT=18,PB=46;
   var n=buckets.length, plotH=H-PT-PB, plotW=W-PL-PR;
-  var slot=n>1?plotW/(n-1):plotW;
+  // 막대 모드는 구간마다 독립된 "칸"이라 점 사이 간격(n-1)이 아니라 칸 개수(n)로 나눠 칸 중앙에 그린다.
+  var slot=barMode?plotW/n:(n>1?plotW/(n-1):plotW);
   var maxV=Math.max.apply(null,valsA.concat(valsB||[]))||1, top=maxV*1.15;
-  function cx(i){ return n>1?PL+slot*i:PL+plotW/2; }
+  function cx(i){ return barMode?PL+slot*(i+0.5):(n>1?PL+slot*i:PL+plotW/2); }
   function cy(v){ return PT+plotH*(1-v/top); }
 
   var grid='';
@@ -2052,24 +2061,43 @@ function udChartBlock_(chartId,title,buckets,valsA,valsB,rowA,rowB,pctMode,metri
       +'<text x="'+(PL-8)+'" y="'+(gy+3.2).toFixed(1)+'" font-size="9" fill="#9ca3af" text-anchor="end">'+esc(pctMode?gv.toFixed(1)+'%':fmtNum(gv))+'</text>';
   }
 
-  function linePath(vals){
-    return vals.map(function(v,i){ return (i===0?'M':'L')+cx(i).toFixed(1)+' '+cy(v).toFixed(1); }).join('');
-  }
-  function areaPath(vals){
-    return linePath(vals)+'L'+cx(vals.length-1).toFixed(1)+' '+(PT+plotH)+'L'+cx(0).toFixed(1)+' '+(PT+plotH)+'Z';
-  }
-  // 점이 너무 촘촘하면(레벨 100구간) 뭉개지므로 구간 간격에 비례해 반지름을 줄인다
-  var dotR=Math.max(1.5,Math.min(3,slot*0.16));
-  function dots(vals,color,r){
-    return vals.map(function(v,i){ return'<circle cx="'+cx(i).toFixed(1)+'" cy="'+cy(v).toFixed(1)+'" r="'+r.toFixed(1)+'" fill="'+color+'" stroke="#fff" stroke-width="1"/>'; }).join('');
-  }
   var lines='';
-  if(valsB) lines+='<path d="'+areaPath(valsB)+'" fill="#cbd5e1" opacity=".18"/>'
-    +'<path d="'+linePath(valsB)+'" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4,3"/>'
-    +dots(valsB,'#94a3b8',dotR*0.85);
-  lines+='<path d="'+areaPath(valsA)+'" fill="'+metricHex+'" opacity=".14"/>'
-    +'<path d="'+linePath(valsA)+'" fill="none" stroke="'+metricHex+'" stroke-width="2.25"/>'
-    +dots(valsA,metricHex,dotR);
+  if(barMode){
+    // 순서형이 아니거나(진행 단계) 서로 겹치는 조건별 인원수(교집합 포함)라 선으로 이으면
+    // 마치 연속적인 추세처럼 보여 오해를 줄 수 있다 — 칸마다 독립된 막대로 그린다.
+    var bw=valsB?Math.min(30,slot*0.34):Math.min(38,slot*0.55);
+    var gap=valsB?bw*0.18:0;
+    buckets.forEach(function(b,i){
+      var cxi=cx(i);
+      if(valsB){
+        var ya=cy(valsA[i]), ha=Math.max(0,PT+plotH-ya);
+        var yb=cy(valsB[i]), hb=Math.max(0,PT+plotH-yb);
+        lines+='<rect x="'+(cxi-bw-gap/2).toFixed(1)+'" y="'+ya.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+ha.toFixed(1)+'" rx="2" fill="'+metricHex+'"/>'
+          +'<rect x="'+(cxi+gap/2).toFixed(1)+'" y="'+yb.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+hb.toFixed(1)+'" rx="2" fill="#94a3b8" opacity=".75"/>';
+      }else{
+        var ya2=cy(valsA[i]), ha2=Math.max(0,PT+plotH-ya2);
+        lines+='<rect x="'+(cxi-bw/2).toFixed(1)+'" y="'+ya2.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+ha2.toFixed(1)+'" rx="2" fill="'+metricHex+'"/>';
+      }
+    });
+  }else{
+    function linePath(vals){
+      return vals.map(function(v,i){ return (i===0?'M':'L')+cx(i).toFixed(1)+' '+cy(v).toFixed(1); }).join('');
+    }
+    function areaPath(vals){
+      return linePath(vals)+'L'+cx(vals.length-1).toFixed(1)+' '+(PT+plotH)+'L'+cx(0).toFixed(1)+' '+(PT+plotH)+'Z';
+    }
+    // 점이 너무 촘촘하면(레벨 100구간) 뭉개지므로 구간 간격에 비례해 반지름을 줄인다
+    var dotR=Math.max(1.5,Math.min(3,slot*0.16));
+    function dots(vals,color,r){
+      return vals.map(function(v,i){ return'<circle cx="'+cx(i).toFixed(1)+'" cy="'+cy(v).toFixed(1)+'" r="'+r.toFixed(1)+'" fill="'+color+'" stroke="#fff" stroke-width="1"/>'; }).join('');
+    }
+    if(valsB) lines+='<path d="'+areaPath(valsB)+'" fill="#cbd5e1" opacity=".18"/>'
+      +'<path d="'+linePath(valsB)+'" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4,3"/>'
+      +dots(valsB,'#94a3b8',dotR*0.85);
+    lines+='<path d="'+areaPath(valsA)+'" fill="'+metricHex+'" opacity=".14"/>'
+      +'<path d="'+linePath(valsA)+'" fill="none" stroke="'+metricHex+'" stroke-width="2.25"/>'
+      +dots(valsA,metricHex,dotR);
+  }
 
   // x축 라벨: 구간이 많으면(전투력 36, 레벨 100) 촘촘해지므로 10~12개만 골라 표시
   var step=Math.max(1,Math.ceil(n/12));
@@ -2081,7 +2109,7 @@ function udChartBlock_(chartId,title,buckets,valsA,valsB,rowA,rowB,pctMode,metri
   // 히트영역(구간별 세로 밴드) — 마우스오버 시 정확한 구간 값을 툴팁으로
   var hit='';
   for(var hi=0;hi<n;hi++){
-    var bx=(hi===0?PL:cx(hi)-slot/2), bw2=(n>1?slot:plotW);
+    var bx=(barMode?cx(hi)-slot/2:(hi===0?PL:cx(hi)-slot/2)), bw2=(barMode||n>1?slot:plotW);
     hit+='<rect x="'+bx.toFixed(1)+'" y="'+PT+'" width="'+bw2.toFixed(1)+'" height="'+plotH+'" fill="transparent" onmousemove="udTip(event,'+hi+',\''+chartId+'\')" onmouseleave="udTipHide(\''+chartId+'\')" style="cursor:crosshair"/>';
   }
 
@@ -2100,6 +2128,28 @@ function udChartBlock_(chartId,title,buckets,valsA,valsB,rowA,rowB,pctMode,metri
     +'</div>'+(isZoom?'':'<span class="text-[10px] text-gray-400">x축: '+esc(axisLabel)+'</span>')+'</div>'
     +'<div style="position:relative"><svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto" onmouseleave="udTipHide(\''+chartId+'\')">'+grid+lines+xLabels+hit+'</svg>'
     +'<div id="ud-tip-'+chartId+'" style="display:none;position:absolute;pointer-events:none;background:#111827;color:#fff;font-size:11px;line-height:1.5;padding:8px 10px;border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,.25);z-index:20;min-width:140px;max-width:240px"></div></div>';
+}
+
+// CP&PAY처럼 서로 다른(교집합 포함) 조건별 인원수는 공유축 차트로 비교하면 왜곡되므로
+// 항목별 숫자 카드로 대신 보여준다. 항목끼리 합산하지 않는다(교집합이라 합계가 의미 없음).
+function udStatCards_(buckets,valsA,valsB,rowA,rowB,pctMode,metricHex){
+  var fmtV=function(v){ return pctMode?v.toFixed(1)+'%':v.toLocaleString('ko-KR'); };
+  var cards=buckets.map(function(b,i){
+    var a=valsA[i]||0, bV=valsB?(valsB[i]||0):null;
+    var chip='';
+    if(bV!=null){
+      var diff=a-bV, up=diff>0;
+      var pct=bV?Math.abs(diff/bV*100).toFixed(1)+'%':(diff===0?'0%':'—');
+      chip='<span class="kpi-change '+(up?'change-up':diff<0?'change-down':'')+'" style="font-size:10px;padding:1px 6px">'+(diff===0?'0':(up?'▲':'▼')+pct)+'</span>';
+    }
+    return'<div class="kpi-card" style="padding:14px 16px">'
+      +'<div class="kpi-label">'+esc(udBucketLabel_(b))+'</div>'
+      +'<div class="kpi-value" style="font-size:22px;color:'+metricHex+'">'+fmtV(a)+'</div>'
+      +(bV!=null?'<div class="flex items-center gap-1.5 mt-1"><span class="text-[10px] text-gray-400">'+esc(rowB.label)+' '+fmtV(bV)+'</span>'+chip+'</div>':'')
+      +'</div>';
+  }).join('');
+  return'<div class="grid grid-cols-2 md:grid-cols-4 gap-3">'+cards+'</div>'
+    +'<div class="text-[10px] text-gray-400 mt-2">'+esc(rowA.label)+' 기준'+(rowB?' · 비교: '+esc(rowB.label):'')+' · 항목끼리는 조건이 겹쳐 합계를 내지 않음</div>';
 }
 
 // 전투력/레벨 구간 라벨을 읽기 좋게 (숫자면 천단위 콤마)
