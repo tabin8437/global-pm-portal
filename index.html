@@ -1810,6 +1810,19 @@ var UD_TABS=[{key:'pu',icon:'ti-coin',clr:'violet'},{key:'power',icon:'ti-swords
   {key:'chapter',icon:'ti-bookmark',clr:'emerald'},{key:'segment',icon:'ti-users-group',clr:'orange'}];
 var UD_METRIC_HEX={pu:'#7c3aed',power:'#dc2626',level:'#2563eb',chapter:'#059669',segment:'#ea580c'};
 
+// CP&PAY: "둘다_*"는 무엇의 교집합인지 알기 어려워 라벨을 풀어쓰고, 미분류_점검(운영/점검용 잡음)은 화면에서 뺀다.
+var UD_SEGMENT_LABEL_MAP={
+  '둘다_전체':'전투력3만&결제100만이상_전체',
+  '둘다_북미':'전투력3만&결제100만이상_북미',
+  '둘다_아시아':'전투력3만&결제100만이상_아시아'
+};
+var UD_SEGMENT_EXCLUDE=['미분류_점검'];
+function udSegmentKeepIdx_(buckets){
+  var idx=[]; buckets.forEach(function(b,i){ if(UD_SEGMENT_EXCLUDE.indexOf(b)===-1) idx.push(i); }); return idx;
+}
+function udSegmentRelabel_(b){ return UD_SEGMENT_LABEL_MAP[b]||b; }
+function udPick_(arr,idx){ return arr?idx.map(function(i){ return arr[i]; }):arr; }
+
 // 결제금액 세분 구간(1만원 이하~1억원 초과)을 업무상 보는 7개 그룹으로 묶는다.
 // upto는 원본 버킷 라벨과 정확히 일치해야 그 구간에서 그룹을 끊는다.
 var UD_PU_GROUPS=[
@@ -1985,8 +1998,12 @@ function udRenderChart(){
   if(window._udMetric==='segment'){
     // CP&PAY 항목은 서로 다른(일부 교집합) 조건별 인원수라 차트로 이으면 왜곡되고,
     // 규모 차이도 커서(Lv40+ 2만대 vs 둘다_북미 수백대) 공유축 그래프 자체가 안 맞는다.
-    // → 항목별 숫자 카드로 대신한다.
-    html=udStatCards_(slice(mainRange,buckets),slice(mainRange,valsA),slice(mainRange,valsB),rowA,rowB,pctMode,metricHex);
+    // → 항목별 숫자 카드로 대신한다. "둘다_*"는 무엇의 교집합인지 라벨에 풀어쓰고,
+    // 미분류_점검은 운영/점검용 잡음이라 화면에서 제외한다.
+    var keepIdx=udSegmentKeepIdx_(buckets);
+    var segBuckets=keepIdx.map(function(i){ return udSegmentRelabel_(buckets[i]); });
+    var segValsA=udPick_(valsA,keepIdx), segValsB=valsB?udPick_(valsB,keepIdx):null;
+    html=udStatCards_(segBuckets,segValsA,segValsB,rowA,rowB,pctMode,metricHex);
   }else{
     html=udChartBlock_('main','전체 분포',slice(mainRange,buckets),slice(mainRange,valsA),slice(mainRange,valsB),rowA,rowB,pctMode,metricHex,axisLabel,false,window._udMetric==='chapter');
   }
@@ -2043,7 +2060,14 @@ function udRenderChart(){
   // 챕터별 진도·CP&PAY는 아직 원본 데이터가 며칠 안 돼서 주간/월간 비교보다
   // "일별 원본을 그대로 쌓아" 보여주는 표가 더 유용하다 — 매일 미러가 돌 때마다 한 줄씩 늘어난다.
   if((window._udMetric==='chapter'||window._udMetric==='segment')&&cur.daily&&cur.daily.length){
-    html+=udDailyLogTable_(cur.buckets,cur.daily,window._udMetric==='segment');
+    if(window._udMetric==='segment'){
+      var dKeepIdx=udSegmentKeepIdx_(cur.buckets);
+      var dBuckets=dKeepIdx.map(function(i){ return udSegmentRelabel_(cur.buckets[i]); });
+      var dDaily=cur.daily.map(function(r){ return { date:r.date, values:udPick_(r.values,dKeepIdx) }; });
+      html+=udDailyLogTable_(dBuckets,dDaily,true);
+    }else{
+      html+=udDailyLogTable_(cur.buckets,cur.daily,false);
+    }
   }
   wrap.innerHTML=html;
 }
