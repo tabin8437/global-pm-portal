@@ -2119,13 +2119,15 @@ function udDistTable_(opts){
   var buckets=opts.buckets, weekA=opts.weekA, weekB=opts.weekB, monA=opts.monA, monB=opts.monB;
   var hasWeekB=!!weekB, hasMon=!!(monA&&monB);
 
+  // 열 순서는 항상 "이전 기간 → 최근 기간"으로 보여준다(월간 칸과 동일한 규칙).
+  // 기준(A)이 보통 더 최근이라 화면에는 비교(B)를 먼저, 기준(A)을 나중에 놓고,
+  // 증감은 그대로 wa-wb(=최근-이전)로 계산해 부호가 안 바뀌게 한다.
   function cell(v,cls){ return'<td class="p-2 border-r text-right'+(cls?' '+cls:'')+'">'+v.toLocaleString('ko-KR')+'</td>'; }
   var rows=buckets.map(function(b,i){
     var wa=weekA[i]||0, wb=hasWeekB?(weekB[i]||0):null;
     var ma=hasMon?(monA[i]||0):null, mb=hasMon?(monB[i]||0):null;
     return'<tr><td class="p-2 border-r text-gray-700">'+esc(opts.labelFn(b,i))+'</td>'
-      +cell(wa,'font-bold text-gray-900')
-      +(hasWeekB?cell(wb,'text-gray-500')+'<td class="p-2 border-r text-right font-bold">'+udDiffArrow_(wa-wb)+'</td>':'')
+      +(hasWeekB?cell(wb,'text-gray-500')+cell(wa,'font-bold text-gray-900')+'<td class="p-2 border-r text-right font-bold">'+udDiffArrow_(wa-wb)+'</td>':cell(wa,'font-bold text-gray-900'))
       +(hasMon?cell(mb,'text-gray-500')+cell(ma,'font-bold text-gray-900')+'<td class="p-2 text-right font-bold">'+udDiffArrow_(ma-mb)+'</td>':'')
       +'</tr>';
   }).join('');
@@ -2133,17 +2135,20 @@ function udDistTable_(opts){
   function sum(arr){ return arr?arr.reduce(function(x,y){return x+y;},0):null; }
   var sWA=sum(weekA), sWB=sum(weekB), sMA=sum(monA), sMB=sum(monB);
   var totalRow='<tr class="bg-gray-50 font-bold"><td class="p-2 border-r border-t-2 border-gray-300">표시구간 합계</td>'
-    +'<td class="p-2 border-r border-t-2 border-gray-300 text-right">'+sWA.toLocaleString('ko-KR')+'</td>'
     +(hasWeekB?'<td class="p-2 border-r border-t-2 border-gray-300 text-right text-gray-500">'+sWB.toLocaleString('ko-KR')+'</td>'
-      +'<td class="p-2 border-r border-t-2 border-gray-300 text-right">'+udDiffArrow_(sWA-sWB)+'</td>':'')
+      +'<td class="p-2 border-r border-t-2 border-gray-300 text-right">'+sWA.toLocaleString('ko-KR')+'</td>'
+      +'<td class="p-2 border-r border-t-2 border-gray-300 text-right">'+udDiffArrow_(sWA-sWB)+'</td>'
+      :'<td class="p-2 border-r border-t-2 border-gray-300 text-right">'+sWA.toLocaleString('ko-KR')+'</td>')
     +(hasMon?'<td class="p-2 border-r border-t-2 border-gray-300 text-right text-gray-500">'+sMB.toLocaleString('ko-KR')+'</td>'
       +'<td class="p-2 border-r border-t-2 border-gray-300 text-right">'+sMA.toLocaleString('ko-KR')+'</td>'
       +'<td class="p-2 border-t-2 border-gray-300 text-right">'+udDiffArrow_(sMA-sMB)+'</td>':'')
     +'</tr>';
 
-  var thWeek='<th class="p-2 font-bold text-gray-700 border-b border-r text-right">'+esc(opts.weekLabelA)+' 인원수</th>'
-    +(hasWeekB?'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">'+esc(opts.weekLabelB)+' 인원수</th>'
-      +'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">증감</th>':'');
+  var thWeek=hasWeekB
+    ? '<th class="p-2 font-bold text-gray-700 border-b border-r text-right">'+esc(opts.weekLabelB)+' 인원수</th>'
+      +'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">'+esc(opts.weekLabelA)+' 인원수</th>'
+      +'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">증감</th>'
+    : '<th class="p-2 font-bold text-gray-700 border-b border-r text-right">'+esc(opts.weekLabelA)+' 인원수</th>';
   var thMon=hasMon?'<th class="p-2 font-bold text-gray-700 border-b border-r text-right bg-violet-50">'+esc(opts.monLabelB)+' 인원수</th>'
     +'<th class="p-2 font-bold text-gray-700 border-b border-r text-right bg-violet-50">'+esc(opts.monLabelA)+' 인원수</th>'
     +'<th class="p-2 font-bold text-gray-700 border-b text-right bg-violet-50">전월대비</th>':'';
