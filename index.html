@@ -1806,8 +1806,9 @@ function renderKpiPage(){
    분포 모양을 겹쳐 보여준다. 레벨(100구간)까지 있어 색상별 범례 대신 2계열 비교로 설계.
    주간/월간 토글 + 기간 선택 드롭다운으로 임의의 두 구간을 비교한다.
    ═══════════════════════════════════════════ */
-var UD_TABS=[{key:'pu',icon:'ti-coin',clr:'violet'},{key:'power',icon:'ti-swords',clr:'red'},{key:'level',icon:'ti-chart-bar',clr:'blue'}];
-var UD_METRIC_HEX={pu:'#7c3aed',power:'#dc2626',level:'#2563eb'};
+var UD_TABS=[{key:'pu',icon:'ti-coin',clr:'violet'},{key:'power',icon:'ti-swords',clr:'red'},{key:'level',icon:'ti-chart-bar',clr:'blue'},
+  {key:'chapter',icon:'ti-bookmark',clr:'emerald'},{key:'segment',icon:'ti-users-group',clr:'orange'}];
+var UD_METRIC_HEX={pu:'#7c3aed',power:'#dc2626',level:'#2563eb',chapter:'#059669',segment:'#ea580c'};
 
 // 결제금액 세분 구간(1만원 이하~1억원 초과)을 업무상 보는 7개 그룹으로 묶는다.
 // upto는 원본 버킷 라벨과 정확히 일치해야 그 구간에서 그룹을 끊는다.
@@ -1972,7 +1973,8 @@ function udRenderChart(){
   }
   var valsA=seriesVals(rowA), valsB=rowB?seriesVals(rowB):null;
   var metricHex=UD_METRIC_HEX[window._udMetric]||'#7c3aed';
-  var axisLabel=window._udMetric==='pu'?'결제금액 구간':window._udMetric==='power'?'전투력 구간':'레벨 구간';
+  var axisLabelMap={pu:'결제금액 구간',power:'전투력 구간',level:'레벨 구간',chapter:'챕터',segment:'세그먼트'};
+  var axisLabel=axisLabelMap[window._udMetric]||'구간';
   function slice(range,arr){ return range&&arr?arr.slice(range.start,range.end+1):arr; }
 
   var rangeCfg=UD_RANGE[window._udMetric]||{};
