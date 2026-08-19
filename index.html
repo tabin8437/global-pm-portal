@@ -1810,17 +1810,22 @@ var UD_TABS=[{key:'pu',icon:'ti-coin',clr:'violet'},{key:'power',icon:'ti-swords
   {key:'chapter',icon:'ti-bookmark',clr:'emerald'},{key:'segment',icon:'ti-users-group',clr:'orange'}];
 var UD_METRIC_HEX={pu:'#7c3aed',power:'#dc2626',level:'#2563eb',chapter:'#059669',segment:'#ea580c'};
 
-// CP&PAY: "둘다_*"는 무엇의 교집합인지 알기 어려워 라벨을 풀어쓰고, 미분류_점검(운영/점검용 잡음)은 화면에서 뺀다.
-var UD_SEGMENT_LABEL_MAP={
-  '둘다_전체':'전투력3만&결제100만이상_전체',
-  '둘다_북미':'전투력3만&결제100만이상_북미',
-  '둘다_아시아':'전투력3만&결제100만이상_아시아'
-};
+// CP&PAY 라벨 정리:
+//  · "둘다_*"는 무엇의 교집합인지 알기 어려워 조건을 풀어쓴다
+//  · "누적"/"3M" 접두사는 "(누적)"/"(최근3개월)"로 뒤에 풀어써서 기간 구분을 명확히 한다
+//    (컬럼명 하나하나를 등록하는 대신 접두사 규칙으로 처리 — 나중에 컬럼이 늘어도 그대로 작동)
+//  · 미분류_점검(운영/점검용 잡음)은 화면에서 뺀다
 var UD_SEGMENT_EXCLUDE=['미분류_점검'];
 function udSegmentKeepIdx_(buckets){
   var idx=[]; buckets.forEach(function(b,i){ if(UD_SEGMENT_EXCLUDE.indexOf(b)===-1) idx.push(i); }); return idx;
 }
-function udSegmentRelabel_(b){ return UD_SEGMENT_LABEL_MAP[b]||b; }
+function udSegmentRelabel_(b){
+  var s=String(b), suffix='';
+  if(/^누적/.test(s)){ suffix='(누적)'; s=s.replace(/^누적_?/,''); }
+  else if(/^3M/i.test(s)){ suffix='(최근3개월)'; s=s.replace(/^3M_?/i,''); }
+  s=s.replace(/둘다/g,'전투력3만&결제100만이상');
+  return s+suffix;
+}
 function udPick_(arr,idx){ return arr?idx.map(function(i){ return arr[i]; }):arr; }
 
 // 결제금액 세분 구간(1만원 이하~1억원 초과)을 업무상 보는 7개 그룹으로 묶는다.
