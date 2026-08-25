@@ -1950,6 +1950,7 @@ function whaleFetch(){
     });
 }
 function whaleRefresh(){ window._whaleCache=null; renderWhaleAlert(); }
+function whaleSetRegion(r){ window._whaleRegion=r; renderWhaleAlert(); }
 
 function renderWhaleAlert(){
   var wrap=document.getElementById('whale-wrap');
@@ -1971,15 +1972,38 @@ function renderWhaleAlert(){
     return;
   }
 
+  // 권역 필터 — "전체"와 실제 데이터에 있는 권역들
+  var allRegions=[];
+  d.rows.forEach(function(r){ if(r.region&&allRegions.indexOf(r.region)===-1) allRegions.push(r.region); });
+  allRegions.sort();
+  var curRegion=window._whaleRegion||'';
+  var filteredRows=curRegion?d.rows.filter(function(r){return r.region===curRegion;}):d.rows;
+
+  var regionTabs='<div class="flex items-center gap-1.5 flex-wrap mb-3">'
+    +['<button onclick="whaleSetRegion(\'\')" class="text-[11px] font-bold px-3 py-1 rounded-full border '+(curRegion===''?'bg-indigo-600 text-white border-indigo-600':'bg-white text-gray-600 border-gray-300 hover:border-indigo-400')+'">전체</button>']
+    .concat(allRegions.map(function(rg){
+      return'<button onclick="whaleSetRegion(\''+esc(rg)+'\')" class="text-[11px] font-bold px-3 py-1 rounded-full border '+(curRegion===rg?'bg-indigo-600 text-white border-indigo-600':'bg-white text-gray-600 border-gray-300 hover:border-indigo-400')+'">'+esc(rg)+'</button>';
+    })).join('')+'</div>';
+
+  // 선택된 권역 기준으로 상태별 집계를 다시 센다 (전체 요약은 d.summary가 이미 만들어 왔지만,
+  // 권역별로 볼 땐 그 권역 계정만 다시 세어야 정확하다)
+  var counts={};
+  filteredRows.forEach(function(r){ counts[r.status]=(counts[r.status]||0)+1; });
+  var regionSummary=d.summary.map(function(s){
+    return{status:s.status,label:s.label,desc:s.desc,color:s.color,count:counts[s.status]||0};
+  });
+
   var STATUS_ICON={NO_PAY_30D:'ti-mood-sad',MOVED_AND_DROP:'ti-trending-down',SPEND_DROP:'ti-arrow-down-right',SERVER_MOVED:'ti-arrows-right-left',NORMAL:'ti-check'};
   var statusMap={};
   d.summary.forEach(function(s){ statusMap[s.status]=s; });
 
   // 핵심 — 상태별 집계 카드 (문제 있는 상태부터 왼쪽에 오도록 이미 심각도순으로 정렬돼서 옴)
-  var cards=d.summary.map(function(s){
+  // 색·아이콘만으로는 뭘 뜻하는지 안 보인다는 피드백 반영 — 라벨 아래 기준 설명을 한 줄 더 붙였다.
+  var cards=regionSummary.map(function(s){
     return'<div class="kpi-card" style="padding:14px 16px">'
       +'<div class="kpi-label" style="display:flex;align-items:center;gap:5px"><i class="ti '+(STATUS_ICON[s.status]||'ti-tag')+' text-'+s.color+'-500"></i>'+esc(s.label)+'</div>'
-      +'<div class="kpi-value text-'+s.color+'-700" style="font-size:26px">'+s.count.toLocaleString('ko-KR')+'<span style="font-size:12px;color:#9ca3af;font-weight:600"> 명</span></div></div>';
+      +'<div class="kpi-value text-'+s.color+'-700" style="font-size:26px">'+s.count.toLocaleString('ko-KR')+'<span style="font-size:12px;color:#9ca3af;font-weight:600"> 명</span></div>'
+      +(s.desc?'<div class="text-[10px] text-gray-400 mt-1 leading-snug">'+esc(s.desc)+'</div>':'')+'</div>';
   }).join('');
 
   function badge(status){
@@ -1994,7 +2018,7 @@ function renderWhaleAlert(){
   }
   function amt(v){ return(v||v===0)?fmtNum(v):'-'; }
 
-  var rows=d.rows.map(function(r){
+  var rows=filteredRows.map(function(r){
     return'<tr><td class="p-2 border-r font-mono text-gray-700">'+esc(r.acnt)+'</td>'
       +'<td class="p-2 border-r text-center">'+esc(r.region)+'</td>'
       +'<td class="p-2 border-r text-center whitespace-nowrap">'+(r.moved?esc(r.svrPrev)+' → '+esc(r.svrNow):esc(r.svrNow))+'</td>'
@@ -2006,8 +2030,8 @@ function renderWhaleAlert(){
       +'<td class="p-2 text-center">'+badge(r.status)+'</td></tr>';
   }).join('');
 
-  wrap.innerHTML='<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">'+cards+'</div>'
-    +'<div class="text-[10px] text-gray-400 mb-2">기준일 '+esc(d.baseYmd)+' · 계정 '+d.total.toLocaleString('ko-KR')+'명 · 매주 월요일 오전 갱신 · 심각도 높은 순 정렬</div>'
+  wrap.innerHTML=regionTabs+'<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">'+cards+'</div>'
+    +'<div class="text-[10px] text-gray-400 mb-2">기준일 '+esc(d.baseYmd)+' · '+(curRegion?esc(curRegion)+' ':'전체 ')+filteredRows.length.toLocaleString('ko-KR')+'명 · 매주 월요일 오전 갱신 · 심각도 높은 순 정렬</div>'
     +'<div class="overflow-x-auto border rounded-xl" style="max-height:520px;overflow-y:auto">'
     +'<table class="w-full text-left border-collapse text-xs">'
     +'<thead class="sticky top-0 bg-gray-100 z-10"><tr>'
