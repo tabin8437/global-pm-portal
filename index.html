@@ -2011,6 +2011,20 @@ function renderWhaleAlert(){
     return{status:s.status,label:s.label,desc:s.desc,color:s.color,count:counts[s.status]||0};
   });
 
+  // 한 줄 인사이트 — 카드 5개를 각각 훑지 않아도 "지금 얼마나 심각한지"가 바로 보이게.
+  // 문제군(30일 미결제 + 결제 급감 2종)의 비율로 위험도를 판단한다.
+  var byStatus={}; regionSummary.forEach(function(s){ byStatus[s.status]=s.count; });
+  var totalN=filteredRows.length;
+  var noPayN=byStatus.NO_PAY_30D||0, movedDropN=byStatus.MOVED_AND_DROP||0, spendDropN=byStatus.SPEND_DROP||0;
+  var riskN=noPayN+movedDropN+spendDropN;
+  var riskPct=totalN?(riskN/totalN*100):0;
+  var tone=riskPct>=30?{color:'red',icon:'ti-alert-triangle'}:riskPct>=15?{color:'amber',icon:'ti-alert-circle'}:{color:'emerald',icon:'ti-shield-check'};
+  var insightHtml=totalN?'<div class="mb-3 flex items-start gap-2 text-[13px] font-semibold px-3.5 py-2.5 rounded-xl bg-'+tone.color+'-50 border border-'+tone.color+'-200 text-'+tone.color+'-800">'
+    +'<i class="ti '+tone.icon+' text-'+tone.color+'-500 mt-0.5"></i>'
+    +'<span>'+(curRegion?esc(curRegion)+' ':'전체 ')+totalN.toLocaleString('ko-KR')+'명 중 <b>'+riskN.toLocaleString('ko-KR')+'명('+riskPct.toFixed(0)+'%)</b>이 결제 이탈·급감 위험군이에요'
+    +(riskN?' — 30일 미결제 '+noPayN.toLocaleString('ko-KR')+'명, 결제 급감 '+(movedDropN+spendDropN).toLocaleString('ko-KR')+'명(서버이동+급감 '+movedDropN+' · 같은서버 '+spendDropN+')':'')
+    +'</span></div>':'';
+
   var STATUS_ICON={NO_PAY_30D:'ti-mood-sad',MOVED_AND_DROP:'ti-trending-down',SPEND_DROP:'ti-arrow-down-right',SERVER_MOVED:'ti-arrows-right-left',NORMAL:'ti-check'};
   var statusMap={};
   d.summary.forEach(function(s){ statusMap[s.status]=s; });
@@ -2048,7 +2062,7 @@ function renderWhaleAlert(){
       +'<td class="p-2 text-center">'+badge(r.status)+'</td></tr>';
   }).join('');
 
-  wrap.innerHTML=regionTabs+'<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">'+cards+'</div>'
+  wrap.innerHTML=regionTabs+insightHtml+'<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">'+cards+'</div>'
     +'<div class="text-[10px] text-gray-400 mb-2">기준일 '+esc(d.baseYmd)+' · '+(curRegion?esc(curRegion)+' ':'전체 ')+filteredRows.length.toLocaleString('ko-KR')+'명 · 매주 월요일 오전 갱신 · 심각도 높은 순 정렬</div>'
     +'<div class="overflow-x-auto border rounded-xl" style="max-height:520px;overflow-y:auto">'
     +'<table class="w-full text-left border-collapse text-xs">'
