@@ -1807,8 +1807,9 @@ function renderKpiPage(){
    주간/월간 토글 + 기간 선택 드롭다운으로 임의의 두 구간을 비교한다.
    ═══════════════════════════════════════════ */
 var UD_TABS=[{key:'pu',icon:'ti-coin',clr:'violet'},{key:'power',icon:'ti-swords',clr:'red'},{key:'level',icon:'ti-chart-bar',clr:'blue'},
-  {key:'chapter',icon:'ti-bookmark',clr:'emerald'},{key:'segment',icon:'ti-users-group',clr:'orange'}];
-var UD_METRIC_HEX={pu:'#7c3aed',power:'#dc2626',level:'#2563eb',chapter:'#059669',segment:'#ea580c'};
+  {key:'chapter',icon:'ti-bookmark',clr:'emerald'},{key:'segment',icon:'ti-users-group',clr:'orange'},
+  {key:'whale',icon:'ti-alert-triangle',clr:'rose'}];
+var UD_METRIC_HEX={pu:'#7c3aed',power:'#dc2626',level:'#2563eb',chapter:'#059669',segment:'#ea580c',whale:'#e11d48'};
 
 // CP&PAY 라벨 정리:
 //  · "둘다_*"는 무엇의 교집합인지 알기 어려워 조건을 풀어쓴다
@@ -1868,7 +1869,24 @@ function renderUserDist(){
       +'<button class="btn btn-sm btn-primary mt-3" onclick="udRefresh()"><i class="ti ti-refresh"></i> 다시 시도</button></div></div>';
     return;
   }
-  window._udMetric=window._udMetric&&d.sets[window._udMetric]?window._udMetric:(UD_TABS.filter(function(o){return d.sets[o.key];})[0]||{}).key;
+  // 'whale'(상위고래유저경보)는 분포 차트가 아니라 계정 단위 경보 목록이라 sets에 없다 —
+  // 항상 선택 가능한 탭으로 취급하고, 아래에서 완전히 별도 화면으로 그린다.
+  window._udMetric=window._udMetric&&(window._udMetric==='whale'||d.sets[window._udMetric])?window._udMetric:(UD_TABS.filter(function(o){return o.key==='whale'||d.sets[o.key];})[0]||{}).key;
+
+  var tabs=UD_TABS.filter(function(o){return o.key==='whale'||d.sets[o.key];}).map(function(o){
+    var label=o.key==='whale'?'상위고래유저경보':d.sets[o.key].label;
+    var active=window._udMetric===o.key;
+    return'<button class="btn btn-sm'+(active?' btn-primary':'')+'" onclick="udSetMetric(\''+o.key+'\')"><i class="ti '+o.icon+'"></i> '+esc(label)+'</button>';
+  }).join('');
+
+  if(window._udMetric==='whale'){
+    c.innerHTML='<div class="card-header" style="padding:0;margin-bottom:12px"><span class="card-title"><i class="ti ti-users-group text-indigo-500"></i> 유저 분포</span>'
+      +'<button class="btn btn-sm" onclick="udRefresh()" title="새로고침"><i class="ti ti-refresh"></i></button></div>'
+      +'<div class="card"><div class="flex gap-1.5 flex-wrap mb-3">'+tabs+'</div><div id="whale-wrap"></div></div>';
+    renderWhaleAlert();
+    return;
+  }
+
   window._udMode=window._udMode||'weekly';
   window._udValueMode=window._udValueMode||'count';
 
@@ -1876,10 +1894,6 @@ function renderUserDist(){
   var rows=(window._udMode==='weekly'?cur.weekly:cur.monthly)||[];
   udEnsureCompare_(rows.length);
 
-  var tabs=UD_TABS.filter(function(o){return d.sets[o.key];}).map(function(o){
-    var s=d.sets[o.key],active=window._udMetric===o.key;
-    return'<button class="btn btn-sm'+(active?' btn-primary':'')+'" onclick="udSetMetric(\''+o.key+'\')"><i class="ti '+o.icon+'"></i> '+esc(s.label)+'</button>';
-  }).join('');
   function seg(group,opts,cur2){
     return'<div class="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">'+opts.map(function(o){
       var active=cur2===o.v;
@@ -1923,7 +1937,91 @@ function udFetch(){
       if(currentPage==='user-dist') renderUserDist();
     });
 }
-function udRefresh(){ window._userDistCache=null; renderUserDist(); }
+function udRefresh(){ window._userDistCache=null; window._whaleCache=null; renderUserDist(); }
+
+// ── 상위 고래 유저 경보 — 분포 차트가 아니라 계정 단위 경보 목록이라 별도 화면으로 그린다 ──
+function whaleFetch(){
+  fetch(KPI_API_URL+'?action=whale_alert&t='+Date.now())
+    .then(function(r){return r.json();})
+    .then(function(d){ window._whaleCache=d; if(currentPage==='user-dist'&&window._udMetric==='whale') renderWhaleAlert(); })
+    .catch(function(e){
+      window._whaleCache={ok:false,error:e.message};
+      if(currentPage==='user-dist'&&window._udMetric==='whale') renderWhaleAlert();
+    });
+}
+function whaleRefresh(){ window._whaleCache=null; renderWhaleAlert(); }
+
+function renderWhaleAlert(){
+  var wrap=document.getElementById('whale-wrap');
+  if(!wrap)return;
+  if(!window._whaleCache){
+    wrap.innerHTML='<p class="text-xs text-gray-400 text-center py-10"><i class="ti ti-loader-2 animate-spin"></i> 고래 유저 경보 불러오는 중...</p>';
+    whaleFetch();
+    return;
+  }
+  var d=window._whaleCache;
+  if(!d.ok){
+    wrap.innerHTML='<div class="text-center py-10"><i class="ti ti-alert-triangle text-amber-500" style="font-size:28px"></i>'
+      +'<p class="text-xs text-gray-500 mt-2">불러오지 못했습니다'+(d.error?' ('+esc(d.error)+')':'')+'</p>'
+      +'<button class="btn btn-sm btn-primary mt-3" onclick="whaleRefresh()"><i class="ti ti-refresh"></i> 다시 시도</button></div>';
+    return;
+  }
+  if(!d.rows||!d.rows.length){
+    wrap.innerHTML='<p class="text-xs text-gray-400 text-center py-10">경보 대상 계정이 없습니다</p>';
+    return;
+  }
+
+  var STATUS_ICON={NO_PAY_30D:'ti-mood-sad',MOVED_AND_DROP:'ti-trending-down',SPEND_DROP:'ti-arrow-down-right',SERVER_MOVED:'ti-arrows-right-left',NORMAL:'ti-check'};
+  var statusMap={};
+  d.summary.forEach(function(s){ statusMap[s.status]=s; });
+
+  // 핵심 — 상태별 집계 카드 (문제 있는 상태부터 왼쪽에 오도록 이미 심각도순으로 정렬돼서 옴)
+  var cards=d.summary.map(function(s){
+    return'<div class="kpi-card" style="padding:14px 16px">'
+      +'<div class="kpi-label" style="display:flex;align-items:center;gap:5px"><i class="ti '+(STATUS_ICON[s.status]||'ti-tag')+' text-'+s.color+'-500"></i>'+esc(s.label)+'</div>'
+      +'<div class="kpi-value text-'+s.color+'-700" style="font-size:26px">'+s.count.toLocaleString('ko-KR')+'<span style="font-size:12px;color:#9ca3af;font-weight:600"> 명</span></div></div>';
+  }).join('');
+
+  function badge(status){
+    var s=statusMap[status]||{label:status,color:'gray'};
+    return'<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-'+s.color+'-50 text-'+s.color+'-700 border border-'+s.color+'-200 whitespace-nowrap">'+esc(s.label)+'</span>';
+  }
+  function pctCell(v){
+    if(v==null||isNaN(v))return'<span class="text-gray-400">-</span>';
+    if(!v)return'<span class="text-gray-400">0%</span>';
+    var up=v>0;
+    return'<span class="font-bold '+(up?'text-red-500':'text-blue-600')+'">'+(up?'▲':'▼')+Math.abs(v).toFixed(1)+'%</span>';
+  }
+  function amt(v){ return(v||v===0)?fmtNum(v):'-'; }
+
+  var rows=d.rows.map(function(r){
+    return'<tr><td class="p-2 border-r font-mono text-gray-700">'+esc(r.acnt)+'</td>'
+      +'<td class="p-2 border-r text-center">'+esc(r.region)+'</td>'
+      +'<td class="p-2 border-r text-center whitespace-nowrap">'+(r.moved?esc(r.svrPrev)+' → '+esc(r.svrNow):esc(r.svrNow))+'</td>'
+      +'<td class="p-2 border-r text-right">'+amt(r.amtPrev30)+'</td>'
+      +'<td class="p-2 border-r text-right font-bold">'+amt(r.amtLast30)+'</td>'
+      +'<td class="p-2 border-r text-right">'+pctCell(r.changePct)+'</td>'
+      +'<td class="p-2 border-r text-right">'+esc(r.lastPayYmd||'-')+'</td>'
+      +'<td class="p-2 border-r text-right">'+(r.daysSincePay||r.daysSincePay===0?r.daysSincePay+'일':'-')+'</td>'
+      +'<td class="p-2 text-center">'+badge(r.status)+'</td></tr>';
+  }).join('');
+
+  wrap.innerHTML='<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">'+cards+'</div>'
+    +'<div class="text-[10px] text-gray-400 mb-2">기준일 '+esc(d.baseYmd)+' · 계정 '+d.total.toLocaleString('ko-KR')+'명 · 매주 월요일 오전 갱신 · 심각도 높은 순 정렬</div>'
+    +'<div class="overflow-x-auto border rounded-xl" style="max-height:520px;overflow-y:auto">'
+    +'<table class="w-full text-left border-collapse text-xs">'
+    +'<thead class="sticky top-0 bg-gray-100 z-10"><tr>'
+    +'<th class="p-2 font-bold text-gray-700 border-b border-r">계정</th>'
+    +'<th class="p-2 font-bold text-gray-700 border-b border-r text-center">권역</th>'
+    +'<th class="p-2 font-bold text-gray-700 border-b border-r text-center">서버</th>'
+    +'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">30일 전 결제</th>'
+    +'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">최근 30일 결제</th>'
+    +'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">변화율</th>'
+    +'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">마지막 결제일</th>'
+    +'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">결제 후 경과</th>'
+    +'<th class="p-2 font-bold text-gray-700 border-b text-center">상태</th>'
+    +'</tr></thead><tbody class="divide-y">'+rows+'</tbody></table></div>';
+}
 function udSetMetric(k){ window._udMetric=k; window._udCompare=null; renderUserDist(); }
 function udSetMode(m){ window._udMode=m; window._udCompare=null; renderUserDist(); }
 function udSetValueMode(m){ window._udValueMode=m; renderUserDist(); }
