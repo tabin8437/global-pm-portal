@@ -932,7 +932,7 @@ function renderDashboard(){
       mergedRows.push('<div class="flex items-center justify-between py-1.5 border-b border-gray-100"><span class="text-xs text-gray-600">'+esc(qCur.label)
         +(stale?' <span class="text-[9px] font-bold text-red-600 bg-red-50 border border-red-200 px-1 py-0.5 rounded ml-1" title="원본 시트가 아직 '+stale+'분기 기준입니다. 시트 갱신이 필요합니다.">'+stale+'분기 기준 · 갱신필요</span>':'')
         +'</span><div class="flex items-center gap-1.5"><span class="text-xs font-bold text-gray-900">'+fmtNum(qCur.value*1000000)
-        +(qPlan?' <span class="text-gray-400 font-normal">/ '+fmtNum(qPlan.value*1000000)+'(계획)</span>':'')+'</span>'
+        +(qPlan?' <span class="text-gray-400 font-normal">/ 계획 '+fmtNum(qPlan.value*1000000)+'</span>':'')+'</span>'
         +(qCur.pct?'<span class="text-[10px] font-bold text-'+pClr+'-600 bg-'+pClr+'-50 px-1.5 py-0.5 rounded">'+qCur.pct+'</span>':'')+'</div></div>');
     }
     if(annualIdx!==-1){
