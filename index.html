@@ -2075,6 +2075,34 @@ function renderWhaleAlert(){
   }
   function amt(v){ return(v||v===0)?fmtNum(v):'-'; }
 
+  // 서버별 결제 총액 — 현재 서버(SVR_NOW) 기준으로 묶어서, 최근 30일 결제 총액이 큰 순으로.
+  // 위험군(30일미결제·급감 2종) 인원도 같이 보여줘 "돈은 많은데 위험한 서버"를 바로 짚을 수 있게.
+  var RISK_STATUSES=['NO_PAY_30D','MOVED_AND_DROP','SPEND_DROP'];
+  var svrMap={};
+  filteredRows.forEach(function(r){
+    var s=r.svrNow||'-';
+    if(!svrMap[s]) svrMap[s]={svr:s,cnt:0,amt:0,riskCnt:0};
+    svrMap[s].cnt++;
+    svrMap[s].amt+=(r.amtLast30||0);
+    if(RISK_STATUSES.indexOf(r.status)!==-1) svrMap[s].riskCnt++;
+  });
+  var svrList=Object.keys(svrMap).map(function(k){return svrMap[k];}).sort(function(a,b){return b.amt-a.amt;});
+  var svrRows=svrList.map(function(s){
+    return'<tr><td class="p-2 border-r font-bold text-gray-700">'+esc(s.svr)+'</td>'
+      +'<td class="p-2 border-r text-right">'+s.cnt.toLocaleString('ko-KR')+'명</td>'
+      +'<td class="p-2 border-r text-right font-bold">'+amt(s.amt)+'</td>'
+      +'<td class="p-2 text-right">'+(s.riskCnt?'<span class="font-bold text-red-500">'+s.riskCnt+'명</span>':'<span class="text-gray-400">0명</span>')+'</td></tr>';
+  }).join('');
+  var svrTableHtml=svrList.length?'<div class="mb-4"><div class="text-[11px] font-bold text-gray-700 mb-1.5">서버별 최근 30일 결제 총액 <span class="font-normal text-gray-400">(결제액 많은 순)</span></div>'
+    +'<div class="overflow-x-auto border rounded-xl" style="max-height:260px;overflow-y:auto">'
+    +'<table class="w-full text-left border-collapse text-xs">'
+    +'<thead class="sticky top-0 bg-gray-100 z-10"><tr>'
+    +'<th class="p-2 font-bold text-gray-700 border-b border-r">서버</th>'
+    +'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">계정 수</th>'
+    +'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">최근 30일 결제 총액</th>'
+    +'<th class="p-2 font-bold text-gray-700 border-b text-right">위험군</th>'
+    +'</tr></thead><tbody class="divide-y">'+svrRows+'</tbody></table></div></div>':'';
+
   var rows=filteredRows.map(function(r){
     return'<tr><td class="p-2 border-r font-mono text-gray-700">'+esc(r.acnt)+'</td>'
       +'<td class="p-2 border-r text-center">'+esc(r.region)+'</td>'
@@ -2087,7 +2115,7 @@ function renderWhaleAlert(){
       +'<td class="p-2 text-center">'+badge(r.status)+'</td></tr>';
   }).join('');
 
-  wrap.innerHTML=regionTabs+insightHtml+'<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">'+cards+'</div>'
+  wrap.innerHTML=regionTabs+insightHtml+'<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">'+cards+'</div>'+svrTableHtml
     +'<div class="text-[10px] text-gray-400 mb-2">기준일 '+esc(d.baseYmd)+' · '+(curRegion?esc(curRegion)+' ':'전체 ')+filteredRows.length.toLocaleString('ko-KR')+'명 · 매주 월요일 오전 갱신 · 심각도 높은 순 정렬</div>'
     +'<div class="overflow-x-auto border rounded-xl" style="max-height:520px;overflow-y:auto">'
     +'<table class="w-full text-left border-collapse text-xs">'
