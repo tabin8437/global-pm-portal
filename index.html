@@ -562,18 +562,39 @@ var _meetingCache={weekly:[],internal:[]};
 var _meetingLoading={weekly:false,internal:false};
 var editTarget={type:null,id:null};
 
+// Apps Script는 콜드 스타트/부하 시 JSON 대신 HTML 에러 페이지를 돌려줄 때가 있다.
+// (그 경우 그냥 두면 "Unexpected token '<'..." 로 죽어버리므로) 짧은 대기 후 자동 재시도한다.
+function fetchJsonRetry(url, tries, timeoutMs){
+  tries = tries || 3; timeoutMs = timeoutMs || 25000;
+  function once(){
+    var ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
+    var timer=setTimeout(function(){if(ctrl)ctrl.abort();}, timeoutMs);
+    return fetch(url, ctrl?{signal:ctrl.signal}:{})
+      .then(function(r){return r.text();})
+      .then(function(text){clearTimeout(timer);return JSON.parse(text);})
+      .catch(function(e){clearTimeout(timer);throw e;});
+  }
+  function attempt(n){
+    return once().catch(function(e){
+      if(n>=tries) throw e;
+      return new Promise(function(res){setTimeout(res,1000*n);}).then(function(){return attempt(n+1);});
+    });
+  }
+  return attempt(1);
+}
+
 function fetchMeetings(type, cb){
   if(!KPI_API_URL){if(cb)cb([]);return;}
   _meetingLoading[type]=true;
-  fetch(KPI_API_URL+'?action=meetings_get&type='+type)
-    .then(function(r){return r.json();})
+  fetchJsonRetry(KPI_API_URL+'?action=meetings_get&type='+type, 3, 25000)
     .then(function(d){_meetingCache[type]=d.data||[];_meetingLoading[type]=false;if(cb)cb(_meetingCache[type]);})
-    .catch(function(){_meetingLoading[type]=false;if(cb)cb([]);});
+    // 재시도까지 다 실패해도 화면을 "기록 없음"으로 비우지 말고 마지막으로 성공했던 목록을 그대로 보여준다.
+    .catch(function(){_meetingLoading[type]=false;if(cb)cb(_meetingCache[type]||[]);});
 }
 
 function apiPostMeeting(params){
   var qs=Object.keys(params).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(params[k]||'');}).join('&');
-  return fetch(KPI_API_URL+'?'+qs+'&t='+Date.now()).then(function(r){return r.json();});
+  return fetchJsonRetry(KPI_API_URL+'?'+qs+'&t='+Date.now(), 3, 25000);
 }
 var isAdmin=false;
 var currentPage='dashboard';
@@ -896,20 +917,57 @@ function renderDashboard(){
   var aw=document.getElementById('annual-revenue-widget');
   if(aw&&window._annualCache){
     var an=window._annualCache;
-    var qHtml=(an.quarterly||[]).map(function(q){
+    var qList=(an.quarterly||[]).slice();
+    // "N분기 현재 누적매출" + "N분기 계획" 행을 한 줄("누적 / 계획(N%)")로 합치고,
+    // "연간 누적매출" 행엔 연간 추정치를 같이 붙여서("누적 / 추정(N%)") 한눈에 보이게 한다.
+    var qCurIdx=qList.findIndex(function(q){return /분기.*현재.*누적매출/.test(q.label||'');});
+    var qPlanIdx=qList.findIndex(function(q){return /분기.*계획/.test(q.label||'');});
+    var annualIdx=qList.findIndex(function(q){return /^연간\s*누적매출/.test(q.label||'');});
+    var mergedRows=[];
+    if(qCurIdx!==-1){
+      var qCur=qList[qCurIdx], qPlan=qPlanIdx!==-1?qList[qPlanIdx]:null;
+      var pNum=parseFloat(String(qCur.pct||'').replace(/[^0-9.]/g,''))||0;
+      var pClr=pNum>=95?'emerald':pNum>=85?'blue':pNum>=70?'amber':'red';
+      var stale=quarterStale(qCur.label);
+      mergedRows.push('<div class="flex items-center justify-between py-1.5 border-b border-gray-100"><span class="text-xs text-gray-600">'+esc(qCur.label)
+        +(stale?' <span class="text-[9px] font-bold text-red-600 bg-red-50 border border-red-200 px-1 py-0.5 rounded ml-1" title="원본 시트가 아직 '+stale+'분기 기준입니다. 시트 갱신이 필요합니다.">'+stale+'분기 기준 · 갱신필요</span>':'')
+        +'</span><div class="flex items-center gap-1.5"><span class="text-xs font-bold text-gray-900">'+fmtNum(qCur.value*1000000)
+        +(qPlan?' <span class="text-gray-400 font-normal">/ '+fmtNum(qPlan.value*1000000)+'(계획)</span>':'')+'</span>'
+        +(qCur.pct?'<span class="text-[10px] font-bold text-'+pClr+'-600 bg-'+pClr+'-50 px-1.5 py-0.5 rounded">'+qCur.pct+'</span>':'')+'</div></div>');
+    }
+    if(annualIdx!==-1){
+      var qAnn=qList[annualIdx];
+      var aNum=parseFloat(String(qAnn.pct||'').replace(/[^0-9.]/g,''))||0;
+      var aClr=aNum>=95?'emerald':aNum>=85?'blue':aNum>=70?'amber':'red';
+      mergedRows.push('<div class="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-none"><span class="text-xs text-gray-600">'+esc(qAnn.label)+'</span>'
+        +'<div class="flex items-center gap-1.5"><span class="text-xs font-bold text-gray-900">'+fmtNum(qAnn.value*1000000)
+        +(an.totalEstimate?' <span class="text-gray-400 font-normal">/ 추정 '+fmtNum(an.totalEstimate*1000000)+'</span>':'')+'</span>'
+        +(qAnn.pct?'<span class="text-[10px] font-bold text-'+aClr+'-600 bg-'+aClr+'-50 px-1.5 py-0.5 rounded">'+qAnn.pct+'</span>':'')+'</div></div>');
+    }
+    // 매치되지 않은 나머지 항목은 예전 방식 그대로 한 줄씩 보여준다 (시트 구조가 바뀌어도 안전하게)
+    qList.forEach(function(q,i){
+      if(i===qCurIdx||i===qPlanIdx||i===annualIdx)return;
       var pNum=parseFloat(String(q.pct||'').replace(/[^0-9.]/g,''))||0;
       var pClr=pNum>=95?'emerald':pNum>=85?'blue':pNum>=70?'amber':'red';
-      // 시트의 분기 라벨이 현재 분기와 다르면 "옛날 값"임을 표시 (조용히 지난 분기를 보여주지 않도록)
-      var stale=quarterStale(q.label);
-      return'<div class="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-none"><span class="text-xs text-gray-600">'+esc(q.label)
-        +(stale?' <span class="text-[9px] font-bold text-red-600 bg-red-50 border border-red-200 px-1 py-0.5 rounded ml-1" title="원본 시트가 아직 '+stale+'분기 기준입니다. 시트 갱신이 필요합니다.">'+stale+'분기 기준 · 갱신필요</span>':'')
-        +'</span><div class="flex items-center gap-2"><span class="text-xs font-bold text-gray-900">'+fmtNum(q.value*1000000)+'</span><span class="text-[10px] font-bold text-'+pClr+'-600 bg-'+pClr+'-50 px-1.5 py-0.5 rounded">'+q.pct+'</span></div></div>';
-    }).join('');
+      mergedRows.push('<div class="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-none"><span class="text-xs text-gray-600">'+esc(q.label)+'</span>'
+        +'<div class="flex items-center gap-2"><span class="text-xs font-bold text-gray-900">'+fmtNum(q.value*1000000)+'</span>'
+        +(q.pct?'<span class="text-[10px] font-bold text-'+pClr+'-600 bg-'+pClr+'-50 px-1.5 py-0.5 rounded">'+q.pct+'</span>':'')+'</div></div>');
+    });
+    var qHtml=mergedRows.join('');
+    // 당월 누적 매출 / 추정 (N%) — 분기 행 위에 배치
+    var mcHtml='';
+    if(window._monthCumCache){
+      var mc=window._monthCumCache;
+      var mClr=mc.pct>=95?'emerald':mc.pct>=85?'blue':mc.pct>=70?'amber':'red';
+      mcHtml='<div class="flex items-center justify-between py-1.5 border-b border-gray-100"><span class="text-xs text-gray-600">현재 월 누적 매출</span>'
+        +'<div class="flex items-center gap-1.5"><span class="text-xs font-bold text-gray-900">'+fmtNum(mc.cum)+' <span class="text-gray-400 font-normal">/ 추정 '+fmtNum(mc.estimateM*1000000)+'</span></span>'
+        +'<span class="text-[10px] font-bold text-'+mClr+'-600 bg-'+mClr+'-50 px-1.5 py-0.5 rounded">'+mc.pct.toFixed(1)+'%</span></div></div>';
+    }
     var totHtml='';
     if(an.totalPlan){
       totHtml='<div class="flex items-center justify-between mt-2 pt-2 border-t border-gray-200"><span class="text-xs font-bold text-gray-700">연간 합계</span><div class="text-right"><div class="text-[10px] text-gray-500">계획 '+fmtNum(an.totalPlan*1000000)+' · 추정 '+fmtNum(an.totalEstimate*1000000)+'</div><div class="text-xs font-bold '+(parseFloat(String(an.totalAchieve||'').replace(/[^0-9.]/g,''))>=90?'text-emerald-600':'text-amber-600')+'">달성률 '+an.totalAchieve+'</div></div></div>';
     }
-    aw.innerHTML='<div class="card"><div class="card-header"><span class="card-title text-sm"><i class="ti ti-coin text-amber-500"></i> 연간 매출 현황</span></div>'+qHtml+totHtml+'</div>';
+    aw.innerHTML='<div class="card"><div class="card-header"><span class="card-title text-sm"><i class="ti ti-coin text-amber-500"></i> 매출 현황</span></div>'+mcHtml+qHtml+totHtml+'</div>';
   }
   // 월간 목표 뱃지 채우기
   var mtb=document.getElementById('month-target-badge');
@@ -1155,7 +1213,7 @@ function renderArchive(type){
     +'<div class="form-group"><label>이미지 URL (선택)</label><input type="text" id="mt-imageUrl" placeholder="구글 드라이브 공유 URL"></div>'
     +'<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:8px">'
     +'<button class="btn btn-sm" onclick="closeMeetingForm()">취소</button>'
-    +'<button class="btn btn-sm btn-primary" onclick="saveMeeting()"><i class="ti ti-device-floppy"></i> 저장</button>'
+    +'<button class="btn btn-sm btn-primary" id="mt-save-btn" onclick="saveMeeting()"><i class="ti ti-device-floppy"></i> 저장</button>'
     +'</div></div>';
 
   var headerHtml='<div class="card-header mb-3" style="padding:0">'
@@ -1198,7 +1256,7 @@ function renderArchive(type){
       +(m.file?'<a href="'+esc(m.file)+'" target="_blank" class="btn btn-sm btn-ghost text-gray-400 hover:text-'+clr+'-600" title="새창열기"><i class="ti ti-external-link"></i></a>':'')
       +(m.file?'<button class="btn btn-sm btn-ghost text-gray-400 hover:text-'+clr+'-600" title="미리보기" onclick="previewMeeting(\''+esc(m.file)+'\')"><i class="ti ti-eye"></i></button>':'')
       +'<button class="btn btn-sm btn-ghost text-gray-400 hover:text-'+clr+'-600" onclick="openMeetingFormEdit(\''+esc(m.id)+'\',\''+type+'\')"><i class="ti ti-pencil"></i></button>'
-      +'<button class="btn btn-sm btn-ghost text-gray-400 hover:text-red-500" onclick="deleteMeetingRow(\''+esc(m.id)+'\',\''+type+'\')"><i class="ti ti-trash"></i></button>'
+      +'<button class="btn btn-sm btn-ghost text-gray-400 hover:text-red-500" onclick="deleteMeetingRow(this,\''+esc(m.id)+'\',\''+type+'\')"><i class="ti ti-trash"></i></button>'
       +'</div></div>'
       +(m.summary?speechBubble(m.summary,clr):'')
       +(m.fu?fuBox(m.fu):'')
@@ -1215,16 +1273,22 @@ function renderArchive(type){
     });
 
     var listHtml=list.length
-      ?'<div class="grid grid-cols-1 md:grid-cols-2 gap-4">'+order.map(function(g){
+      ?'<div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">'+order.map(function(g){
           if(g.items.length===1){
             return'<div class="bg-white border border-gray-200 rounded-2xl p-4 hover:shadow-md transition-all hover:border-'+clr+'-200">'
               +renderMeetingEntry(g.items[0],true)+'</div>';
           }
-          var threadHtml=g.items.map(function(m,idx){
+          // 최신 회차가 위로 오게 정렬 (날짜순). 접혀 있을 땐 최신 1건만 보이고, 나머지는 눌러서 펼친다.
+          var sorted=g.items.slice().sort(function(a,b){return String(b.date||'').localeCompare(String(a.date||''));});
+          var latest=sorted[0], rest=sorted.slice(1);
+          var itemBlock=function(m,idx){
             return'<div class="relative pl-4'+(idx?' pt-3 mt-3 border-t border-dashed border-gray-100':'')+'">'
               +'<span class="absolute rounded-full bg-'+clr+'-400" style="left:-5px;top:'+(idx?'15px':'2px')+';width:8px;height:8px;border:2px solid #fff"></span>'
               +renderMeetingEntry(m,false)+'</div>';
-          }).join('');
+          };
+          var threadHtml=itemBlock(latest,0)
+            +(rest.length?'<button type="button" class="mt-2.5 ml-4 text-[11px] font-bold text-'+clr+'-600 hover:text-'+clr+'-700 inline-flex items-center gap-1" onclick="toggleThreadMore(this,'+rest.length+')"><i class="ti ti-chevron-down"></i>이전 회의 '+rest.length+'건 더보기</button>'
+              +'<div style="display:none">'+rest.map(function(m,i){return itemBlock(m,i+1);}).join('')+'</div>':'');
           return'<div class="bg-white border border-gray-200 rounded-2xl p-4 hover:shadow-md transition-all hover:border-'+clr+'-200">'
             +'<div class="flex items-center gap-2"><div class="font-bold text-sm text-gray-900 leading-snug flex-1 min-w-0">'+esc(g.title)+'</div>'
             +'<span class="text-[10px] font-bold text-'+clr+'-700 bg-'+clr+'-50 border border-'+clr+'-200 px-2 py-0.5 rounded-full shrink-0">'+g.items.length+'건 · 반복</span></div>'
@@ -1322,14 +1386,19 @@ function saveMeeting(){
   if(!params.title){alert('제목을 입력해주세요.');return;}
   if(!params.date){alert('날짜를 선택해주세요.');return;}
   // 저장 성공이 확인되기 전에는 폼을 닫지 않는다 (작성 내용 유실 방지)
+  // 버튼을 비활성화 + "저장 중"으로 바꿔서, 응답이 늦어도 중복 클릭으로 같은 내용이 여러 번 등록되지 않게 한다.
+  var btn=document.getElementById('mt-save-btn');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2 animate-spin"></i> 저장 중...';}
+  function restoreBtn(){if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-device-floppy"></i> 저장';}}
   apiPostMeeting(params).then(function(d){
-    if(!d||!d.ok){alert('저장 실패: 서버가 저장을 처리하지 못했습니다.\n'+(d&&d.error?d.error:'작성 내용은 그대로 남아있으니 다시 시도해주세요.'));return;}
+    if(!d||!d.ok){restoreBtn();alert('저장 실패: 서버가 저장을 처리하지 못했습니다.\n'+(d&&d.error?d.error:'작성 내용은 그대로 남아있으니 다시 시도해주세요.'));return;}
+    restoreBtn();
     closeMeetingForm();
     fetchMeetings(type,function(list){
       _meetingCache[type]=list;
       renderArchive(type);
     });
-  }).catch(function(e){alert('저장 실패: '+e.message+'\n작성 내용은 그대로 남아있으니 다시 시도해주세요.');});
+  }).catch(function(e){restoreBtn();alert('저장 실패: '+e.message+'\n작성 내용은 그대로 남아있으니 다시 시도해주세요.');});
 }
 function toDocPreviewUrl(url){
   // 구글 문서/시트/슬라이드 URL은 /preview 형태로 바꿔 카드 안에 깔끔하게 임베드
@@ -1349,11 +1418,22 @@ function previewMeeting(url){
   overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
   document.body.appendChild(overlay);
 }
-function deleteMeetingRow(id, type){
+function deleteMeetingRow(btn, id, type){
   if(!confirm('삭제하시겠습니까?'))return;
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2 animate-spin"></i>';}
   apiPostMeeting({action:'meetings_delete',type:type,id:id}).then(function(){
     fetchMeetings(type,function(list){_meetingCache[type]=list;renderArchive(type);});
-  }).catch(function(e){alert('삭제 실패: '+e.message);});
+  }).catch(function(e){
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-trash"></i>';}
+    alert('삭제 실패: '+e.message+'\n다시 시도해주세요.');
+  });
+}
+// 반복 시리즈 카드에서 "이전 회의 더보기" 버튼을 누르면 나머지 회차를 펼치고/접는다.
+function toggleThreadMore(btn,count){
+  var box=btn.nextElementSibling;
+  var opening=box.style.display==='none';
+  box.style.display=opening?'block':'none';
+  btn.innerHTML=opening?'<i class="ti ti-chevron-up"></i>접기':'<i class="ti ti-chevron-down"></i>이전 회의 '+count+'건 더보기';
 }
 
 /* ── 주차별 추이 그래프 (매출 · DAU · PU · ARPPU) ── */
@@ -2786,6 +2866,8 @@ function applyKpiData(d){
       window._monthTargetHtml='<div class="flex items-center gap-2 flex-wrap"><span class="text-[11px] text-gray-400">계획 <b class="text-gray-700">'+fmtNum(mt.plan*1000000)+'</b></span><span class="text-[11px] text-gray-400">추정 <b class="text-gray-700">'+fmtNum(mt.estimate*1000000)+'</b></span><span class="text-[11px] font-bold text-'+achColor+'-600 bg-'+achColor+'-50 px-2 py-0.5 rounded-md">추정/계획 '+mt.achieve+'</span>'
         +(tCum?'<span class="text-[11px] text-gray-400">누적 <b class="text-gray-700">'+fmtNum(tCum)+'</b></span>':'')
         +cumChip('계획대비',mt.plan)+cumChip('추정대비',mt.estimate)+'</div>';
+      // "매출 현황" 위젯의 "당월 누적" 행에서 쓸 수 있게 원본 수치도 같이 저장
+      window._monthCumCache=tCum?{cum:tCum,estimateM:mt.estimate,pct:(tCum/(mt.estimate*1000000)*100)}:null;
     }
   }
 
