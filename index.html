@@ -3539,6 +3539,8 @@ function renderCompetitor(){
     var clr=colorOf(g.name);
     var articles=g.articles||[];
     var summaryHtml=g.summary?'<div class="mb-3 px-3 py-2.5 bg-'+clr+'-50 border border-'+clr+'-200 rounded-xl text-[12px] text-'+clr+'-900 leading-relaxed"><i class="ti ti-sparkles text-'+clr+'-400 mr-1"></i>'+esc(g.summary)+'</div>':'';
+    // 해외/영어권 커뮤니티·매체에서 특이사항이 잡혔을 때만 한 줄 표시 (없으면 조용히 생략)
+    var overseasHtml=g.overseas?'<div class="mb-3 px-3 py-2.5 bg-blue-50 border border-blue-200 rounded-xl text-[12px] text-blue-900 leading-relaxed"><i class="ti ti-world text-blue-400 mr-1"></i><b>해외 반응</b> · '+esc(g.overseas)+(g.overseasUrl?' <a href="'+esc(g.overseasUrl)+'" target="_blank" rel="noopener" class="text-blue-500 underline">근거</a>':'')+'</div>':'';
     var artHtml=articles.length?articles.map(function(a,i){
       var dateStr=a.date?'<span class="text-[10px] text-gray-400 flex-shrink-0">'+esc(a.date.slice(0,10))+'</span>':'';
       var sourceStr=a.source?'<span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded flex-shrink-0">'+esc(a.source)+'</span>':'';
@@ -3556,6 +3558,7 @@ function renderCompetitor(){
       +'<div class="card-header"><span class="card-title text-sm"><i class="ti ti-device-gamepad-2 text-'+clr+'-500"></i> '+esc(g.name)+'</span>'
       +'<span class="text-[10px] font-bold bg-'+clr+'-50 text-'+clr+'-700 border border-'+clr+'-200 px-2 py-0.5 rounded-full">'+articles.length+'건</span></div>'
       +summaryHtml
+      +overseasHtml
       +'<ul>'+artHtml+'</ul></div>';
   }).join('');
 
