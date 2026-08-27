@@ -265,6 +265,7 @@ table tbody tr:hover{background:#f9fafb}
     <div class="topbar">
       <button class="mobile-menu-btn" onclick="toggleMobileMenu()"><i class="ti ti-menu-2"></i></button>
       <div class="breadcrumb">해외사업PM 포탈 › <b id="bc-text">종합 대시보드</b> <span style="font-size:10px;color:#cbd5e1;font-weight:400;margin-left:6px">made by 조현영 yeriel.jo</span></div>
+      <button class="btn btn-sm" onclick="openSearch()" title="검색 (Ctrl+K)" style="margin-left:10px;color:#9ca3af"><i class="ti ti-search"></i> 검색 <span style="font-size:10px;color:#b0b6c2;margin-left:4px;border:1px solid #e5e7eb;border-radius:4px;padding:0 4px">Ctrl K</span></button>
       <div class="clock-bar">
         🇰🇷 <b>KR</b> <span id="clock-kr">--:--:--</span>
         <div class="sep"></div>🇹🇼 <b>TW</b> <span id="clock-tw">--:--</span>
@@ -291,29 +292,24 @@ var SEED_ADMIN = {email:'tabin8437@gmail.com', name:'관리자', role:'admin'};
 
 // 사이드바 메뉴 구조
 var SIDEBAR_MENU = [
-  {section:'개요'},
+  {section:'홈'},
   {id:'dashboard',icon:'ti-layout-dashboard',label:'종합 대시보드'},
-  {id:'milestone',icon:'ti-clock',label:'통합 마일스톤',type:'doc'},
-  {section:'사업 지표'},
+  {section:'성과 분석'},
   {id:'kpi',icon:'ti-trending-up',label:'전권역 주간 매출 추이'},
   {id:'user-dist',icon:'ti-users-group',label:'유저 분포 (PU/전투력/레벨)'},
+  {id:'competitor',icon:'ti-radar',label:'경쟁사 모니터링'},
   {id:'report-kpi',icon:'ti-presentation',label:'주/월간 보고용 지표',type:'doc'},
   {id:'platform',icon:'ti-brand-apple',label:'iOS 관리'},
-  {id:'competitor',icon:'ti-radar',label:'경쟁사 모니터링'},
-  {section:'라이브 관리'},
-  {id:'metrics-analysis',icon:'ti-chart-arcs',label:'지표분석',type:'doc'},
+  {section:'일정 · 마일스톤'},
+  {id:'milestone',icon:'ti-clock',label:'통합 마일스톤',type:'doc'},
   {id:'live-schedule',icon:'ti-calendar-time',label:'월던/컨텐츠 오픈시점'},
-  {id:'event',icon:'ti-gift',label:'이벤트 & 보상안',type:'doc'},
-  {id:'product',icon:'ti-package',label:'상품안',type:'doc'},
-  {section:'주요 히스토리'},
-  {id:'server-migration',icon:'ti-database-share',label:'서버이전/통합',type:'doc'},
-  {section:'아카이브'},
-  {id:'weekly',icon:'ti-file-text',label:'주간회의 기록'},
-  {id:'report',icon:'ti-report',label:'보고/분석'},
-  {id:'internal',icon:'ti-lock',label:'내부 회의'},
-  {id:'devmeeting',icon:'ti-key',label:'개발사 회의록'},
-  {section:'업무 공간'},
-  {id:'localization',icon:'ti-language',label:'현지화',type:'doc'},
+  {section:'라이브 운영'},
+  {id:'live-ops-hub',icon:'ti-broadcast',label:'라이브 운영 문서함'},
+  {section:'문서 · 히스토리'},
+  {id:'archive-hub',icon:'ti-notebook',label:'회의 기록 아카이브'},
+  {id:'refdocs-hub',icon:'ti-files',label:'참고 문서함'},
+  {section:'업무 도구'},
+  {id:'tools-hub',icon:'ti-tools',label:'업무 도구'},
   {section:'종합 링크', group:true, groupId:'links', items:[
     {id:'links-0',label:'사내 공통 인프라',icon:'ti-building'},
     {id:'links-1',label:'스토어 배포 · 피쳐링',icon:'ti-brand-google-play'},
@@ -331,10 +327,6 @@ var SIDEBAR_MENU = [
     {id:'links-13',label:'사업관련 · 시뮬',icon:'ti-calculator'}
   ]},
   {id:'team-calendar',icon:'ti-calendar-event',label:'팀 캘린더',external:'https://tabin8437.github.io/team-calendar/'},
-  {section:'도구'},
-  {id:'screenshot-spec',icon:'ti-device-mobile',label:'마켓 스샷 규격'},
-  {section:'회계'},
-  {id:'settlement',icon:'ti-calculator',label:'정산 및 빌링 설계'},
   {section:'관리자', adminOnly:true},
   {id:'admin-settings',icon:'ti-settings-2',label:'포탈 설정',adminOnly:true}
 ];
@@ -771,7 +763,7 @@ function toggleGroup(el){
 /* ═══════════════════════════════════════════
    PAGE NAMES & NAV
    ═══════════════════════════════════════════ */
-var pageNames={dashboard:'종합 대시보드',milestone:'통합 마일스톤','live-schedule':'월던/컨텐츠 오픈시점',settlement:'정산 및 빌링 설계',event:'이벤트 & 보상안',product:'상품안',kpi:'전권역 주간 매출 추이 ','user-dist':'유저 분포','report-kpi':'주/월간 보고용 지표','server-migration':'서버이전/통합',platform:'iOS 관리',weekly:'주간회의 기록',report:'보고/분석',internal:'내부 회의',devmeeting:'개발사 미팅',localization:'현지화','metrics-analysis':'지표분석','shared-drive':'공유 드라이브','screenshot-spec':'마켓 스샷 규격',ai:'AI 도움말','admin-settings':'포탈 설정'};
+var pageNames={dashboard:'종합 대시보드',milestone:'통합 마일스톤','live-schedule':'월던/컨텐츠 오픈시점',settlement:'정산 및 빌링 설계',event:'이벤트 & 보상안',product:'상품안',kpi:'전권역 주간 매출 추이 ','user-dist':'유저 분포','report-kpi':'주/월간 보고용 지표','server-migration':'서버이전/통합',platform:'iOS 관리',weekly:'주간회의 기록',report:'보고/분석',internal:'내부 회의',devmeeting:'개발사 미팅',localization:'현지화','metrics-analysis':'지표분석','shared-drive':'공유 드라이브','screenshot-spec':'마켓 스샷 규격',ai:'AI 도움말','admin-settings':'포탈 설정','live-ops-hub':'라이브 운영 문서함','archive-hub':'회의 기록 아카이브','refdocs-hub':'참고 문서함','tools-hub':'업무 도구'};
 
 function nav(id,el){
   closeMobileMenu();
@@ -797,66 +789,227 @@ function renderPage(id){
     return;
   }
   // Doc viewer pages
-  if(DOC_URLS[id]){
-    var doc=DOC_URLS[id];
-    if(doc.placeholder){
-      c.innerHTML='<div class="doc-viewer"><div class="doc-toolbar"><span class="title"><i class="ti ti-table text-gray-400"></i> '+(pageNames[id]||id)+'</span><a href="'+doc.edit+'" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-external-link"></i> Google Drive에서 열기</a></div><div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px"><i class="ti ti-folder-open" style="font-size:48px;color:#d1d5db"></i><p style="font-size:13px;color:#9ca3af">폴더를 새 창에서 확인하세요</p></div></div>';
-      return;
-    }
-    // extra가 있으면 보고/분석 목록과 같은 "미리보기 포함 카드" 형태로 노출
-    if(doc.extra){
-      var items=doc.extra.concat([{url:doc.edit,preview:doc.preview,label:(pageNames[id]||id)+' Q&A',
-        icon:'ti-file-spreadsheet',clr:'emerald',desc:'문의·답변 정리 시트'}]);
-      var cards=items.map(function(e){
-        var clr=e.clr||'gray';
-        var prev=e.noEmbed?'':(e.preview||toDocPreviewUrl(e.url));
-        var body=prev
-          ?'<div class="mt-3 rounded-lg overflow-hidden border border-gray-200" style="height:300px;position:relative">'
-            +'<iframe src="'+esc(prev)+'" loading="lazy" style="width:100%;height:100%;border:none;pointer-events:none"></iframe>'
-            +'<div style="position:absolute;inset:0;cursor:pointer" title="크게 보기" onclick="previewMeeting(\''+esc(e.url)+'\')"></div></div>'
-          :'<div class="mt-3 rounded-lg border border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-2" style="height:300px">'
-            +'<i class="ti '+e.icon+' text-3xl text-'+clr+'-300"></i>'
-            +'<span class="text-[11px] text-gray-400">미리보기를 지원하지 않는 페이지입니다</span>'
-            +'<a href="'+esc(e.url)+'" target="_blank" class="btn btn-sm btn-primary"><i class="ti ti-external-link"></i> 바로가기</a></div>';
-        return'<div class="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all hover:border-'+clr+'-200">'
-          +'<div class="flex items-start justify-between gap-2">'
-          +'<div class="flex items-center gap-2.5 min-w-0">'
-          +'<div class="shrink-0 w-9 h-9 rounded-lg bg-'+clr+'-50 border border-'+clr+'-100 flex items-center justify-center"><i class="ti '+e.icon+' text-'+clr+'-600"></i></div>'
-          +'<div class="min-w-0"><div class="font-bold text-sm text-gray-900 leading-snug">'+esc(e.label)+'</div>'
-          +(e.desc?'<div class="text-[11px] text-gray-500 mt-0.5">'+esc(e.desc)+'</div>':'')+'</div></div>'
-          +'<div class="flex gap-1 shrink-0">'
-          +'<a href="'+esc(e.url)+'" target="_blank" class="btn btn-sm btn-ghost text-gray-400 hover:text-'+clr+'-600" title="새창열기"><i class="ti ti-external-link"></i></a>'
-          +(prev?'<button class="btn btn-sm btn-ghost text-gray-400 hover:text-'+clr+'-600" title="미리보기" onclick="previewMeeting(\''+esc(e.url)+'\')"><i class="ti ti-eye"></i></button>':'')
-          +'</div></div>'+body+'</div>';
-      }).join('');
-      c.innerHTML='<div class="card-header mb-3" style="padding:0"><span class="card-title text-sm"><i class="ti ti-language text-emerald-600"></i> '+(pageNames[id]||id)+' 목록</span></div>'
-        +'<div class="grid grid-cols-1 md:grid-cols-2 gap-4">'+cards+'</div>';
-      return;
-    }
-    c.innerHTML='<div class="doc-viewer"><div class="doc-toolbar"><span class="title"><i class="ti ti-file-spreadsheet text-emerald-600"></i> '+(pageNames[id]||id)+' <span style="font-size:11px;color:#9ca3af;font-weight:400;margin-left:8px">읽기 전용</span></span><div style="display:flex;gap:6px"><a href="'+doc.edit+'" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-pencil"></i> 새창에서 편집</a></div></div><div class="doc-iframe-wrap"><iframe src="'+(doc.preview||doc.edit)+'"></iframe></div></div>';
-    return;
-  }
+  if(DOC_URLS[id]){ renderDocViewer(id); return; }
   // Custom pages
   var renderers={
     dashboard:renderDashboard,
     'live-schedule':renderSchedule,
     platform:renderPlatform,
-    settlement:renderSettlement,
-    weekly:function(){renderArchive('weekly');},
-    report:function(){renderArchive('report');},
-    internal:function(){renderArchive('internal');},
     kpi:renderKpiPage,
     'user-dist':renderUserDist,
-    devmeeting:renderDevMeeting,
-    'screenshot-spec':renderSpecs,
     ai:renderAI,
     'admin-settings':renderAdmin,
     milestone:renderMilestonePage,
-    competitor:renderCompetitor
+    competitor:renderCompetitor,
+    'live-ops-hub':renderLiveOpsHub,
+    'archive-hub':renderArchiveHub,
+    'refdocs-hub':renderRefDocsHub,
+    'tools-hub':renderToolsHub
   };
   if(renderers[id]) renderers[id]();
   else c.innerHTML='<div class="card"><p style="color:#999;padding:20px;text-align:center">페이지 준비 중</p></div>';
 }
+
+// DOC_URLS 기반 문서 뷰어 — containerId를 주면 그 안에, 안 주면 content-area 전체에 그린다.
+// (라이브 운영 문서함 등 허브 페이지의 탭 본문으로도 그대로 재사용)
+function renderDocViewer(id, containerId){
+  var c=document.getElementById(containerId||'content-area');
+  var doc=DOC_URLS[id];
+  if(!doc){ c.innerHTML=''; return; }
+  if(doc.placeholder){
+    c.innerHTML='<div class="doc-viewer"><div class="doc-toolbar"><span class="title"><i class="ti ti-table text-gray-400"></i> '+(pageNames[id]||id)+'</span><a href="'+doc.edit+'" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-external-link"></i> Google Drive에서 열기</a></div><div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px"><i class="ti ti-folder-open" style="font-size:48px;color:#d1d5db"></i><p style="font-size:13px;color:#9ca3af">폴더를 새 창에서 확인하세요</p></div></div>';
+    return;
+  }
+  // extra가 있으면 보고/분석 목록과 같은 "미리보기 포함 카드" 형태로 노출
+  if(doc.extra){
+    var items=doc.extra.concat([{url:doc.edit,preview:doc.preview,label:(pageNames[id]||id)+' Q&A',
+      icon:'ti-file-spreadsheet',clr:'emerald',desc:'문의·답변 정리 시트'}]);
+    var cards=items.map(function(e){
+      var clr=e.clr||'gray';
+      var prev=e.noEmbed?'':(e.preview||toDocPreviewUrl(e.url));
+      var body=prev
+        ?'<div class="mt-3 rounded-lg overflow-hidden border border-gray-200" style="height:300px;position:relative">'
+          +'<iframe src="'+esc(prev)+'" loading="lazy" style="width:100%;height:100%;border:none;pointer-events:none"></iframe>'
+          +'<div style="position:absolute;inset:0;cursor:pointer" title="크게 보기" onclick="previewMeeting(\''+esc(e.url)+'\')"></div></div>'
+        :'<div class="mt-3 rounded-lg border border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-2" style="height:300px">'
+          +'<i class="ti '+e.icon+' text-3xl text-'+clr+'-300"></i>'
+          +'<span class="text-[11px] text-gray-400">미리보기를 지원하지 않는 페이지입니다</span>'
+          +'<a href="'+esc(e.url)+'" target="_blank" class="btn btn-sm btn-primary"><i class="ti ti-external-link"></i> 바로가기</a></div>';
+      return'<div class="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all hover:border-'+clr+'-200">'
+        +'<div class="flex items-start justify-between gap-2">'
+        +'<div class="flex items-center gap-2.5 min-w-0">'
+        +'<div class="shrink-0 w-9 h-9 rounded-lg bg-'+clr+'-50 border border-'+clr+'-100 flex items-center justify-center"><i class="ti '+e.icon+' text-'+clr+'-600"></i></div>'
+        +'<div class="min-w-0"><div class="font-bold text-sm text-gray-900 leading-snug">'+esc(e.label)+'</div>'
+        +(e.desc?'<div class="text-[11px] text-gray-500 mt-0.5">'+esc(e.desc)+'</div>':'')+'</div></div>'
+        +'<div class="flex gap-1 shrink-0">'
+        +'<a href="'+esc(e.url)+'" target="_blank" class="btn btn-sm btn-ghost text-gray-400 hover:text-'+clr+'-600" title="새창열기"><i class="ti ti-external-link"></i></a>'
+        +(prev?'<button class="btn btn-sm btn-ghost text-gray-400 hover:text-'+clr+'-600" title="미리보기" onclick="previewMeeting(\''+esc(e.url)+'\')"><i class="ti ti-eye"></i></button>':'')
+        +'</div></div>'+body+'</div>';
+    }).join('');
+    c.innerHTML='<div class="card-header mb-3" style="padding:0"><span class="card-title text-sm"><i class="ti ti-language text-emerald-600"></i> '+(pageNames[id]||id)+' 목록</span></div>'
+      +'<div class="grid grid-cols-1 md:grid-cols-2 gap-4">'+cards+'</div>';
+    return;
+  }
+  c.innerHTML='<div class="doc-viewer"><div class="doc-toolbar"><span class="title"><i class="ti ti-file-spreadsheet text-emerald-600"></i> '+(pageNames[id]||id)+' <span style="font-size:11px;color:#9ca3af;font-weight:400;margin-left:8px">읽기 전용</span></span><div style="display:flex;gap:6px"><a href="'+doc.edit+'" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-pencil"></i> 새창에서 편집</a></div></div><div class="doc-iframe-wrap"><iframe src="'+(doc.preview||doc.edit)+'"></iframe></div></div>';
+}
+
+// 여러 페이지를 탭 하나로 묶는 허브 공통 탭바
+function hubTabsHtml_(tabs, cur, onclickFn){
+  return'<div class="flex gap-1.5 flex-wrap mb-4">'+tabs.map(function(t){
+    return'<button class="btn btn-sm'+(cur===t.id?' btn-primary':'')+'" onclick="'+onclickFn+'(\''+t.id+'\')"><i class="ti '+t.icon+'"></i> '+t.label+'</button>';
+  }).join('')+'</div>';
+}
+
+/* ── 라이브 운영 문서함 (지표분석 / 이벤트&보상안 / 상품안) ── */
+var LIVEOPS_TABS=[
+  {id:'metrics-analysis',label:'지표분석',icon:'ti-chart-arcs'},
+  {id:'event',label:'이벤트 & 보상안',icon:'ti-gift'},
+  {id:'product',label:'상품안',icon:'ti-package'}
+];
+function setLiveOpsTab(id){ window._liveOpsTab=id; renderLiveOpsHub(); }
+function renderLiveOpsHub(){
+  window._liveOpsTab=window._liveOpsTab||LIVEOPS_TABS[0].id;
+  var c=document.getElementById('content-area');
+  c.innerHTML=hubTabsHtml_(LIVEOPS_TABS,window._liveOpsTab,'setLiveOpsTab')+'<div id="hub-body"></div>';
+  renderDocViewer(window._liveOpsTab,'hub-body');
+}
+
+/* ── 회의 기록 아카이브 (주간회의 / 보고·분석 / 내부 회의 / 개발사 회의록) ── */
+var ARCHIVE_TABS=[
+  {id:'weekly',label:'주간회의',icon:'ti-file-text'},
+  {id:'report',label:'보고/분석',icon:'ti-report'},
+  {id:'internal',label:'내부 회의',icon:'ti-lock'},
+  {id:'devmeeting',label:'개발사 회의록',icon:'ti-key'}
+];
+function setArchiveHubTab(id){ window._archiveHubTab=id; renderArchiveHub(); }
+function renderArchiveHub(){
+  window._archiveHubTab=window._archiveHubTab||ARCHIVE_TABS[0].id;
+  var c=document.getElementById('content-area');
+  c.innerHTML=hubTabsHtml_(ARCHIVE_TABS,window._archiveHubTab,'setArchiveHubTab')+'<div id="hub-body"></div>';
+  if(window._archiveHubTab==='devmeeting') renderDevMeeting('hub-body');
+  else renderArchive(window._archiveHubTab,'hub-body');
+}
+
+/* ── 참고 문서함 (서버이전/통합 / 현지화) ── */
+var REFDOCS_TABS=[
+  {id:'server-migration',label:'서버이전/통합',icon:'ti-database-share'},
+  {id:'localization',label:'현지화',icon:'ti-language'}
+];
+function setRefDocsTab(id){ window._refDocsTab=id; renderRefDocsHub(); }
+function renderRefDocsHub(){
+  window._refDocsTab=window._refDocsTab||REFDOCS_TABS[0].id;
+  var c=document.getElementById('content-area');
+  c.innerHTML=hubTabsHtml_(REFDOCS_TABS,window._refDocsTab,'setRefDocsTab')+'<div id="hub-body"></div>';
+  renderDocViewer(window._refDocsTab,'hub-body');
+}
+
+/* ── 업무 도구 (마켓 스샷 규격 / 정산 및 빌링 설계) ── */
+var TOOLS_TABS=[
+  {id:'screenshot-spec',label:'마켓 스샷 규격',icon:'ti-device-mobile'},
+  {id:'settlement',label:'정산 및 빌링 설계',icon:'ti-calculator'}
+];
+function setToolsHubTab(id){ window._toolsHubTab=id; renderToolsHub(); }
+function renderToolsHub(){
+  window._toolsHubTab=window._toolsHubTab||TOOLS_TABS[0].id;
+  var c=document.getElementById('content-area');
+  c.innerHTML=hubTabsHtml_(TOOLS_TABS,window._toolsHubTab,'setToolsHubTab')+'<div id="hub-body"></div>';
+  if(window._toolsHubTab==='settlement') renderSettlement('hub-body');
+  else renderSpecs('hub-body');
+}
+
+/* ═══════════════════════════════════════════
+   전역 검색 (Ctrl+K) — 메뉴로 통합되면서 사이드바에서 안 보이게 된
+   회의록/문서 탭이나 종합 링크 하위 항목도 이름으로 바로 찾아갈 수 있게 한다.
+   ═══════════════════════════════════════════ */
+function buildSearchIndex_(){
+  var idx=[];
+  function addPage(label,icon,run){ idx.push({label:label,icon:icon,type:'page',run:run}); }
+  function addHubTab(label,icon,hubId,setterFn,tabId){ addPage(label,icon,function(){ setterFn(tabId); nav(hubId); }); }
+  function addExternal(label,icon,url){ idx.push({label:label,icon:icon,type:'link',run:function(){ window.open(url,'_blank'); }}); }
+
+  addPage('종합 대시보드','ti-layout-dashboard',function(){ nav('dashboard'); });
+  addPage('전권역 주간 매출 추이','ti-trending-up',function(){ nav('kpi'); });
+  addPage('유저 분포 (PU/전투력/레벨)','ti-users-group',function(){ nav('user-dist'); });
+  addPage('경쟁사 모니터링','ti-radar',function(){ nav('competitor'); });
+  addPage('주/월간 보고용 지표','ti-presentation',function(){ nav('report-kpi'); });
+  addPage('iOS 관리','ti-brand-apple',function(){ nav('platform'); });
+  addPage('통합 마일스톤','ti-clock',function(){ nav('milestone'); });
+  addPage('월던/컨텐츠 오픈시점','ti-calendar-time',function(){ nav('live-schedule'); });
+
+  addHubTab('지표분석','ti-chart-arcs','live-ops-hub',setLiveOpsTab,'metrics-analysis');
+  addHubTab('이벤트 & 보상안','ti-gift','live-ops-hub',setLiveOpsTab,'event');
+  addHubTab('상품안','ti-package','live-ops-hub',setLiveOpsTab,'product');
+
+  addHubTab('주간회의 기록','ti-file-text','archive-hub',setArchiveHubTab,'weekly');
+  addHubTab('보고/분석','ti-report','archive-hub',setArchiveHubTab,'report');
+  addHubTab('내부 회의','ti-lock','archive-hub',setArchiveHubTab,'internal');
+  addHubTab('개발사 회의록','ti-key','archive-hub',setArchiveHubTab,'devmeeting');
+
+  addHubTab('서버이전/통합','ti-database-share','refdocs-hub',setRefDocsTab,'server-migration');
+  addHubTab('현지화','ti-language','refdocs-hub',setRefDocsTab,'localization');
+
+  addHubTab('마켓 스샷 규격','ti-device-mobile','tools-hub',setToolsHubTab,'screenshot-spec');
+  addHubTab('정산 및 빌링 설계','ti-calculator','tools-hub',setToolsHubTab,'settlement');
+
+  addExternal('팀 캘린더','ti-calendar-event','https://tabin8437.github.io/team-calendar/');
+  if(isAdmin) addPage('포탈 설정','ti-settings-2',function(){ nav('admin-settings'); });
+
+  (LINK_HUB||[]).forEach(function(hub){
+    (hub.links||[]).forEach(function(lk){
+      idx.push({label:lk.label,icon:(lk.icon||'ti-link').split(' ')[0],sub:hub.title,type:'link',run:function(){ window.open(lk.url,'_blank'); }});
+    });
+  });
+  return idx;
+}
+function openSearch(){
+  if(document.getElementById('search-overlay')) return;
+  window._searchIndex=window._searchIndex||buildSearchIndex_();
+  var overlay=document.createElement('div');
+  overlay.id='search-overlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.35);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:12vh 16px 0';
+  overlay.innerHTML='<div style="width:100%;max-width:560px;background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden;display:flex;flex-direction:column;max-height:70vh">'
+    +'<div style="display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid #eee">'
+    +'<i class="ti ti-search" style="color:#9ca3af"></i>'
+    +'<input id="search-input" type="text" placeholder="메뉴 · 문서 · 링크 검색..." style="flex:1;border:none;outline:none;font-size:14px">'
+    +'<span style="font-size:10px;color:#9ca3af;border:1px solid #e5e7eb;border-radius:4px;padding:1px 5px;cursor:pointer" onclick="closeSearch()">Esc</span></div>'
+    +'<div id="search-results" style="overflow-y:auto"></div></div>';
+  overlay.onclick=function(e){ if(e.target===overlay) closeSearch(); };
+  document.body.appendChild(overlay);
+  var inp=document.getElementById('search-input');
+  inp.addEventListener('input',function(){ renderSearchResults_(inp.value); });
+  inp.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){ closeSearch(); }
+    if(e.key==='Enter'){ var first=document.querySelector('#search-results .search-result-item'); if(first) first.click(); }
+  });
+  renderSearchResults_('');
+  setTimeout(function(){ inp.focus(); },0);
+}
+function closeSearch(){ var el=document.getElementById('search-overlay'); if(el) el.remove(); }
+function renderSearchResults_(q){
+  var idx=window._searchIndex||[];
+  q=(q||'').trim().toLowerCase();
+  var results=q?idx.filter(function(it){ return it.label.toLowerCase().indexOf(q)!==-1||(it.sub&&it.sub.toLowerCase().indexOf(q)!==-1); }):idx.slice(0,10);
+  window._searchResultsCache=results;
+  var wrap=document.getElementById('search-results');
+  if(!wrap)return;
+  if(!results.length){ wrap.innerHTML='<div style="padding:24px;text-align:center;color:#9ca3af;font-size:13px">검색 결과가 없습니다</div>'; return; }
+  wrap.innerHTML=results.map(function(it,i){
+    return'<div class="search-result-item" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid #f3f4f6" onmouseover="this.style.background=\'#f9fafb\'" onmouseout="this.style.background=\'\'" onclick="runSearchResult_('+i+')">'
+      +'<i class="ti '+it.icon+'" style="color:#6366f1;width:18px;text-align:center"></i>'
+      +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:#111827">'+esc(it.label)+'</div>'
+      +(it.sub?'<div style="font-size:11px;color:#9ca3af">'+esc(it.sub)+'</div>':'')+'</div>'
+      +'<i class="ti '+(it.type==='link'?'ti-external-link':'ti-chevron-right')+'" style="color:#d1d5db;font-size:12px"></i></div>';
+  }).join('');
+}
+function runSearchResult_(i){
+  var it=(window._searchResultsCache||[])[i];
+  if(!it)return;
+  closeSearch();
+  it.run();
+}
+document.addEventListener('keydown',function(e){
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); openSearch(); }
+});
 
 /* ═══════════════════════════════════════════
    DASHBOARD
@@ -1169,8 +1322,8 @@ function editPlatformIssue(i){editTarget={type:'pf_edit',index:i};var s=platform
 function savePlatformIssue(){var d={title:document.getElementById('pfi-title').value,date:document.getElementById('pfi-date').value,status:document.getElementById('pfi-status').value,type:document.getElementById('pfi-type').value};if(editTarget.type==='pf_edit')platformData.issues[editTarget.index]=d;else platformData.issues.unshift(d);document.getElementById('pf-issue-form').style.display='none';renderPlatformIssues();}
 
 /* ── Settlement ── */
-function renderSettlement(){
-  document.getElementById('content-area').innerHTML='<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-calculator text-emerald-600"></i> 정산 및 라이브 지표 설계서</span></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><a href="https://publisher.xsolla.com/270427" target="_blank" class="link-card featured" style="padding:16px"><div><div class="font-bold text-sm">엑솔라(Xsolla) 정산 콘솔</div><div class="text-xs text-gray-500 mt-1">웹상점 결제 수수료 및 국가별 PG 수익 정산</div></div></a><a href="https://docs.google.com/spreadsheets/d/110L1VMxjBnp5FHe9VFvSvKqGoTIq1hbLgidSPsQHyBM/edit" target="_blank" class="link-card" style="padding:16px"><div><div class="font-bold text-sm">라이브 지표 설계 수식 정의서</div><div class="text-xs text-gray-500 mt-1">매출 데이터 로그 적재 및 통계 산출 수식</div></div></a></div>'
+function renderSettlement(containerId){
+  document.getElementById(containerId||'content-area').innerHTML='<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-calculator text-emerald-600"></i> 정산 및 라이브 지표 설계서</span></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><a href="https://publisher.xsolla.com/270427" target="_blank" class="link-card featured" style="padding:16px"><div><div class="font-bold text-sm">엑솔라(Xsolla) 정산 콘솔</div><div class="text-xs text-gray-500 mt-1">웹상점 결제 수수료 및 국가별 PG 수익 정산</div></div></a><a href="https://docs.google.com/spreadsheets/d/110L1VMxjBnp5FHe9VFvSvKqGoTIq1hbLgidSPsQHyBM/edit" target="_blank" class="link-card" style="padding:16px"><div><div class="font-bold text-sm">라이브 지표 설계 수식 정의서</div><div class="text-xs text-gray-500 mt-1">매출 데이터 로그 적재 및 통계 산출 수식</div></div></a></div>'
     +'<div class="card-header mt-5" style="padding:0;margin-bottom:12px"><span class="card-title text-sm"><i class="ti ti-file-check text-indigo-500"></i> 전자결재</span></div>'
     +'<div class="grid grid-cols-1 md:grid-cols-2 gap-4">'
     +'<a href="https://approval.kakaogames.io/box/dc" target="_blank" class="link-card" style="padding:16px"><div><div class="font-bold text-sm">전자결재 (일반)</div><div class="text-xs text-gray-500 mt-1">카카오게임즈 일반 결재 시스템</div></div></a>'
@@ -1179,20 +1332,20 @@ function renderSettlement(){
 }
 
 /* ── Specs ── */
-function renderSpecs(){
+function renderSpecs(containerId){
   var iconMap={apple:'ti-brand-apple text-gray-500',google:'ti-brand-google-play text-blue-500',common:'ti-photo text-emerald-600'};
   var colorMap={apple:'text-indigo-600',google:'text-blue-600',common:'text-emerald-700'};
   var rows=SPEC_DATA.map(function(s){return'<tr class="hover:bg-gray-50"><td class="py-3 pr-3 font-semibold"><i class="ti '+(iconMap[s.p]||'')+' mr-1"></i>'+s.device+'</td><td class="py-3 font-mono '+colorMap[s.p]+' font-bold text-sm">'+s.res+'</td><td class="py-3 '+(s.warn?'text-red-500 font-bold':'text-gray-500')+'">'+s.note+'</td><td class="py-3 text-right"><button onclick="navigator.clipboard.writeText(\''+s.res+'\');this.textContent=\'✓ 복사됨\';var b=this;setTimeout(function(){b.textContent=\'복사\'},1200)" class="btn btn-sm">복사</button></td></tr>';}).join('');
-  document.getElementById('content-area').innerHTML='<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-device-mobile text-purple-500"></i> 마켓 스크린샷 규격 가이드</span></div><div class="overflow-x-auto"><table class="w-full text-left text-xs"><thead><tr class="border-b-2 border-gray-200 text-gray-500 font-bold text-[11px]"><th class="pb-2">디스플레이 스펙</th><th class="pb-2">해상도 (px)</th><th class="pb-2">비고</th><th class="pb-2 text-right">퀵</th></tr></thead><tbody class="divide-y">'+rows+'</tbody></table></div></div>';
+  document.getElementById(containerId||'content-area').innerHTML='<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-device-mobile text-purple-500"></i> 마켓 스크린샷 규격 가이드</span></div><div class="overflow-x-auto"><table class="w-full text-left text-xs"><thead><tr class="border-b-2 border-gray-200 text-gray-500 font-bold text-[11px]"><th class="pb-2">디스플레이 스펙</th><th class="pb-2">해상도 (px)</th><th class="pb-2">비고</th><th class="pb-2 text-right">퀵</th></tr></thead><tbody class="divide-y">'+rows+'</tbody></table></div></div>';
 }
 
 /* ── Archive (meetings) ── */
-function renderArchive(type){
+function renderArchive(type,containerId){
   var iconMap={weekly:'ti-file-text text-blue-500',report:'ti-report text-emerald-500',internal:'ti-lock text-amber-500'};
   var colorMap={weekly:'blue',report:'emerald',internal:'amber'};
   var titles={weekly:'주간회의',report:'보고/분석',internal:'내부 회의'};
   var clr=colorMap[type]||'blue';
-  var c=document.getElementById('content-area');
+  var c=document.getElementById(containerId||'content-area');
 
   // 폼 HTML
   var formHtml='<div id="mt-form" style="display:none" class="card mb-4">'
@@ -2683,8 +2836,8 @@ function udTip(ev,idx,chartId){
 }
 function udTipHide(chartId){ var b=document.getElementById('ud-tip-'+chartId); if(b) b.style.display='none'; }
 
-function renderDevMeeting(){
-  document.getElementById('content-area').innerHTML='<div class="doc-viewer"><div class="doc-toolbar"><span class="title"><i class="ti ti-code text-purple-500"></i> 개발사 회의록 <span style="font-size:11px;color:#9ca3af;font-weight:400;margin-left:8px">읽기 전용 · 탭 이동 가능</span></span><a href="https://docs.google.com/spreadsheets/d/1JvOfFWcvssvFZP91OFvtd66SThG1XxKAJSf3hJ6FEVw/edit?gid=1146934928" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-pencil"></i> 새창에서 편집</a></div><div class="doc-iframe-wrap"><iframe src="https://docs.google.com/spreadsheets/d/1JvOfFWcvssvFZP91OFvtd66SThG1XxKAJSf3hJ6FEVw/htmlview?gid=1146934928"></iframe></div></div>';
+function renderDevMeeting(containerId){
+  document.getElementById(containerId||'content-area').innerHTML='<div class="doc-viewer"><div class="doc-toolbar"><span class="title"><i class="ti ti-code text-purple-500"></i> 개발사 회의록 <span style="font-size:11px;color:#9ca3af;font-weight:400;margin-left:8px">읽기 전용 · 탭 이동 가능</span></span><a href="https://docs.google.com/spreadsheets/d/1JvOfFWcvssvFZP91OFvtd66SThG1XxKAJSf3hJ6FEVw/edit?gid=1146934928" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-pencil"></i> 새창에서 편집</a></div><div class="doc-iframe-wrap"><iframe src="https://docs.google.com/spreadsheets/d/1JvOfFWcvssvFZP91OFvtd66SThG1XxKAJSf3hJ6FEVw/htmlview?gid=1146934928"></iframe></div></div>';
 }
 
 function renderAI(){
