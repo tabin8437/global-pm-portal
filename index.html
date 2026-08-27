@@ -2589,10 +2589,11 @@ function renderUserDistSummary(){
     if(puSet&&puSet.weekly&&puSet.weekly.length){
       var pr=puSet.weekly, pLast=pr[pr.length-1], pPrev=pr[pr.length-2];
       var pCur=sumVals(pLast), pPrevSum=sumVals(pPrev);
-      // 결제금액 구간별로 묶어서 유저가 가장 몰린 구간도 같이 보여준다
+      // 결제금액 구간별로 묶어서 상위(고액) 구간을 보여준다 — 최다 구간(=거의 항상 최하단)은
+      // "대부분 소액 결제"라는 당연한 얘기라 무의미해서, 사람이 있는 구간 중 가장 위(고액)를 찾는다
       var pGrouped=udGroupPuValues_(puSet.buckets,pLast.values)||[];
-      var pMaxIdx=0; pGrouped.forEach(function(v,i){ if(v>pGrouped[pMaxIdx]) pMaxIdx=i; });
-      var pSub=pGrouped.length?'최다 구간 '+esc(UD_PU_GROUPS[pMaxIdx].label)+' · '+(pGrouped[pMaxIdx]||0).toLocaleString('ko-KR')+'명':'';
+      var pTopIdx=pGrouped.length-1; while(pTopIdx>0&&!pGrouped[pTopIdx]) pTopIdx--;
+      var pSub=pGrouped.length?'최상위 구간 '+esc(UD_PU_GROUPS[pTopIdx].label)+' · '+(pGrouped[pTopIdx]||0).toLocaleString('ko-KR')+'명':'';
       rowsHtml+=row('ti-coin','violet','결제유저(PU)', pCur.toLocaleString('ko-KR')+'명'+changeBadge(pCur,pPrevSum), pSub, 'pu');
     }
     var powerSet=d.sets.power;
