@@ -1449,9 +1449,14 @@ function renderMilestoneTimelineChart_(timeline){
     }
     cur.setMonth(cur.getMonth()+1); guard++;
   }
+  // 국기 이모지는 SVG <text>에서 제대로 안 그려지고 "KR KR"처럼 코드가 겹쳐 보여서,
+  // 글로벌(🌐, 단일 글리프)은 그대로 두고 국가 플래그(KR/TW/JP)만 foreignObject로 HTML 렌더링한다.
   var rowLines=MS_REGION_ROWS.map(function(r,ri){
     var y=PT+ri*rowH+rowH/2;
-    return'<text x="4" y="'+(y+4).toFixed(1)+'" font-size="11" font-weight="700" fill="'+r.clr+'">'+r.l+'</text>'
+    var label=r.k==='gl'
+      ?'<text x="4" y="'+(y+4).toFixed(1)+'" font-size="11" font-weight="700" fill="'+r.clr+'">'+r.l+'</text>'
+      :'<foreignObject x="0" y="'+(y-9).toFixed(1)+'" width="'+(PL-6)+'" height="18"><div xmlns="http://www.w3.org/1999/xhtml" style="font-size:11px;font-weight:700;color:'+r.clr+';line-height:18px;white-space:nowrap">'+r.l+'</div></foreignObject>';
+    return label
       +'<line x1="'+PL+'" y1="'+(PT+ri*rowH+rowH)+'" x2="'+(W-PR)+'" y2="'+(PT+ri*rowH+rowH)+'" stroke="#f3f4f6" stroke-width="1"/>';
   }).join('');
   var todayLine='';
@@ -1563,6 +1568,7 @@ var SCHEDULE_WD=[
   ['정예 던전 - 공허의 유적','일 단위','04시','무료 이용 시간 초기화','04시','13시',''],
   ['정예 던전 - 난쟁이 비밀 통로','일 단위','04시','무료 이용 시간 초기화','04시','13시',''],
   ['교환 상점 - 훈장, 주화 일부','일 단위','04시','구매 횟수 초기화','04시','13시',''],
+  ['노른','일 단위','04시','초기화','04시','13시',''],
   ['파티 던전','주 단위','월요일 04시','무료 입장 횟수 초기화','월요일 04시','월요일 13시',''],
   ['정예 던전 - 지하감옥','주 단위','월요일 04시','무료 이용 시간 초기화','월요일 04시','월요일 13시',''],
   ['월드 던전 - 트리니티, 다이아','주 단위','목요일 04시','참여 길드 선정','금요일 02시','금요일 11시',''],
