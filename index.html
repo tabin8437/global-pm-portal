@@ -1167,57 +1167,6 @@ function buildRegionMiniRow_(){
   if(!cards) return'';
   return'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-map-2 text-blue-500"></i> 권역별 매출 추이 <span class="text-[11px] text-gray-400 font-medium ml-1">최근 '+f.periodWeeks+'주</span></span></div><div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">'+cards+'</div>';
 }
-// 오늘의 운영 이슈 + (관리자만) 가입 승인 대기
-// 6단계: 운영 이슈 + 최근 회의록(변경사항) + F/U(다음 액션)를 한 피드로 통합
-// "결정사항"은 회의록에 별도 필드가 없어(요약/F/U만 있음) 새로 지어내지 않고, 있는 필드만 쓴다.
-function opsFeedInnerHtml_(){
-  var items=[];
-  (platformData.issues||[]).filter(function(i){return i.status&&i.status.indexOf('해결')===-1;}).forEach(function(iss){
-    items.push({date:iss.date,title:iss.title,sub:iss.status,icon:'ti-alert-circle',clr:'amber',onclick:"nav('platform')"});
-  });
-  ['weekly','internal','report'].forEach(function(type){
-    (_meetingCache[type]||[]).slice(0,3).forEach(function(m){
-      items.push({date:m.date,title:m.title,sub:m.summary||'',fu:m.fu||'',icon:'ti-notebook',clr:'blue',onclick:"setArchiveHubTab('"+type+"');nav('archive-hub')"});
-    });
-  });
-  items.sort(function(a,b){return String(b.date||'').localeCompare(String(a.date||''));});
-  items=items.slice(0,6);
-  if(!items.length) return'<div class="text-xs text-gray-400 text-center py-4">최근 업데이트가 없습니다</div>';
-  return items.map(function(it){
-    return'<div class="flex items-start gap-2 py-1.5 border-b border-gray-50 last:border-none cursor-pointer hover:bg-gray-50 rounded" style="margin:0 -4px;padding-left:4px;padding-right:4px" onclick="'+it.onclick+'">'
-      +'<i class="ti '+it.icon+' text-'+it.clr+'-500 mt-0.5" style="font-size:14px"></i>'
-      +'<div class="flex-1 min-w-0"><div class="text-xs font-semibold text-gray-800 truncate">'+esc(it.title)+'</div>'
-      +(it.sub?'<div class="text-[10px] text-gray-400 truncate">'+esc(it.sub)+'</div>':'')
-      +(it.fu?'<div class="text-[10px] text-indigo-500 font-semibold mt-0.5 truncate"><i class="ti ti-flag-3-filled"></i> '+esc(it.fu)+'</div>':'')+'</div>'
-      +'<div class="text-[9px] text-gray-300 shrink-0 mt-0.5">'+esc(String(it.date||'').slice(5))+'</div></div>';
-  }).join('');
-}
-function loadOpsFeedMeetings_(){
-  ['weekly','internal','report'].forEach(function(type){
-    if(!_meetingCache[type]||!_meetingCache[type].length){
-      fetchMeetings(type,function(){
-        if(currentPage==='dashboard'){ var el=document.getElementById('dash-ops-feed'); if(el) el.innerHTML=opsFeedInnerHtml_(); }
-      });
-    }
-  });
-}
-function buildOpsIssueCard_(){
-  var pendingHtml=isAdmin?'<div id="dash-pending-approval" class="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-400">승인 대기 확인 중...</div>':'';
-  return'<div class="card h-full"><div class="card-header"><span class="card-title text-sm"><i class="ti ti-activity text-amber-500"></i> 운영 업데이트</span><button class="btn btn-sm" onclick="nav(\'archive-hub\')">전체 <i class="ti ti-chevron-right text-[10px]"></i></button></div><div id="dash-ops-feed">'+opsFeedInnerHtml_()+'</div>'+pendingHtml+'</div>';
-}
-function fillDashPendingApproval_(){
-  if(!isAdmin) return;
-  fetchUsersFromAPI(function(users){
-    var el=document.getElementById('dash-pending-approval');
-    if(!el) return;
-    var pending=(users||[]).filter(function(u){return u.status==='pending';});
-    if(pending.length){
-      el.innerHTML='<div class="flex items-center justify-between cursor-pointer" onclick="nav(\'admin-settings\')"><span class="text-xs font-bold text-amber-700">가입 승인 대기</span><span class="text-xs font-extrabold text-amber-700">'+pending.length+'건</span></div>';
-    } else {
-      el.textContent='승인 대기 없음';
-    }
-  });
-}
 // 다음 마일스톤 + D-day
 function buildNextMilestoneCard_(){
   var timeline=window._milestoneTimeline||[];
@@ -1314,20 +1263,19 @@ function renderDashboard(){
     +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-flame text-emerald-500"></i> 핵심 현황</span><span class="text-[11px] text-gray-400 font-medium">'+weekLabel+' 기준</span></div>'
     +'<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">'+buildHeroRow_()+'</div>'
     +buildRegionMiniRow_()
-    +'<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">'+buildOpsIssueCard_()+buildNextMilestoneCard_()+'</div>'
+    +buildNextMilestoneCard_()
+    +'<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">'+
+    '<div class="lg:col-span-2">'+userDistSummaryHtml+'</div>'+
+    '<div class="space-y-4">'+annualHtml+iosMini+'</div>'+
+    '</div>'
     +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-list-details text-gray-400"></i> 전체 지표</span><button class="btn btn-sm" onclick="toggleDashMoreStats(this)"><i class="ti ti-chevron-down"></i> 전체 지표 펼치기</button></div>'
     +'<div id="dash-more-stats" style="display:none" class="mb-5">'
     +'<div class="text-[11px] text-gray-400 font-semibold mb-1.5 mt-2">'+weekLabel+' 주간</div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">'+restWeeklyHtml+'</div>'
     +'<div class="flex items-center gap-2 flex-wrap text-[11px] text-gray-400 font-semibold mb-1.5">'+monthLabel+monthTargetHtml+'</div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">'+monthlyCards+'</div>'
     +'</div>'
-    +'<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">'+
-    '<div class="lg:col-span-2">'+userDistSummaryHtml+'</div>'+
-    '<div class="space-y-4">'+annualHtml+iosMini+'</div>'+
-    '</div>'+milestoneHtml;
+    +milestoneHtml;
   switchMilestoneTab('cross');
   renderUserDistSummary();
-  fillDashPendingApproval_();
-  loadOpsFeedMeetings_();
 
   // 연간매출 위젯 채우기
   var aw=document.getElementById('annual-revenue-widget');
