@@ -2599,12 +2599,14 @@ function renderUserDistSummary(){
     var powerSet=d.sets.power;
     if(powerSet&&powerSet.weekly&&powerSet.weekly.length){
       var wr=powerSet.weekly, wLast=wr[wr.length-1];
-      var maxIdx=0; wLast.values.forEach(function(v,i){ if(v>wLast.values[maxIdx]) maxIdx=i; });
+      // 최다 구간(mode)은 하위권에 몰려 있어 의미가 없어서, 전투력 4만 이상(고전투력) 구간만 합산해서 보여준다
+      // (유저 분포 상세 페이지의 "확대 차트" 기준선(4만)과 동일한 컷)
+      var HIGH_POWER_CUT=40000;
+      var highSum=0;
+      powerSet.buckets.forEach(function(b,i){ var n=Number(b); if(!isNaN(n)&&n>=HIGH_POWER_CUT) highSum+=(wLast.values[i]||0); });
       var wTotal=sumVals(wLast);
-      var wPct=wTotal?(wLast.values[maxIdx]/wTotal*100):0;
-      // 구간 하나(경계값)만 찍으면 그게 정확히 뭘 뜻하는지 안 보여서, 앞 구간 경계~해당 구간으로 범위를 잡아 보여준다
-      var rangeLbl=(maxIdx>0?esc(udBucketLabel_(powerSet.buckets[maxIdx-1]))+' ~ ':'~')+esc(udBucketLabel_(powerSet.buckets[maxIdx]));
-      rowsHtml+=row('ti-swords','red','전투력별 DAU 최다 구간', rangeLbl, wLast.values[maxIdx].toLocaleString('ko-KR')+'명 · 전체의 '+wPct.toFixed(0)+'%', 'power');
+      var wPct=wTotal?(highSum/wTotal*100):0;
+      rowsHtml+=row('ti-swords','red','전투력 4만+ DAU', highSum.toLocaleString('ko-KR')+'명', '전체의 '+wPct.toFixed(0)+'%', 'power');
     }
     var segSet=d.sets.segment;
     if(segSet&&segSet.weekly&&segSet.weekly.length){
