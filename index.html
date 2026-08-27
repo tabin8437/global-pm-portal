@@ -985,25 +985,64 @@ function openSearch(){
   setTimeout(function(){ inp.focus(); },0);
 }
 function closeSearch(){ var el=document.getElementById('search-overlay'); if(el) el.remove(); }
+
+/* 5단계: 즐겨찾기 · 최근 사용 — 검색창을 그대로 "빠른 진입" 창구로 써서
+   검색 → 즐겨찾기 → 최근 사용 → 전체 순으로 보여준다(문서에서 권장한 진입 순서). */
+window._favorites=(function(){ try{ return JSON.parse(localStorage.getItem('portal_favorites')||'[]'); }catch(e){ return[]; } })();
+window._recentUsed=(function(){ try{ return JSON.parse(localStorage.getItem('portal_recent')||'[]'); }catch(e){ return[]; } })();
+function isFavorite_(label){ return window._favorites.indexOf(label)!==-1; }
+function toggleFavorite_(label){
+  var i=window._favorites.indexOf(label);
+  if(i===-1) window._favorites.unshift(label); else window._favorites.splice(i,1);
+  try{ localStorage.setItem('portal_favorites',JSON.stringify(window._favorites)); }catch(e){}
+}
+function pushRecentUsed_(label){
+  window._recentUsed=[label].concat(window._recentUsed.filter(function(l){return l!==label;})).slice(0,8);
+  try{ localStorage.setItem('portal_recent',JSON.stringify(window._recentUsed)); }catch(e){}
+}
 function renderSearchResults_(q){
   var idx=window._searchIndex||[];
   q=(q||'').trim().toLowerCase();
-  var results=q?idx.filter(function(it){ return it.label.toLowerCase().indexOf(q)!==-1||(it.sub&&it.sub.toLowerCase().indexOf(q)!==-1); }):idx.slice(0,10);
-  window._searchResultsCache=results;
   var wrap=document.getElementById('search-results');
   if(!wrap)return;
-  if(!results.length){ wrap.innerHTML='<div style="padding:24px;text-align:center;color:#9ca3af;font-size:13px">검색 결과가 없습니다</div>'; return; }
-  wrap.innerHTML=results.map(function(it,i){
+  window._searchResultsCache=[];
+  function rowHtml(it){
+    window._searchResultsCache.push(it);
+    var i=window._searchResultsCache.length-1;
+    var fav=isFavorite_(it.label);
     return'<div class="search-result-item" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid #f3f4f6" onmouseover="this.style.background=\'#f9fafb\'" onmouseout="this.style.background=\'\'" onclick="runSearchResult_('+i+')">'
       +'<i class="ti '+it.icon+'" style="color:#6366f1;width:18px;text-align:center"></i>'
       +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:#111827">'+esc(it.label)+'</div>'
       +(it.sub?'<div style="font-size:11px;color:#9ca3af">'+esc(it.sub)+'</div>':'')+'</div>'
+      +'<span onclick="event.stopPropagation();toggleFavoriteByIndex_('+i+')" style="cursor:pointer;color:'+(fav?'#f59e0b':'#d1d5db')+';font-size:16px;padding:2px 4px" title="즐겨찾기">'+(fav?'★':'☆')+'</span>'
       +'<i class="ti '+(it.type==='link'?'ti-external-link':'ti-chevron-right')+'" style="color:#d1d5db;font-size:12px"></i></div>';
-  }).join('');
+  }
+  function sectionHtml(title,items){
+    if(!items.length)return'';
+    return'<div style="padding:8px 14px 2px;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.02em">'+title+'</div>'+items.map(rowHtml).join('');
+  }
+  var html='';
+  if(!q){
+    var favItems=window._favorites.map(function(l){return idx.find(function(it){return it.label===l;});}).filter(Boolean);
+    var recentItems=window._recentUsed.map(function(l){return idx.find(function(it){return it.label===l;});}).filter(Boolean);
+    html+=sectionHtml('즐겨찾기',favItems)+sectionHtml('최근 사용',recentItems)+sectionHtml('전체',idx.slice(0,10));
+    if(!html) html='<div style="padding:24px;text-align:center;color:#9ca3af;font-size:13px">검색하거나 ☆를 눌러 즐겨찾기에 추가해보세요</div>';
+  } else {
+    var results=idx.filter(function(it){ return it.label.toLowerCase().indexOf(q)!==-1||(it.sub&&it.sub.toLowerCase().indexOf(q)!==-1); });
+    html=results.length?results.map(rowHtml).join(''):'<div style="padding:24px;text-align:center;color:#9ca3af;font-size:13px">검색 결과가 없습니다</div>';
+  }
+  wrap.innerHTML=html;
+}
+function toggleFavoriteByIndex_(i){
+  var it=(window._searchResultsCache||[])[i];
+  if(!it)return;
+  toggleFavorite_(it.label);
+  renderSearchResults_(document.getElementById('search-input')?document.getElementById('search-input').value:'');
 }
 function runSearchResult_(i){
   var it=(window._searchResultsCache||[])[i];
   if(!it)return;
+  pushRecentUsed_(it.label);
   closeSearch();
   it.run();
 }
