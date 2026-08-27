@@ -48,9 +48,9 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 .sidebar-header .logo{width:34px;height:34px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .sidebar-header .logo i{color:#fff;font-size:17px}
 .sidebar-header .title{font-size:14px;font-weight:700}
-.sidebar-header .sub{font-size:10px;color:var(--text-tertiary);margin-top:1px}
+.sidebar-header .sub{font-size:11px;color:#8b95a8;margin-top:1px}
 .sidebar-nav{flex:1;overflow-y:auto;padding:8px 0}
-.nav-label{padding:16px 18px 4px;font-size:10px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.8px}
+.nav-label{padding:18px 18px 6px;font-size:11px;font-weight:700;color:#7c8598;text-transform:uppercase;letter-spacing:.8px}
 .nav-item{display:flex;align-items:center;gap:8px;padding:8px 18px;font-size:13px;color:var(--text-secondary);cursor:pointer;border-left:2.5px solid transparent;transition:all .12s;user-select:none}
 .nav-item:hover{background:var(--bg-secondary);color:var(--text-primary)}
 .nav-item.active{color:var(--accent-dark);border-left-color:var(--accent);background:var(--accent-light);font-weight:600}
@@ -91,6 +91,7 @@ body.is-admin .admin-only{display:flex}
 .kpi-change{font-size:12px;font-weight:800;display:inline-flex;align-items:center;gap:2px;padding:2px 8px;border-radius:6px}
 .kpi-change.change-up{color:#dc2626;background:#fef2f2}
 .kpi-change.change-down{color:#2563eb;background:#eff6ff}
+.kpi-change.change-neutral{color:#9ca3af;background:#f3f4f6}
 
 /* ── Buttons ── */
 .btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;font-size:12px;font-weight:600;border:1px solid var(--border-strong);border-radius:var(--radius);cursor:pointer;background:#fff;transition:all .12s;white-space:nowrap}
@@ -295,7 +296,6 @@ var SEED_ADMIN = {email:'tabin8437@gmail.com', name:'관리자', role:'admin'};
 
 // 사이드바 메뉴 구조
 var SIDEBAR_MENU = [
-  {section:'홈'},
   {id:'dashboard',icon:'ti-layout-dashboard',label:'종합 대시보드'},
   {section:'성과 분석'},
   {id:'kpi',icon:'ti-trending-up',label:'전권역 주간 매출 추이'},
@@ -311,9 +311,9 @@ var SIDEBAR_MENU = [
   {section:'문서 · 히스토리'},
   {id:'archive-hub',icon:'ti-notebook',label:'회의 기록 아카이브'},
   {id:'refdocs-hub',icon:'ti-files',label:'참고 문서함'},
-  {section:'업무 도구'},
+  {section:'도구 모음'},
   {id:'tools-hub',icon:'ti-tools',label:'업무 도구'},
-  {section:'종합 링크', group:true, groupId:'links', items:[
+  {section:'업무 링크', group:true, groupId:'links', items:[
     {id:'links-0',label:'사내 공통 인프라',icon:'ti-building'},
     {id:'links-1',label:'스토어 배포 · 피쳐링',icon:'ti-brand-google-play'},
     {id:'links-2',label:'권역별 일정',icon:'ti-calendar'},
@@ -705,6 +705,19 @@ function buildMobileNav(){
   SIDEBAR_MENU.forEach(function(item){
     if(item.section){
       if(item.adminOnly&&!isAdmin)return;
+      // 접이식 그룹(종합 링크)은 모바일에서도 기본 접어두고 탭해야 펼치게 — 안 그러면 하위 링크가
+      // 전부 나열돼서 사이드바를 정리한 효과가 모바일에서는 그대로 사라진다.
+      if(item.group&&item.items){
+        var gid='mnav-g-'+(item.groupId||item.section);
+        html+='<div class="mobile-nav-item" onclick="toggleMobileGroup(\''+gid+'\')" style="justify-content:space-between"><span style="display:flex;align-items:center;gap:12px"><i class="ti ti-folder"></i>'+item.section+'</span><i class="ti ti-chevron-down" id="'+gid+'-chev" style="transition:transform .15s"></i></div>';
+        html+='<div id="'+gid+'" style="display:none">';
+        item.items.forEach(function(sub){
+          if(sub.adminOnly&&!isAdmin)return;
+          html+='<div class="mobile-nav-item" style="padding-left:36px" onclick="nav(\''+sub.id+'\');closeMobileMenu()"><i class="ti '+sub.icon+'"></i>'+sub.label+'</div>';
+        });
+        html+='</div>';
+        return;
+      }
       html+='<div class="mobile-nav-label">'+item.section+'</div>';
       if(item.items){
         item.items.forEach(function(sub){
@@ -739,7 +752,6 @@ function buildSidebar(){
   SIDEBAR_MENU.forEach(function(item){
     if(item.section){
       if(item.group){
-        html+='<div class="nav-label'+(item.adminOnly?' admin-only':'')+'">'+item.section+'</div>';
         html+='<div class="nav-group-toggle'+(item.adminOnly?' admin-only':'')+'" onclick="toggleGroup(this)"><i class="ti ti-folder" style="font-size:16px;width:18px;text-align:center"></i> <span style="flex:1;font-weight:600">'+item.section+'</span><i class="ti ti-chevron-right chevron"></i></div>';
         html+='<div class="nav-group-items">';
         (item.items||[]).forEach(function(sub){
@@ -761,6 +773,14 @@ function toggleGroup(el){
   el.classList.toggle('open');
   var items=el.nextElementSibling;
   if(items) items.classList.toggle('open');
+}
+function toggleMobileGroup(gid){
+  var el=document.getElementById(gid);
+  if(!el)return;
+  var opening=el.style.display==='none';
+  el.style.display=opening?'block':'none';
+  var chev=document.getElementById(gid+'-chev');
+  if(chev) chev.style.transform=opening?'rotate(180deg)':'';
 }
 
 /* ═══════════════════════════════════════════
@@ -1093,12 +1113,11 @@ function buildHeroRow_(){
     } else {
       value=base.value; change=base.change;
     }
-    var isDown=String(change).indexOf('▼')!==-1||String(change).indexOf('-')!==-1;
     var spark=miniSparkline_(heroSparkVals_(key,f.region,f.periodWeeks),color);
     return'<div class="kpi-card'+(base.alert?' ring-2 ring-red-200 bg-red-50/30':'')+'" style="padding:18px 20px;cursor:pointer" onclick="nav(\'kpi\')">'
       +'<div class="kpi-label" style="font-size:12px">'+label+(base.alert?' <span class="text-red-500">⚠</span>':'')+'</div>'
       +'<div class="kpi-value" style="font-size:26px;color:'+color+';margin:4px 0 2px">'+value+'</div>'
-      +'<span class="kpi-change '+(isDown?'change-down':'change-up')+'" style="font-size:11px"><span class="text-[9px] opacity-60">전주비</span> '+change+'</span>'
+      +'<span class="kpi-change '+changeClass_(change)+'" style="font-size:11px"><span class="text-[9px] opacity-60">전주비</span> '+change+'</span>'
       +(spark?'<div class="mt-2">'+spark+'</div>':'')+'</div>';
   }).join('');
 }
@@ -1197,9 +1216,7 @@ function renderDashboard(){
   var dispYear=showPrevMonth?(now.getMonth()===0?now.getFullYear()-1:now.getFullYear()):now.getFullYear();
   var monthLabel=dispYear+'년 '+dispMonth+'월 누적'+(showPrevMonth?' <span style="font-size:10px;font-weight:600;color:#f59e0b;margin-left:4px">전월 확정</span>':' <span style="font-size:11px;font-weight:500;color:#94a3b8;margin-left:6px">1일 ~ '+dispMonth+'월 '+yesterday+'일 기준</span>');
   var monthlyCards=KPI_MONTHLY.map(function(k){
-    var mDown=k.change.indexOf('▼')!==-1||k.change.indexOf('-')!==-1;
-    var mCls=mDown?'change-down':'change-up';
-    return'<div class="kpi-card" style="padding:14px 16px"><div class="kpi-label">'+k.label+'</div><div class="kpi-value" style="font-size:20px;color:'+k.color+';margin:4px 0 3px">'+k.value+'</div><span class="kpi-change '+mCls+'" style="font-size:11px"><span class="text-[9px] opacity-60">전월비</span> '+k.change+'</span></div>';
+    return'<div class="kpi-card" style="padding:14px 16px"><div class="kpi-label">'+k.label+'</div><div class="kpi-value" style="font-size:20px;color:'+k.color+';margin:4px 0 3px">'+k.value+'</div><span class="kpi-change '+changeClass_(k.change)+'" style="font-size:11px"><span class="text-[9px] opacity-60">전월비</span> '+k.change+'</span></div>';
   }).join('');
   // 유저 분포 요약 (PU·전투력·CP&PAY·상위고래유저경보 핵심 수치만) — 상세는 유저 분포 페이지 그대로 유지
   var userDistSummaryHtml='<div id="userdist-summary-widget"></div>';
@@ -1223,14 +1240,15 @@ function renderDashboard(){
   c.innerHTML=globalFilterBarHtml_()
     +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-flame text-emerald-500"></i> 주간 지표 현황</span><span class="text-[11px] text-gray-400 font-medium">'+weekLabel+' 기준</span></div>'
     +'<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-5">'+buildHeroRow_()+'</div>'
-    +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-list-details text-gray-400"></i> 월간 지표</span><button class="btn btn-sm" onclick="toggleDashMoreStats(this)"><i class="ti ti-chevron-up"></i> 접기</button></div>'
-    +'<div id="dash-more-stats" class="mb-5">'
+    // 데스크톱은 주간·월간을 이어서 바로 비교하도록 기본 펼침, 모바일은 카드가 길어지니 기본 접힘
+    +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-list-details text-gray-400"></i> 월간 지표</span><button class="btn btn-sm" onclick="toggleDashMoreStats(this)">'+(window.innerWidth<768?'<i class="ti ti-chevron-down"></i> 펼치기':'<i class="ti ti-chevron-up"></i> 접기')+'</button></div>'
+    +'<div id="dash-more-stats" class="mb-5"'+(window.innerWidth<768?' style="display:none"':'')+'>'
     +'<div class="flex items-center gap-2 flex-wrap text-[11px] text-gray-400 font-semibold mb-1.5">'+monthLabel+monthTargetHtml+'</div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">'+monthlyCards+'</div>'
     +'</div>'
     +buildRegionMiniRow_()
     +'<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">'+
     '<div class="lg:col-span-2">'+userDistSummaryHtml+'</div>'+
-    '<div class="space-y-4">'+annualHtml+buildNextMilestoneCard_()+iosMini+'</div>'+
+    '<div>'+annualHtml+buildNextMilestoneCard_()+iosMini+'</div>'+
     '</div>'
     +milestoneHtml;
   switchMilestoneTab('cross');
@@ -2276,8 +2294,7 @@ function renderKpiPage(){
     {key:'gl',label:'🌐 글로벌',color:'purple'}
   ];
   function mk(label,val,change){
-    var isD=(change||'').indexOf('▼')!==-1||(change||'').indexOf('-')!==-1;
-    return'<div class="py-1 flex items-center justify-between"><span class="text-[11px] text-gray-500">'+label+'</span><div class="flex items-center gap-1.5"><span class="text-xs font-bold text-gray-900">'+fmtNum(val)+'</span>'+(change?'<span class="text-[10px] font-bold '+(isD?'text-blue-600':'text-red-500')+'">'+change+'</span>':'')+'</div></div>';
+    return'<div class="py-1 flex items-center justify-between"><span class="text-[11px] text-gray-500">'+label+'</span><div class="flex items-center gap-1.5"><span class="text-xs font-bold text-gray-900">'+fmtNum(val)+'</span>'+(change?'<span class="text-[10px] font-bold '+changeTextClass_(change)+'">'+change+'</span>':'')+'</div></div>';
   }
   // 당월 누적 매출 기준 실제 달성률 (계획 대비 / 추정 대비)
   // actual: 원 단위, planM/estM: 백만원 단위
@@ -2294,10 +2311,9 @@ function renderKpiPage(){
   // '당월 누적 매출' 한 줄 (전월비 뱃지 포함)
   function cumRevRow(m){
     if(!m||!m.revenue)return'';
-    var dn=(m.revenueChange||'').indexOf('▼')!==-1||(m.revenueChange||'').indexOf('-')!==-1;
     return'<div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">당월 누적</span>'
       +'<span class="flex items-center gap-1"><span class="text-[11px] font-extrabold text-gray-900">'+fmtNum(m.revenue)+'</span>'
-      +(m.revenueChange?'<span class="text-[9px] font-bold '+(dn?'text-blue-600':'text-red-500')+'">'+m.revenueChange+'</span>':'')+'</span></div>';
+      +(m.revenueChange?'<span class="text-[9px] font-bold '+changeTextClass_(m.revenueChange)+'">'+m.revenueChange+'</span>':'')+'</span></div>';
   }
   function rCard(def){
     var d=regions[def.key];
@@ -3277,7 +3293,32 @@ function fmtNum(n){
   if(n>=10000){var v=Math.round(n/1000)/10;return(v%1===0?v.toFixed(0):v.toFixed(1))+'만';}
   return Math.round(n).toLocaleString();
 }
-function parseChange(s){var str=String(s||'');var isDown=str.indexOf('▼')!==-1||str.indexOf('-')!==-1;var num=str.replace(/[▲▼\s]/g,'');return{text:(isDown?'▼':'▲')+num,dir:isDown?'down':'up'};}
+// 데이터가 없어 "-"만 온 경우까지 하이픈만 보고 "하락"으로 오판하던 문제 수정 —
+// 화살표가 있을 때만 상승/하락으로 판정하고, 빈 값/"-"는 중립으로 따로 둔다.
+function parseChange(s){
+  var str=String(s||'').trim();
+  if(!str||str==='-') return{text:'-',dir:'neutral'};
+  var isDown=str.indexOf('▼')!==-1;
+  var num=str.replace(/[▲▼\s]/g,'');
+  return{text:(isDown?'▼':'▲')+num,dir:isDown?'down':'up'};
+}
+// change 문자열(예: "▲12.3%","▼5.0%","-") 하나로 상승/하락/중립 톤을 판정하는 공통 헬퍼.
+// 화살표 유무만 보고, 문자열에 "-"가 섞여 있다는 이유만으로 하락 처리하지 않는다.
+function changeTone_(change){
+  var s=String(change||'').trim();
+  if(!s||s==='-') return'neutral';
+  if(s.indexOf('▼')!==-1) return'down';
+  if(s.indexOf('▲')!==-1) return'up';
+  return'neutral';
+}
+function changeClass_(change){
+  var t=changeTone_(change);
+  return t==='down'?'change-down':t==='up'?'change-up':'change-neutral';
+}
+function changeTextClass_(change){
+  var t=changeTone_(change);
+  return t==='down'?'text-blue-600':t==='up'?'text-red-500':'text-gray-400';
+}
 
 function fetchKpiData(){
   if(!KPI_API_URL) return;
