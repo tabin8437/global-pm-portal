@@ -1164,7 +1164,7 @@ function buildRegionMiniRow_(){
 function buildNextMilestoneCard_(){
   var timeline=window._milestoneTimeline||[];
   var nextIdx=milestoneNextIdx(timeline);
-  if(nextIdx===-1) return'<div class="card h-full"><div class="card-header"><span class="card-title text-sm"><i class="ti ti-flag text-blue-500"></i> 다음 마일스톤</span></div><div class="text-xs text-gray-400 text-center py-6">예정된 마일스톤이 없습니다</div></div>';
+  if(nextIdx===-1) return'<div class="card"><div class="card-header"><span class="card-title text-sm"><i class="ti ti-flag text-blue-500"></i> 다음 마일스톤</span></div><div class="text-xs text-gray-400 text-center py-6">예정된 마일스톤이 없습니다</div></div>';
   var t=timeline[nextIdx];
   var gap=milestoneDayGap(t);
   var regions=[{k:'kr',l:'🇰🇷 KR'},{k:'tw',l:'🇹🇼 TW'},{k:'jp',l:'🇯🇵 JP'},{k:'gl',l:'🌐 GL'}];
@@ -1174,7 +1174,7 @@ function buildNextMilestoneCard_(){
     var text=Array.isArray(val)?(esc(val[0])+(val.length>1?' 외 '+(val.length-1)+'건':'')):esc(String(val));
     return'<div class="flex items-start gap-1.5 py-0.5"><span class="text-[10px] font-bold text-gray-400 w-9 shrink-0">'+r.l+'</span><span class="text-[11px] text-gray-700">'+text+'</span></div>';
   }).join('');
-  return'<div class="card h-full cursor-pointer" onclick="nav(\'milestone\')"><div class="card-header"><span class="card-title text-sm"><i class="ti ti-flag text-blue-500"></i> 다음 마일스톤</span><span class="text-[11px] font-extrabold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">D-'+gap+'</span></div>'
+  return'<div class="card cursor-pointer" onclick="nav(\'milestone\')"><div class="card-header"><span class="card-title text-sm"><i class="ti ti-flag text-blue-500"></i> 다음 마일스톤</span><span class="text-[11px] font-extrabold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">D-'+gap+'</span></div>'
     +'<div class="text-sm font-bold text-gray-900 mb-2">'+esc(t.date)+(t.version?' · '+esc(t.version):'')+'</div>'
     +(items||'<div class="text-xs text-gray-400">세부 내용 없음</div>')+'</div>';
 }
