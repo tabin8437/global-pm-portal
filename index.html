@@ -885,9 +885,8 @@ function renderDashboard(){
     var mCls=mDown?'change-down':'change-up';
     return'<div class="kpi-card" style="padding:14px 16px"><div class="kpi-label">'+k.label+'</div><div class="kpi-value" style="font-size:20px;color:'+k.color+';margin:4px 0 3px">'+k.value+'</div><span class="kpi-change '+mCls+'" style="font-size:11px"><span class="text-[9px] opacity-60">전월비</span> '+k.change+'</span></div>';
   }).join('');
-  // 지표 분석 (마이비서 연동)
-  var analysisContent=window._analysisCache||'';
-  var analysisHtml='<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-chart-dots text-purple-500"></i> 지표 분석</span><span class="text-[10px] text-gray-400 font-medium" id="analysis-date"></span></div><div id="analysis-body" class="text-[13px] leading-relaxed text-gray-600">'+(analysisContent||'<div class="bg-slate-50 border border-slate-200 p-5 rounded-xl text-gray-400 text-center">마이비서 분석 데이터를 불러오는 중...</div>')+'</div></div>';
+  // 유저 분포 요약 (PU·전투력·CP&PAY·상위고래유저경보 핵심 수치만) — 상세는 유저 분포 페이지 그대로 유지
+  var userDistSummaryHtml='<div id="userdist-summary-widget"></div>';
 
   // Milestone widget
   var milestoneHtml='<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-route text-blue-500"></i> 통합 마일스톤 타임라인</span><div class="flex items-center gap-2"><span id="milestone-active-date" class="text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md">최신: -</span><button onclick="nav(\'milestone\')" class="btn btn-ghost btn-sm">상세 <i class="ti ti-chevron-right text-[10px]"></i></button></div></div><div class="flex bg-gray-100 p-0.5 rounded-lg text-[11px] font-bold mb-3"><button onclick="switchMilestoneTab(\'cross\')" id="m-tab-cross" class="flex-1 py-1.5 rounded-md transition-all">전권역</button><button onclick="switchMilestoneTab(\'kr\')" id="m-tab-kr" class="flex-1 py-1.5 rounded-md transition-all">KR</button><button onclick="switchMilestoneTab(\'tw\')" id="m-tab-tw" class="flex-1 py-1.5 rounded-md transition-all">TW</button><button onclick="switchMilestoneTab(\'jp\')" id="m-tab-jp" class="flex-1 py-1.5 rounded-md transition-all">JP</button><button onclick="switchMilestoneTab(\'global\')" id="m-tab-global" class="flex-1 py-1.5 rounded-md transition-all">글로벌</button></div><div id="milestone-widget-body" class="p-3 bg-blue-50/50 border border-blue-100 rounded-xl text-xs max-h-[420px] overflow-y-auto"></div></div>';
@@ -908,10 +907,11 @@ function renderDashboard(){
   c.innerHTML='<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-chart-bar text-emerald-500"></i> '+weekLabel+' 주간 지표</span></div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">'+kpiHtml+'</div>'+
     '<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-calendar-stats text-indigo-500"></i> '+monthLabel+'</span>'+monthTargetHtml+'</div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">'+monthlyCards+'</div>'+
     '<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">'+
-    '<div class="lg:col-span-2">'+analysisHtml+'</div>'+
+    '<div class="lg:col-span-2">'+userDistSummaryHtml+'</div>'+
     '<div class="space-y-4">'+annualHtml+iosMini+'</div>'+
     '</div>'+milestoneHtml;
   switchMilestoneTab('cross');
+  renderUserDistSummary();
 
   // 연간매출 위젯 채우기
   var aw=document.getElementById('annual-revenue-widget');
@@ -1917,11 +1917,15 @@ function renderKpiPage(){
     annualHtml='<div class="card"><div class="font-bold text-sm text-gray-800 mb-3"><i class="ti ti-coin text-amber-500"></i> 연간 매출 현황</div>'+qRows+totRow+'</div>';
   }
   var cardsHtml=defs.map(rCard).join('');
+  // 지표 분석 (마이비서 연동) — 대시보드에서 이 페이지 맨 아래로 옮김
+  var analysisContent=window._analysisCache||'';
+  var analysisHtml='<div class="card mt-5"><div class="card-header"><span class="card-title"><i class="ti ti-chart-dots text-purple-500"></i> 지표 분석</span><span class="text-[10px] text-gray-400 font-medium" id="analysis-date"></span></div><div id="analysis-body" class="text-[13px] leading-relaxed text-gray-600">'+(analysisContent||'<div class="bg-slate-50 border border-slate-200 p-5 rounded-xl text-gray-400 text-center">마이비서 분석 데이터를 불러오는 중...</div>')+'</div></div>';
   c.innerHTML='<div class="card-header" style="padding:0;margin-bottom:12px"><span class="card-title"><i class="ti ti-trending-up text-emerald-500"></i> 전권역 주간 매출 추이</span><a href="https://drive.google.com/drive/folders/1lk_9pMhvy343Wx7J2sHbGIYRo2c-x7vQ" target="_blank" class="btn btn-sm"><i class="ti ti-folder"></i> 보고 폴더</a></div>'+
     '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">'+cardsHtml+'</div>'+
     renderTrendCharts()+
     renderMonthlyCharts()+
-    renderDailyGlobal();
+    renderDailyGlobal()+
+    analysisHtml;
 }
 
 /* ═══════════════════════════════════════════
@@ -2053,28 +2057,98 @@ function renderUserDist(){
 }
 
 function udFetch(){
+  if(window._udFetching)return;
+  window._udFetching=true;
   fetch(KPI_API_URL+'?action=user_dist&t='+Date.now())
     .then(function(r){return r.json();})
-    .then(function(d){ window._userDistCache=d; if(currentPage==='user-dist') renderUserDist(); })
+    .then(function(d){ window._udFetching=false; window._userDistCache=d; if(currentPage==='user-dist') renderUserDist(); if(currentPage==='dashboard') renderUserDistSummary(); })
     .catch(function(e){
+      window._udFetching=false;
       window._userDistCache={ok:false,error:e.message};
       if(currentPage==='user-dist') renderUserDist();
+      if(currentPage==='dashboard') renderUserDistSummary();
     });
 }
 function udRefresh(){ window._userDistCache=null; window._whaleCache=null; renderUserDist(); }
 
 // ── 상위 고래 유저 경보 — 분포 차트가 아니라 계정 단위 경보 목록이라 별도 화면으로 그린다 ──
 function whaleFetch(){
+  if(window._whaleFetching)return;
+  window._whaleFetching=true;
   fetch(KPI_API_URL+'?action=whale_alert&t='+Date.now())
     .then(function(r){return r.json();})
-    .then(function(d){ window._whaleCache=d; if(currentPage==='user-dist'&&window._udMetric==='whale') renderWhaleAlert(); })
+    .then(function(d){ window._whaleFetching=false; window._whaleCache=d; if(currentPage==='user-dist'&&window._udMetric==='whale') renderWhaleAlert(); if(currentPage==='dashboard') renderUserDistSummary(); })
     .catch(function(e){
+      window._whaleFetching=false;
       window._whaleCache={ok:false,error:e.message};
       if(currentPage==='user-dist'&&window._udMetric==='whale') renderWhaleAlert();
+      if(currentPage==='dashboard') renderUserDistSummary();
     });
 }
 function whaleRefresh(){ window._whaleCache=null; renderWhaleAlert(); }
 function whaleSetRegion(r){ window._whaleRegion=r; renderWhaleAlert(); }
+
+// 대시보드용 유저 분포 요약 — 상세 화면(renderUserDist)은 그대로 두고, PU·전투력·CP&PAY·
+// 상위고래유저경보 핵심 수치 한 줄씩만 뽑아 보여준다. 클릭하면 해당 탭으로 바로 이동.
+function udSummaryGoto(metric){ window._udMetric=metric; nav('user-dist'); }
+function renderUserDistSummary(){
+  var el=document.getElementById('userdist-summary-widget');
+  if(!el)return;
+  var d=window._userDistCache, w=window._whaleCache;
+  if(!d) udFetch();
+  if(!w) whaleFetch();
+  function sumVals(row){ return row?row.values.reduce(function(a,b){return a+b;},0):0; }
+  function changeBadge(cur,prev){
+    if(prev==null||!prev) return'';
+    var diff=(cur-prev)/prev*100;
+    if(!diff) return'';
+    var up=diff>0;
+    return' <span class="text-[10px] font-bold '+(up?'text-red-500':'text-blue-600')+'">'+(up?'▲':'▼')+Math.abs(diff).toFixed(1)+'%</span>';
+  }
+  function row(icon,clr,label,valueHtml,metric){
+    return'<div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-none cursor-pointer hover:bg-gray-50 rounded-lg" style="margin:0 -6px;padding-left:6px;padding-right:6px" onclick="udSummaryGoto(\''+metric+'\')">'
+      +'<span class="text-xs text-gray-600 flex items-center gap-1.5"><i class="ti '+icon+' text-'+clr+'-500"></i>'+label+'</span>'
+      +'<span class="text-xs font-bold text-gray-900 flex items-center gap-1">'+valueHtml+' <i class="ti ti-chevron-right text-gray-300"></i></span></div>';
+  }
+  var rowsHtml='';
+  if(!d){
+    rowsHtml='<div class="text-center py-6 text-xs text-gray-400"><i class="ti ti-loader-2 animate-spin"></i> 불러오는 중...</div>';
+  } else if(!d.ok){
+    rowsHtml='<div class="text-center py-6 text-xs text-gray-400">데이터를 불러오지 못했습니다</div>';
+  } else {
+    var puSet=d.sets.pu;
+    if(puSet&&puSet.weekly&&puSet.weekly.length){
+      var pr=puSet.weekly, pLast=pr[pr.length-1], pPrev=pr[pr.length-2];
+      var pCur=sumVals(pLast), pPrevSum=sumVals(pPrev);
+      rowsHtml+=row('ti-coin','violet','결제유저(PU)', pCur.toLocaleString('ko-KR')+'명'+changeBadge(pCur,pPrevSum), 'pu');
+    }
+    var powerSet=d.sets.power;
+    if(powerSet&&powerSet.weekly&&powerSet.weekly.length){
+      var wr=powerSet.weekly, wLast=wr[wr.length-1];
+      var maxIdx=0; wLast.values.forEach(function(v,i){ if(v>wLast.values[maxIdx]) maxIdx=i; });
+      rowsHtml+=row('ti-swords','red','전투력별 DAU 최다 구간', esc(udBucketLabel_(powerSet.buckets[maxIdx]))+' <span class="text-gray-400 font-normal">('+wLast.values[maxIdx].toLocaleString('ko-KR')+'명)</span>', 'power');
+    }
+    var segSet=d.sets.segment;
+    if(segSet&&segSet.weekly&&segSet.weekly.length){
+      var sr=segSet.weekly, sLast=sr[sr.length-1];
+      var coreIdx=-1; segSet.buckets.forEach(function(b,i){ if(coreIdx===-1&&/둘다/.test(String(b))) coreIdx=i; });
+      if(coreIdx===-1) coreIdx=0;
+      rowsHtml+=row('ti-users-group','orange','CP&PAY', esc(udSegmentRelabel_(segSet.buckets[coreIdx]))+' <span class="text-gray-400 font-normal">'+(sLast.values[coreIdx]||0).toLocaleString('ko-KR')+'명</span>', 'segment');
+    }
+    if(!rowsHtml) rowsHtml='<div class="text-center py-6 text-xs text-gray-400">표시할 데이터가 없습니다</div>';
+  }
+  if(!w){
+    rowsHtml+='<div class="text-center py-3 text-xs text-gray-400"><i class="ti ti-loader-2 animate-spin"></i> 고래 유저 불러오는 중...</div>';
+  } else if(w.ok&&w.rows&&w.rows.length){
+    var RISK=['NO_PAY_30D','MOVED_AND_DROP','SPEND_DROP'];
+    var totalN=w.rows.length;
+    var riskN=w.rows.filter(function(r){return RISK.indexOf(r.status)!==-1;}).length;
+    var pct=totalN?(riskN/totalN*100):0;
+    var clr=pct>=30?'red':pct>=15?'amber':'emerald';
+    rowsHtml+=row('ti-alert-triangle',clr,'상위고래유저경보 위험군', riskN.toLocaleString('ko-KR')+'명 <span class="text-[10px] font-bold text-'+clr+'-600">('+pct.toFixed(0)+'%)</span>', 'whale');
+  }
+  el.innerHTML='<div class="card"><div class="card-header"><span class="card-title text-sm"><i class="ti ti-users-group text-indigo-500"></i> 유저 분포 요약</span><button class="btn btn-sm" onclick="nav(\'user-dist\')">상세 <i class="ti ti-chevron-right text-[10px]"></i></button></div>'+rowsHtml+'</div>';
+}
 
 function renderWhaleAlert(){
   var wrap=document.getElementById('whale-wrap');
