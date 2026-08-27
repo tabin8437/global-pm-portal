@@ -1221,21 +1221,17 @@ function renderDashboard(){
   var monthTargetHtml='<span id="month-target-badge" class="text-[11px] text-gray-400 font-medium">1일 ~ '+(now.getMonth()+1)+'월 '+yesterday+'일 기준</span>';
 
   c.innerHTML=globalFilterBarHtml_()
-    +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-flame text-emerald-500"></i> 핵심 현황</span><span class="text-[11px] text-gray-400 font-medium">'+weekLabel+' 기준</span></div>'
+    +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-flame text-emerald-500"></i> 주간 지표 현황</span><span class="text-[11px] text-gray-400 font-medium">'+weekLabel+' 기준</span></div>'
     +'<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-5">'+buildHeroRow_()+'</div>'
-    +buildRegionMiniRow_()
-    +'<div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">'+
-    '<div class="lg:col-span-2">'+userDistSummaryHtml+'</div>'+
-    '<div>'+annualHtml+'</div>'+
-    '</div>'
-    +'<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">'+
-    '<div class="lg:col-span-2">'+buildNextMilestoneCard_()+'</div>'+
-    '<div>'+iosMini+'</div>'+
-    '</div>'
-    +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-list-details text-gray-400"></i> 전체 지표</span><button class="btn btn-sm" onclick="toggleDashMoreStats(this)"><i class="ti ti-chevron-up"></i> 접기</button></div>'
+    +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-list-details text-gray-400"></i> 월간 지표</span><button class="btn btn-sm" onclick="toggleDashMoreStats(this)"><i class="ti ti-chevron-up"></i> 접기</button></div>'
     +'<div id="dash-more-stats" class="mb-5">'
     +'<div class="flex items-center gap-2 flex-wrap text-[11px] text-gray-400 font-semibold mb-1.5">'+monthLabel+monthTargetHtml+'</div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">'+monthlyCards+'</div>'
     +'</div>'
+    +buildRegionMiniRow_()
+    +'<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">'+
+    '<div class="lg:col-span-2">'+userDistSummaryHtml+'</div>'+
+    '<div class="space-y-4">'+annualHtml+buildNextMilestoneCard_()+iosMini+'</div>'+
+    '</div>'
     +milestoneHtml;
   switchMilestoneTab('cross');
   renderUserDistSummary();
