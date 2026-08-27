@@ -1149,10 +1149,16 @@ function buildRegionMiniRow_(){
   var hasRegion=byR&&['kr','tw','jp'].some(function(k){return(byR[k]||[]).length>0;});
   if(!hasRegion) return'';
   var regionList=(f.region!=='all')?TREND_REGIONS.filter(function(r){return r.key===f.region;}):TREND_REGIONS;
+  // 롤링 N주 대신 "이번 달" 안에 속한 주차만 잘라서 보여준다 (월 단위로 딱 끊어서)
+  var now=new Date(),curY=now.getFullYear(),curM=now.getMonth();
   var cards=regionList.map(function(r){
     var arr=collapseToWeekly(byR[r.key]||[]);
     if(!arr.length) return'';
-    var lastN=arr.slice(-f.periodWeeks);
+    var lastN=arr.filter(function(t){
+      var d=new Date(weekKeyOf(shortPeriod(t.period)));
+      return d.getFullYear()===curY&&d.getMonth()===curM;
+    });
+    if(!lastN.length) lastN=arr.slice(-4); // 월초라 이번 달 주차가 아직 없으면 최근 값이라도 보여준다
     var vals=lastN.map(function(t){var v=Number(t.revenue);return v>0?v:null;});
     var lastT=lastN[lastN.length-1],prevT=lastN[lastN.length-2];
     var lastV=lastT?Number(lastT.revenue):null,prevV=prevT?Number(prevT.revenue):null;
@@ -1165,7 +1171,7 @@ function buildRegionMiniRow_(){
       +(spark?'<div class="mt-1.5">'+spark+'</div>':'')+'</div>';
   }).join('');
   if(!cards) return'';
-  return'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-map-2 text-blue-500"></i> 권역별 매출 추이 <span class="text-[11px] text-gray-400 font-medium ml-1">최근 '+f.periodWeeks+'주</span></span></div><div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">'+cards+'</div>';
+  return'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-map-2 text-blue-500"></i> 권역별 매출 추이 <span class="text-[11px] text-gray-400 font-medium ml-1">('+(curM+1)+'월)</span></span></div><div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">'+cards+'</div>';
 }
 // 다음 마일스톤 + D-day
 function buildNextMilestoneCard_(){
