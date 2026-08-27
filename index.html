@@ -2105,6 +2105,8 @@ function udSegmentRelabel_(b){
   var s=String(b), suffix='';
   if(/^누적/.test(s)){ suffix='(누적)'; s=s.replace(/^누적_?/,''); }
   else if(/^3M/i.test(s)){ suffix='(최근3개월)'; s=s.replace(/^3M_?/i,''); }
+  // "전체" 같은 스코프 표시 토큰은 신호가 없어 빼고, 남는 토큰들은 "_" 대신 "·"로 이어 붙인다
+  s=s.split('_').filter(function(p){return p&&p!=='전체';}).join('·');
   s=s.replace(/둘다/g,'전투력3만&결제100만이상');
   return s+suffix;
 }
@@ -2258,10 +2260,12 @@ function renderUserDistSummary(){
     var up=diff>0;
     return' <span class="text-[10px] font-bold '+(up?'text-red-500':'text-blue-600')+'">'+(up?'▲':'▼')+Math.abs(diff).toFixed(1)+'%</span>';
   }
-  function row(icon,clr,label,valueHtml,metric){
+  // 값 한 줄 + 구간/범위를 보여주는 보조 줄을 같이 쓰는 행 (요약이라 숫자만 덜렁 있으면 뭘 보는 건지 안 잡혀서 보강)
+  function row(icon,clr,label,valueHtml,subHtml,metric){
     return'<div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-none cursor-pointer hover:bg-gray-50 rounded-lg" style="margin:0 -6px;padding-left:6px;padding-right:6px" onclick="udSummaryGoto(\''+metric+'\')">'
       +'<span class="text-xs text-gray-600 flex items-center gap-1.5"><i class="ti '+icon+' text-'+clr+'-500"></i>'+label+'</span>'
-      +'<span class="text-xs font-bold text-gray-900 flex items-center gap-1">'+valueHtml+' <i class="ti ti-chevron-right text-gray-300"></i></span></div>';
+      +'<span class="text-right"><span class="text-xs font-bold text-gray-900 flex items-center justify-end gap-1">'+valueHtml+' <i class="ti ti-chevron-right text-gray-300"></i></span>'
+      +(subHtml?'<span class="block text-[10px] text-gray-400 mt-0.5">'+subHtml+'</span>':'')+'</span></div>';
   }
   var rowsHtml='';
   if(!d){
@@ -2273,20 +2277,39 @@ function renderUserDistSummary(){
     if(puSet&&puSet.weekly&&puSet.weekly.length){
       var pr=puSet.weekly, pLast=pr[pr.length-1], pPrev=pr[pr.length-2];
       var pCur=sumVals(pLast), pPrevSum=sumVals(pPrev);
-      rowsHtml+=row('ti-coin','violet','결제유저(PU)', pCur.toLocaleString('ko-KR')+'명'+changeBadge(pCur,pPrevSum), 'pu');
+      // 결제금액 구간별로 묶어서 유저가 가장 몰린 구간도 같이 보여준다
+      var pGrouped=udGroupPuValues_(puSet.buckets,pLast.values)||[];
+      var pMaxIdx=0; pGrouped.forEach(function(v,i){ if(v>pGrouped[pMaxIdx]) pMaxIdx=i; });
+      var pSub=pGrouped.length?'최다 구간 '+esc(UD_PU_GROUPS[pMaxIdx].label)+' · '+(pGrouped[pMaxIdx]||0).toLocaleString('ko-KR')+'명':'';
+      rowsHtml+=row('ti-coin','violet','결제유저(PU)', pCur.toLocaleString('ko-KR')+'명'+changeBadge(pCur,pPrevSum), pSub, 'pu');
     }
     var powerSet=d.sets.power;
     if(powerSet&&powerSet.weekly&&powerSet.weekly.length){
       var wr=powerSet.weekly, wLast=wr[wr.length-1];
       var maxIdx=0; wLast.values.forEach(function(v,i){ if(v>wLast.values[maxIdx]) maxIdx=i; });
-      rowsHtml+=row('ti-swords','red','전투력별 DAU 최다 구간', esc(udBucketLabel_(powerSet.buckets[maxIdx]))+' <span class="text-gray-400 font-normal">('+wLast.values[maxIdx].toLocaleString('ko-KR')+'명)</span>', 'power');
+      var wTotal=sumVals(wLast);
+      var wPct=wTotal?(wLast.values[maxIdx]/wTotal*100):0;
+      // 구간 하나(경계값)만 찍으면 그게 정확히 뭘 뜻하는지 안 보여서, 앞 구간 경계~해당 구간으로 범위를 잡아 보여준다
+      var rangeLbl=(maxIdx>0?esc(udBucketLabel_(powerSet.buckets[maxIdx-1]))+' ~ ':'~')+esc(udBucketLabel_(powerSet.buckets[maxIdx]));
+      rowsHtml+=row('ti-swords','red','전투력별 DAU 최다 구간', rangeLbl, wLast.values[maxIdx].toLocaleString('ko-KR')+'명 · 전체의 '+wPct.toFixed(0)+'%', 'power');
     }
     var segSet=d.sets.segment;
     if(segSet&&segSet.weekly&&segSet.weekly.length){
       var sr=segSet.weekly, sLast=sr[sr.length-1];
-      var coreIdx=-1; segSet.buckets.forEach(function(b,i){ if(coreIdx===-1&&/둘다/.test(String(b))) coreIdx=i; });
-      if(coreIdx===-1) coreIdx=0;
-      rowsHtml+=row('ti-users-group','orange','CP&PAY', esc(udSegmentRelabel_(segSet.buckets[coreIdx]))+' <span class="text-gray-400 font-normal">'+(sLast.values[coreIdx]||0).toLocaleString('ko-KR')+'명</span>', 'segment');
+      var coreCumIdx=-1, core3mIdx=-1;
+      segSet.buckets.forEach(function(b,i){
+        var s=String(b);
+        if(/둘다/.test(s)){ if(/^누적/.test(s)) coreCumIdx=i; else if(/^3M/i.test(s)) core3mIdx=i; }
+      });
+      if(coreCumIdx===-1&&core3mIdx===-1){
+        segSet.buckets.forEach(function(b,i){ if(coreCumIdx===-1&&/둘다/.test(String(b))) coreCumIdx=i; });
+      }
+      var segLabelBase=esc(udSegmentRelabel_(segSet.buckets[coreCumIdx!==-1?coreCumIdx:core3mIdx]).replace(/\(.*\)$/,''));
+      var segSubParts=[];
+      if(coreCumIdx!==-1) segSubParts.push('누적 '+(sLast.values[coreCumIdx]||0).toLocaleString('ko-KR')+'명');
+      if(core3mIdx!==-1) segSubParts.push('최근3개월 '+(sLast.values[core3mIdx]||0).toLocaleString('ko-KR')+'명');
+      var segMainIdx=coreCumIdx!==-1?coreCumIdx:core3mIdx;
+      rowsHtml+=row('ti-users-group','orange','CP&PAY', (sLast.values[segMainIdx]||0).toLocaleString('ko-KR')+'명', segLabelBase+(segSubParts.length?' · '+segSubParts.join(' / '):''), 'segment');
     }
     if(!rowsHtml) rowsHtml='<div class="text-center py-6 text-xs text-gray-400">표시할 데이터가 없습니다</div>';
   }
@@ -2298,7 +2321,7 @@ function renderUserDistSummary(){
     var riskN=w.rows.filter(function(r){return RISK.indexOf(r.status)!==-1;}).length;
     var pct=totalN?(riskN/totalN*100):0;
     var clr=pct>=30?'red':pct>=15?'amber':'emerald';
-    rowsHtml+=row('ti-alert-triangle',clr,'상위고래유저경보 위험군', riskN.toLocaleString('ko-KR')+'명 <span class="text-[10px] font-bold text-'+clr+'-600">('+pct.toFixed(0)+'%)</span>', 'whale');
+    rowsHtml+=row('ti-alert-triangle',clr,'상위고래유저경보 위험군', riskN.toLocaleString('ko-KR')+'명 <span class="text-[10px] font-bold text-'+clr+'-600">('+pct.toFixed(0)+'%)</span>', '전체 '+totalN.toLocaleString('ko-KR')+'명 중 · 30일 미결제·결제 급감 기준', 'whale');
   }
   el.innerHTML='<div class="card"><div class="card-header"><span class="card-title text-sm"><i class="ti ti-users-group text-indigo-500"></i> 유저 분포 요약</span><button class="btn btn-sm" onclick="nav(\'user-dist\')">상세 <i class="ti ti-chevron-right text-[10px]"></i></button></div>'+rowsHtml+'</div>';
 }
