@@ -1079,59 +1079,28 @@ function heroSparkVals_(key,region,weeks){
   }
   return src.slice(-weeks).map(function(t){var v=Number(t[key]);return v>0?v:null;});
 }
-var HERO_KPI_LABELS=['주간 매출','일평균 DAU','일평균 PU'];
-var HERO_KPI_KEYS={'주간 매출':'revenue','일평균 DAU':'dau','일평균 PU':'pu'};
+// 핵심현황 = 주간 KPI 5개 전부(원래 순서 그대로: DAU/NRU/WAU/PU/매출). 따로 추리지 않고 다 보여준다.
+var HERO_KPI_KEYS={'주간 매출':'revenue','일평균 DAU':'dau','일평균 PU':'pu','누적 NRU':'nru','주간 WAU':'wau'};
 function buildHeroRow_(){
   var f=window._globalFilter;
   var regionData=(f.region!=='all')?((window._regionsCache||{})[f.region]||{}).weekly:null;
-  return HERO_KPI_LABELS.map(function(label){
-    var key=HERO_KPI_KEYS[label];
-    var value,change,color;
-    var base=KPI_DATA.find(function(x){return x.label===label;});
-    color=base?base.color:'#111827';
+  return KPI_DATA.map(function(base){
+    var label=base.label, key=HERO_KPI_KEYS[label];
+    var value,change,color=base.color;
     if(regionData&&regionData[key]!=null){
       value=fmtNum(regionData[key]);
       change=(regionData.change&&regionData.change[key])||'-';
-    } else if(base){
+    } else {
       value=base.value; change=base.change;
-    } else { return''; }
+    }
     var isDown=String(change).indexOf('▼')!==-1||String(change).indexOf('-')!==-1;
     var spark=miniSparkline_(heroSparkVals_(key,f.region,f.periodWeeks),color);
-    return'<div class="kpi-card" style="padding:18px 20px;cursor:pointer" onclick="nav(\'kpi\')">'
-      +'<div class="kpi-label" style="font-size:12px">'+label+'</div>'
+    return'<div class="kpi-card'+(base.alert?' ring-2 ring-red-200 bg-red-50/30':'')+'" style="padding:18px 20px;cursor:pointer" onclick="nav(\'kpi\')">'
+      +'<div class="kpi-label" style="font-size:12px">'+label+(base.alert?' <span class="text-red-500">⚠</span>':'')+'</div>'
       +'<div class="kpi-value" style="font-size:26px;color:'+color+';margin:4px 0 2px">'+value+'</div>'
       +'<span class="kpi-change '+(isDown?'change-down':'change-up')+'" style="font-size:11px"><span class="text-[9px] opacity-60">전주비</span> '+change+'</span>'
       +(spark?'<div class="mt-2">'+spark+'</div>':'')+'</div>';
-  }).join('')+buildRiskAlertCard_();
-}
-// "위험 알림" 카드 — NRU 급증 → 고래유저 위험군 비율 → 미해결 운영 이슈 순으로 가장 급한 것 하나만 보여준다.
-// 임계값(고래 위험군 30%)은 상위고래유저경보 화면과 동일 기준을 그대로 재사용.
-function buildRiskAlertCard_(){
-  var nruItem=KPI_DATA.find(function(x){return x.label==='누적 NRU';});
-  var whale=window._whaleCache;
-  var riskN=0,totalN=0,pct=0,noPayN=0,movedDropN=0,spendDropN=0;
-  if(whale&&whale.ok&&whale.rows){
-    totalN=whale.rows.length;
-    noPayN=whale.rows.filter(function(r){return r.status==='NO_PAY_30D';}).length;
-    movedDropN=whale.rows.filter(function(r){return r.status==='MOVED_AND_DROP';}).length;
-    spendDropN=whale.rows.filter(function(r){return r.status==='SPEND_DROP';}).length;
-    riskN=noPayN+movedDropN+spendDropN;
-    pct=totalN?(riskN/totalN*100):0;
-  }
-  // 그냥 "위험군 N%"만 찍으면 뭐가 위험한 건지 안 보여서, 원인(30일미결제·결제급감)까지 같이 보여준다
-  var riskBreakdown=riskN?(' — 30일미결제 '+noPayN.toLocaleString('ko-KR')+'명, 결제급감 '+(movedDropN+spendDropN).toLocaleString('ko-KR')+'명'):'';
-  var openIssues=(platformData.issues||[]).filter(function(i){return i.status&&i.status.indexOf('해결')===-1;});
-  var level='ok',title='이상 없음',desc='주요 지표·이슈 모두 정상 범위',dest='dashboard';
-  if(nruItem&&nruItem.alert){ level='warn'; title='신규 유저 급증'; desc='NRU '+nruItem.change+' — 이벤트/마케팅 영향 확인 필요'; dest='kpi'; }
-  else if(pct>=30){ level='danger'; title='고래유저 위험군 '+pct.toFixed(0)+'%'; desc=riskN.toLocaleString('ko-KR')+'명 / 전체 '+totalN.toLocaleString('ko-KR')+'명'+riskBreakdown; dest='user-dist'; }
-  else if(openIssues.length){ level='warn'; title=openIssues.length+'건의 운영 이슈'; desc=esc(openIssues[0].title); dest='platform'; }
-  else if(totalN){ title='위험군 '+pct.toFixed(0)+'%'; desc=riskN.toLocaleString('ko-KR')+'명 / 전체 '+totalN.toLocaleString('ko-KR')+'명'+riskBreakdown; dest='user-dist'; }
-  var clr=level==='danger'?'red':level==='warn'?'amber':'emerald';
-  var icon=level==='danger'?'ti-alert-triangle':level==='warn'?'ti-alert-circle':'ti-shield-check';
-  return'<div class="kpi-card" style="padding:18px 20px;cursor:pointer" onclick="nav(\''+dest+'\')">'
-    +'<div class="kpi-label" style="font-size:12px">위험 알림</div>'
-    +'<div class="flex items-center gap-1.5 mt-1.5"><i class="ti '+icon+' text-'+clr+'-500" style="font-size:20px"></i><span class="font-extrabold text-'+clr+'-700" style="font-size:15px">'+title+'</span></div>'
-    +'<div class="text-[11px] text-gray-500 mt-1.5 leading-snug">'+desc+'</div></div>';
+  }).join('');
 }
 // 권역별 매출 미니 추세 — 전권역 주간 매출 추이 페이지의 데이터를 재사용, 홈에서는 요약만
 function buildRegionMiniRow_(){
@@ -1172,16 +1141,16 @@ function buildNextMilestoneCard_(){
   var t=timeline[nextIdx];
   var gap=milestoneDayGap(t);
   var regions=[{k:'kr',l:'🇰🇷 KR'},{k:'tw',l:'🇹🇼 TW'},{k:'jp',l:'🇯🇵 JP'},{k:'gl',l:'🌐 GL'}];
-  // 요약해서 "외 N건"으로 자르지 않고, 전부 줄바꿈해서 다 보여준다
+  // 요약해서 "외 N건"으로 자르지 않고 전부 줄바꿈해서 다 보여주고, 내용 없는 권역도 자리는 그대로 유지한다 (KR/TW/JP/GL 4행 항상 표시)
   var items=regions.map(function(r){
     var val=t[r.k];
-    if(!val||(Array.isArray(val)&&!val.length)) return'';
-    var text=Array.isArray(val)?val.map(function(s){return esc(s);}).join('<br>'):esc(String(val));
+    var hasVal=val&&(!Array.isArray(val)||val.length);
+    var text=!hasVal?'<span class="text-gray-300">일정 없음</span>':(Array.isArray(val)?val.map(function(s){return esc(s);}).join('<br>'):esc(String(val)));
     return'<div class="flex items-start gap-1.5 py-0.5"><span class="text-[10px] font-bold text-gray-400 w-9 shrink-0 mt-px">'+r.l+'</span><span class="text-[11px] text-gray-700 leading-relaxed">'+text+'</span></div>';
   }).join('');
   return'<div class="card cursor-pointer" onclick="nav(\'milestone\')"><div class="card-header"><span class="card-title text-sm"><i class="ti ti-flag text-blue-500"></i> 다음 마일스톤</span><span class="text-[11px] font-extrabold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">D-'+gap+'</span></div>'
     +'<div class="text-sm font-bold text-gray-900 mb-2">'+esc(t.date)+(t.version?' · '+esc(t.version):'')+'</div>'
-    +(items||'<div class="text-xs text-gray-400">세부 내용 없음</div>')+'</div>';
+    +items+'</div>';
 }
 function toggleDashMoreStats(btn){
   var box=document.getElementById('dash-more-stats');
@@ -1251,15 +1220,9 @@ function renderDashboard(){
   // 월간 목표 뱃지
   var monthTargetHtml='<span id="month-target-badge" class="text-[11px] text-gray-400 font-medium">1일 ~ '+(now.getMonth()+1)+'월 '+yesterday+'일 기준</span>';
 
-  // 나머지(부차) 지표 — 히어로 4개에 안 들어간 주간 항목 + 월간 누적 6개는 기본 접어두고 필요할 때만 펼친다
-  var restWeeklyHtml=KPI_DATA.filter(function(k){return HERO_KPI_LABELS.indexOf(k.label)===-1;}).map(function(k){
-    var isDown=k.change.indexOf('▼')!==-1||k.change.indexOf('-')!==-1;
-    return'<div class="kpi-card'+(k.alert?' ring-2 ring-red-200 bg-red-50/30':'')+'"><div class="kpi-label">'+k.label+(k.alert?' <span class="text-red-500">⚠</span>':'')+'</div><div class="kpi-value" style="color:'+k.color+'">'+k.value+'</div><span class="kpi-change '+(isDown?'change-down':'change-up')+'"><span class="text-[9px] opacity-60">전주비</span> '+k.change+'</span></div>';
-  }).join('');
-
   c.innerHTML=globalFilterBarHtml_()
     +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-flame text-emerald-500"></i> 핵심 현황</span><span class="text-[11px] text-gray-400 font-medium">'+weekLabel+' 기준</span></div>'
-    +'<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">'+buildHeroRow_()+'</div>'
+    +'<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-5">'+buildHeroRow_()+'</div>'
     +buildRegionMiniRow_()
     +'<div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">'+
     '<div class="lg:col-span-2">'+userDistSummaryHtml+'</div>'+
@@ -1271,7 +1234,6 @@ function renderDashboard(){
     '</div>'
     +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-list-details text-gray-400"></i> 전체 지표</span><button class="btn btn-sm" onclick="toggleDashMoreStats(this)"><i class="ti ti-chevron-up"></i> 접기</button></div>'
     +'<div id="dash-more-stats" class="mb-5">'
-    +'<div class="text-[11px] text-gray-400 font-semibold mb-1.5 mt-2">'+weekLabel+' 주간</div><div class="grid grid-cols-2 gap-4 mb-4">'+restWeeklyHtml+'</div>'
     +'<div class="flex items-center gap-2 flex-wrap text-[11px] text-gray-400 font-semibold mb-1.5">'+monthLabel+monthTargetHtml+'</div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">'+monthlyCards+'</div>'
     +'</div>'
     +milestoneHtml;
