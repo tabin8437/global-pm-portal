@@ -1109,19 +1109,23 @@ function buildHeroRow_(){
 function buildRiskAlertCard_(){
   var nruItem=KPI_DATA.find(function(x){return x.label==='누적 NRU';});
   var whale=window._whaleCache;
-  var riskN=0,totalN=0,pct=0;
+  var riskN=0,totalN=0,pct=0,noPayN=0,movedDropN=0,spendDropN=0;
   if(whale&&whale.ok&&whale.rows){
-    var RISK=['NO_PAY_30D','MOVED_AND_DROP','SPEND_DROP'];
     totalN=whale.rows.length;
-    riskN=whale.rows.filter(function(r){return RISK.indexOf(r.status)!==-1;}).length;
+    noPayN=whale.rows.filter(function(r){return r.status==='NO_PAY_30D';}).length;
+    movedDropN=whale.rows.filter(function(r){return r.status==='MOVED_AND_DROP';}).length;
+    spendDropN=whale.rows.filter(function(r){return r.status==='SPEND_DROP';}).length;
+    riskN=noPayN+movedDropN+spendDropN;
     pct=totalN?(riskN/totalN*100):0;
   }
+  // 그냥 "위험군 N%"만 찍으면 뭐가 위험한 건지 안 보여서, 원인(30일미결제·결제급감)까지 같이 보여준다
+  var riskBreakdown=riskN?(' — 30일미결제 '+noPayN.toLocaleString('ko-KR')+'명, 결제급감 '+(movedDropN+spendDropN).toLocaleString('ko-KR')+'명'):'';
   var openIssues=(platformData.issues||[]).filter(function(i){return i.status&&i.status.indexOf('해결')===-1;});
   var level='ok',title='이상 없음',desc='주요 지표·이슈 모두 정상 범위',dest='dashboard';
   if(nruItem&&nruItem.alert){ level='warn'; title='신규 유저 급증'; desc='NRU '+nruItem.change+' — 이벤트/마케팅 영향 확인 필요'; dest='kpi'; }
-  else if(pct>=30){ level='danger'; title='고래유저 위험군 '+pct.toFixed(0)+'%'; desc=riskN.toLocaleString('ko-KR')+'명 / 전체 '+totalN.toLocaleString('ko-KR')+'명 — 결제 이탈 위험'; dest='user-dist'; }
+  else if(pct>=30){ level='danger'; title='고래유저 위험군 '+pct.toFixed(0)+'%'; desc=riskN.toLocaleString('ko-KR')+'명 / 전체 '+totalN.toLocaleString('ko-KR')+'명'+riskBreakdown; dest='user-dist'; }
   else if(openIssues.length){ level='warn'; title=openIssues.length+'건의 운영 이슈'; desc=esc(openIssues[0].title); dest='platform'; }
-  else if(totalN){ title='위험군 '+pct.toFixed(0)+'%'; desc=riskN.toLocaleString('ko-KR')+'명 / 전체 '+totalN.toLocaleString('ko-KR')+'명'; dest='user-dist'; }
+  else if(totalN){ title='위험군 '+pct.toFixed(0)+'%'; desc=riskN.toLocaleString('ko-KR')+'명 / 전체 '+totalN.toLocaleString('ko-KR')+'명'+riskBreakdown; dest='user-dist'; }
   var clr=level==='danger'?'red':level==='warn'?'amber':'emerald';
   var icon=level==='danger'?'ti-alert-triangle':level==='warn'?'ti-alert-circle':'ti-shield-check';
   return'<div class="kpi-card" style="padding:18px 20px;cursor:pointer" onclick="nav(\''+dest+'\')">'
@@ -1168,11 +1172,12 @@ function buildNextMilestoneCard_(){
   var t=timeline[nextIdx];
   var gap=milestoneDayGap(t);
   var regions=[{k:'kr',l:'🇰🇷 KR'},{k:'tw',l:'🇹🇼 TW'},{k:'jp',l:'🇯🇵 JP'},{k:'gl',l:'🌐 GL'}];
+  // 요약해서 "외 N건"으로 자르지 않고, 전부 줄바꿈해서 다 보여준다
   var items=regions.map(function(r){
     var val=t[r.k];
     if(!val||(Array.isArray(val)&&!val.length)) return'';
-    var text=Array.isArray(val)?(esc(val[0])+(val.length>1?' 외 '+(val.length-1)+'건':'')):esc(String(val));
-    return'<div class="flex items-start gap-1.5 py-0.5"><span class="text-[10px] font-bold text-gray-400 w-9 shrink-0">'+r.l+'</span><span class="text-[11px] text-gray-700">'+text+'</span></div>';
+    var text=Array.isArray(val)?val.map(function(s){return esc(s);}).join('<br>'):esc(String(val));
+    return'<div class="flex items-start gap-1.5 py-0.5"><span class="text-[10px] font-bold text-gray-400 w-9 shrink-0 mt-px">'+r.l+'</span><span class="text-[11px] text-gray-700 leading-relaxed">'+text+'</span></div>';
   }).join('');
   return'<div class="card cursor-pointer" onclick="nav(\'milestone\')"><div class="card-header"><span class="card-title text-sm"><i class="ti ti-flag text-blue-500"></i> 다음 마일스톤</span><span class="text-[11px] font-extrabold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">D-'+gap+'</span></div>'
     +'<div class="text-sm font-bold text-gray-900 mb-2">'+esc(t.date)+(t.version?' · '+esc(t.version):'')+'</div>'
@@ -1256,14 +1261,17 @@ function renderDashboard(){
     +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-flame text-emerald-500"></i> 핵심 현황</span><span class="text-[11px] text-gray-400 font-medium">'+weekLabel+' 기준</span></div>'
     +'<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">'+buildHeroRow_()+'</div>'
     +buildRegionMiniRow_()
-    +buildNextMilestoneCard_()
-    +'<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">'+
+    +'<div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">'+
     '<div class="lg:col-span-2">'+userDistSummaryHtml+'</div>'+
-    '<div class="space-y-4">'+annualHtml+iosMini+'</div>'+
+    '<div>'+annualHtml+'</div>'+
+    '</div>'
+    +'<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">'+
+    '<div class="lg:col-span-2">'+buildNextMilestoneCard_()+'</div>'+
+    '<div>'+iosMini+'</div>'+
     '</div>'
     +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-list-details text-gray-400"></i> 전체 지표</span><button class="btn btn-sm" onclick="toggleDashMoreStats(this)"><i class="ti ti-chevron-up"></i> 접기</button></div>'
     +'<div id="dash-more-stats" class="mb-5">'
-    +'<div class="text-[11px] text-gray-400 font-semibold mb-1.5 mt-2">'+weekLabel+' 주간</div><div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4" style="max-width:600px">'+restWeeklyHtml+'</div>'
+    +'<div class="text-[11px] text-gray-400 font-semibold mb-1.5 mt-2">'+weekLabel+' 주간</div><div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">'+restWeeklyHtml+'</div>'
     +'<div class="flex items-center gap-2 flex-wrap text-[11px] text-gray-400 font-semibold mb-1.5">'+monthLabel+monthTargetHtml+'</div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">'+monthlyCards+'</div>'
     +'</div>'
     +milestoneHtml;
