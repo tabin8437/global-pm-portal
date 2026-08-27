@@ -1026,23 +1026,39 @@ function miniSparkline_(vals,color){
   var pts=vals.map(function(v,i){return X(i).toFixed(1)+','+Y(v).toFixed(1);}).join(' L');
   return'<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:28px;display:block"><path d="M'+pts+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="'+X(n-1).toFixed(1)+'" cy="'+Y(vals[n-1]).toFixed(1)+'" r="2.5" fill="'+color+'"/></svg>';
 }
-function heroSparkVals_(key){
-  var tr=(window._trendCache||[]).slice();
-  tr.sort(function(a,b){return weekKeyOf(shortPeriod(a.period))-weekKeyOf(shortPeriod(b.period));});
-  return tr.slice(-6).map(function(t){var v=Number(t[key]);return v>0?v:null;});
+// region이 'all'이면 전권역 합산 추이(_trendCache), 특정 권역이면 그 권역 주차별 추이(_trendByRegionCache)에서 뽑는다
+function heroSparkVals_(key,region,weeks){
+  var src;
+  if(region&&region!=='all'&&window._trendByRegionCache&&window._trendByRegionCache[region]){
+    src=collapseToWeekly(window._trendByRegionCache[region]);
+  } else {
+    src=(window._trendCache||[]).slice();
+    src.sort(function(a,b){return weekKeyOf(shortPeriod(a.period))-weekKeyOf(shortPeriod(b.period));});
+  }
+  return src.slice(-weeks).map(function(t){var v=Number(t[key]);return v>0?v:null;});
 }
 var HERO_KPI_LABELS=['주간 매출','일평균 DAU','일평균 PU'];
 var HERO_KPI_KEYS={'주간 매출':'revenue','일평균 DAU':'dau','일평균 PU':'pu'};
 function buildHeroRow_(){
+  var f=window._globalFilter;
+  var regionData=(f.region!=='all')?((window._regionsCache||{})[f.region]||{}).weekly:null;
   return HERO_KPI_LABELS.map(function(label){
-    var k=KPI_DATA.find(function(x){return x.label===label;});
-    if(!k) return'';
-    var isDown=k.change.indexOf('▼')!==-1||k.change.indexOf('-')!==-1;
-    var spark=miniSparkline_(heroSparkVals_(HERO_KPI_KEYS[label]),k.color);
+    var key=HERO_KPI_KEYS[label];
+    var value,change,color;
+    var base=KPI_DATA.find(function(x){return x.label===label;});
+    color=base?base.color:'#111827';
+    if(regionData&&regionData[key]!=null){
+      value=fmtNum(regionData[key]);
+      change=(regionData.change&&regionData.change[key])||'-';
+    } else if(base){
+      value=base.value; change=base.change;
+    } else { return''; }
+    var isDown=String(change).indexOf('▼')!==-1||String(change).indexOf('-')!==-1;
+    var spark=miniSparkline_(heroSparkVals_(key,f.region,f.periodWeeks),color);
     return'<div class="kpi-card" style="padding:18px 20px;cursor:pointer" onclick="nav(\'kpi\')">'
       +'<div class="kpi-label" style="font-size:12px">'+label+'</div>'
-      +'<div class="kpi-value" style="font-size:26px;color:'+k.color+';margin:4px 0 2px">'+k.value+'</div>'
-      +'<span class="kpi-change '+(isDown?'change-down':'change-up')+'" style="font-size:11px"><span class="text-[9px] opacity-60">전주비</span> '+k.change+'</span>'
+      +'<div class="kpi-value" style="font-size:26px;color:'+color+';margin:4px 0 2px">'+value+'</div>'
+      +'<span class="kpi-change '+(isDown?'change-down':'change-up')+'" style="font-size:11px"><span class="text-[9px] opacity-60">전주비</span> '+change+'</span>'
       +(spark?'<div class="mt-2">'+spark+'</div>':'')+'</div>';
   }).join('')+buildRiskAlertCard_();
 }
@@ -1073,15 +1089,17 @@ function buildRiskAlertCard_(){
 }
 // 권역별 매출 미니 추세 — 전권역 주간 매출 추이 페이지의 데이터를 재사용, 홈에서는 요약만
 function buildRegionMiniRow_(){
+  var f=window._globalFilter;
   var byR=window._trendByRegionCache;
   var hasRegion=byR&&['kr','tw','jp'].some(function(k){return(byR[k]||[]).length>0;});
   if(!hasRegion) return'';
-  var cards=TREND_REGIONS.map(function(r){
+  var regionList=(f.region!=='all')?TREND_REGIONS.filter(function(r){return r.key===f.region;}):TREND_REGIONS;
+  var cards=regionList.map(function(r){
     var arr=collapseToWeekly(byR[r.key]||[]);
     if(!arr.length) return'';
-    var last6=arr.slice(-6);
-    var vals=last6.map(function(t){var v=Number(t.revenue);return v>0?v:null;});
-    var lastT=last6[last6.length-1],prevT=last6[last6.length-2];
+    var lastN=arr.slice(-f.periodWeeks);
+    var vals=lastN.map(function(t){var v=Number(t.revenue);return v>0?v:null;});
+    var lastT=lastN[lastN.length-1],prevT=lastN[lastN.length-2];
     var lastV=lastT?Number(lastT.revenue):null,prevV=prevT?Number(prevT.revenue):null;
     var changeTxt='';
     if(lastV!=null&&prevV){var diff=(lastV-prevV)/prevV*100;changeTxt='<span class="text-[10px] font-bold '+(diff>=0?'text-red-500':'text-blue-600')+'">'+(diff>=0?'▲':'▼')+Math.abs(diff).toFixed(1)+'%</span>';}
@@ -1092,7 +1110,7 @@ function buildRegionMiniRow_(){
       +(spark?'<div class="mt-1.5">'+spark+'</div>':'')+'</div>';
   }).join('');
   if(!cards) return'';
-  return'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-map-2 text-blue-500"></i> 권역별 매출 추이 <span class="text-[11px] text-gray-400 font-medium ml-1">최근 6주</span></span></div><div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">'+cards+'</div>';
+  return'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-map-2 text-blue-500"></i> 권역별 매출 추이 <span class="text-[11px] text-gray-400 font-medium ml-1">최근 '+f.periodWeeks+'주</span></span></div><div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">'+cards+'</div>';
 }
 // 오늘의 운영 이슈 + (관리자만) 가입 승인 대기
 function buildOpsIssueCard_(){
@@ -1141,6 +1159,31 @@ function toggleDashMoreStats(btn){
   btn.innerHTML=opening?'<i class="ti ti-chevron-up"></i> 접기':'<i class="ti ti-chevron-down"></i> 전체 지표 펼치기';
 }
 
+/* ═══════════════════════════════════════════
+   전역 필터 (기간 · 권역) — 대시보드/전권역 주간 매출 추이 화면 상단에 공통으로 두고
+   선택값을 localStorage에 남겨 다음에 열 때도 유지한다.
+   플랫폼·비교기준 필터는 이를 뒷받침할 원본 데이터(플랫폼별 지표, 임의 비교기준 재계산용
+   히스토리)가 현재 없어서 만들면 실제로는 아무것도 안 걸러지는 가짜 필터가 되므로 넣지 않았다.
+   ═══════════════════════════════════════════ */
+window._globalFilter=(function(){
+  try{ var s=JSON.parse(localStorage.getItem('portal_filter')||'null'); if(s&&s.periodWeeks&&s.region) return s; }catch(e){}
+  return{periodWeeks:6,region:'all'};
+})();
+function setGlobalFilter(key,val){
+  window._globalFilter[key]=(key==='periodWeeks')?parseInt(val,10):val;
+  try{ localStorage.setItem('portal_filter',JSON.stringify(window._globalFilter)); }catch(e){}
+  renderPage(currentPage);
+}
+var GF_PERIOD_OPTS=[{v:4,l:'최근 4주'},{v:6,l:'최근 6주'},{v:8,l:'최근 8주'},{v:12,l:'최근 12주'}];
+var GF_REGION_OPTS=[{v:'all',l:'전체 권역'},{v:'kr',l:'🇰🇷 한국'},{v:'tw',l:'🇹🇼 대만'},{v:'jp',l:'🇯🇵 일본'},{v:'gl',l:'🌐 글로벌'}];
+function globalFilterBarHtml_(){
+  var f=window._globalFilter;
+  return'<div class="flex items-center gap-2 flex-wrap mb-4"><span class="text-[11px] text-gray-400 font-semibold flex items-center gap-1"><i class="ti ti-filter"></i> 필터</span>'
+    +'<select class="!w-auto !py-1 !px-2 text-[11px]" onchange="setGlobalFilter(\'periodWeeks\',this.value)">'+GF_PERIOD_OPTS.map(function(o){return'<option value="'+o.v+'"'+(f.periodWeeks===o.v?' selected':'')+'>'+o.l+'</option>';}).join('')+'</select>'
+    +'<select class="!w-auto !py-1 !px-2 text-[11px]" onchange="setGlobalFilter(\'region\',this.value)">'+GF_REGION_OPTS.map(function(o){return'<option value="'+o.v+'"'+(f.region===o.v?' selected':'')+'>'+o.l+'</option>';}).join('')+'</select>'
+    +(f.region!=='all'?'<span class="text-[10px] text-gray-400">홈 화면의 핵심 카드가 선택한 권역 기준으로 바뀝니다</span>':'')+'</div>';
+}
+
 function renderDashboard(){
   var c=document.getElementById('content-area');
   // 월간 누적 — 첫째주 토요일 이전(월~금)은 전월 누적 표시
@@ -1183,7 +1226,8 @@ function renderDashboard(){
     return'<div class="kpi-card'+(k.alert?' ring-2 ring-red-200 bg-red-50/30':'')+'"><div class="kpi-label">'+k.label+(k.alert?' <span class="text-red-500">⚠</span>':'')+'</div><div class="kpi-value" style="color:'+k.color+'">'+k.value+'</div><span class="kpi-change '+(isDown?'change-down':'change-up')+'"><span class="text-[9px] opacity-60">전주비</span> '+k.change+'</span></div>';
   }).join('');
 
-  c.innerHTML='<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-flame text-emerald-500"></i> 핵심 현황</span><span class="text-[11px] text-gray-400 font-medium">'+weekLabel+' 기준</span></div>'
+  c.innerHTML=globalFilterBarHtml_()
+    +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-flame text-emerald-500"></i> 핵심 현황</span><span class="text-[11px] text-gray-400 font-medium">'+weekLabel+' 기준</span></div>'
     +'<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">'+buildHeroRow_()+'</div>'
     +buildRegionMiniRow_()
     +'<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">'+buildOpsIssueCard_()+buildNextMilestoneCard_()+'</div>'
@@ -1825,19 +1869,21 @@ function renderTrendCharts(){
     if(!tr.length) return '';
     byR={gl:tr};
   }
+  // 전역 필터(권역)가 걸려 있으면 해당 권역만 그린다
+  var regions=(window._globalFilter&&window._globalFilter.region!=='all')?TREND_REGIONS.filter(function(r){return r.key===window._globalFilter.region;}):TREND_REGIONS;
   // 며칠 간격 스냅샷을 주 단위로 접어 일별처럼 보이는 문제를 해결
   var byRWeekly={};
-  TREND_REGIONS.forEach(function(r){ if(byR[r.key]) byRWeekly[r.key]=collapseToWeekly(byR[r.key]); });
+  regions.forEach(function(r){ if(byR[r.key]) byRWeekly[r.key]=collapseToWeekly(byR[r.key]); });
   byR=byRWeekly;
 
   // x축 = 전 권역에 등장하는 주차의 합집합(중복 제거 후 시간순). 권역마다 빠진 주차는 null로 둔다.
   var labelSet={};
-  TREND_REGIONS.forEach(function(r){
+  regions.forEach(function(r){
     (byR[r.key]||[]).forEach(function(t){var l=shortPeriod(t.period);if(l)labelSet[l]=1;});
   });
   var labels=Object.keys(labelSet).sort(function(a,b){return weekKeyOf(a)-weekKeyOf(b);});
-  // 최근 한 달(약 5주)치만 보여준다 — 오래된 스냅샷 라벨이 섞여 그래프가 짧아 보이는 것 방지
-  var cutoff=Date.now()-35*86400000;
+  // 전역 필터(기간)만큼만 보여준다 — 오래된 스냅샷 라벨이 섞여 그래프가 짧아 보이는 것 방지
+  var cutoff=Date.now()-(window._globalFilter?window._globalFilter.periodWeeks:6)*7*86400000;
   var recent=labels.filter(function(l){var t=weekKeyOf(l);return t&&t>=cutoff;});
   if(recent.length>=2) labels=recent;
   if(labels.length<2) return '';
@@ -1851,7 +1897,7 @@ function renderTrendCharts(){
 
   var cards=metrics.map(function(m){
     var seriesList=[],legend='';
-    TREND_REGIONS.forEach(function(r){
+    regions.forEach(function(r){
       var arr=byR[r.key]||[];
       if(!arr.length) return;
       var map={};   // 같은 주차가 여러 번 오면 마지막 값이 이김
@@ -2203,11 +2249,15 @@ function renderKpiPage(){
     }
     annualHtml='<div class="card"><div class="font-bold text-sm text-gray-800 mb-3"><i class="ti ti-coin text-amber-500"></i> 연간 매출 현황</div>'+qRows+totRow+'</div>';
   }
-  var cardsHtml=defs.map(rCard).join('');
+  // 전역 필터(권역)가 특정 권역으로 걸려 있으면 그 권역 카드만 보여준다
+  var gf=window._globalFilter;
+  var visibleDefs=(gf.region!=='all')?defs.filter(function(d){return d.key===gf.region;}):defs;
+  var cardsHtml=visibleDefs.map(rCard).join('');
   // 지표 분석 (마이비서 연동) — 대시보드에서 이 페이지 맨 아래로 옮김
   var analysisContent=window._analysisCache||'';
   var analysisHtml='<div class="card mt-5"><div class="card-header"><span class="card-title"><i class="ti ti-chart-dots text-purple-500"></i> 지표 분석</span><span class="text-[10px] text-gray-400 font-medium" id="analysis-date"></span></div><div id="analysis-body" class="text-[13px] leading-relaxed text-gray-600">'+(analysisContent||'<div class="bg-slate-50 border border-slate-200 p-5 rounded-xl text-gray-400 text-center">마이비서 분석 데이터를 불러오는 중...</div>')+'</div></div>';
   c.innerHTML='<div class="card-header" style="padding:0;margin-bottom:12px"><span class="card-title"><i class="ti ti-trending-up text-emerald-500"></i> 전권역 주간 매출 추이</span><a href="https://drive.google.com/drive/folders/1lk_9pMhvy343Wx7J2sHbGIYRo2c-x7vQ" target="_blank" class="btn btn-sm"><i class="ti ti-folder"></i> 보고 폴더</a></div>'+
+    globalFilterBarHtml_()+
     '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">'+cardsHtml+'</div>'+
     renderTrendCharts()+
     renderMonthlyCharts()+
