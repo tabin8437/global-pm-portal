@@ -71,7 +71,7 @@ body.is-admin .admin-only{display:flex}
 .topbar .clock-bar-wrap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
 .breadcrumb{font-size:12px;color:var(--text-tertiary);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .breadcrumb b{color:var(--text-primary);font-weight:700}
-.clock-bar{align-items:center;gap:4px;font-size:11px;font-weight:600;background:#fff;border:1px solid var(--border);padding:8px 14px;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,.1)}
+.clock-bar{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;background:var(--bg-secondary);border:1px solid var(--border);padding:6px 14px;border-radius:12px}
 .clock-bar .sep{width:1px;height:14px;background:var(--border);margin:0 6px}
 .content{flex:1;overflow-y:auto;padding:24px;min-height:0}
 .page{display:none}
@@ -268,8 +268,7 @@ table tbody tr:hover{background:#f9fafb}
       <div class="breadcrumb">해외사업PM 포탈 › <b id="bc-text">종합 대시보드</b> <span style="font-size:10px;color:#cbd5e1;font-weight:400;margin-left:6px">made by 조현영 yeriel.jo</span></div>
       <button class="btn btn-sm" onclick="openSearch()" title="검색 (Ctrl+K)" style="margin-left:10px;color:#9ca3af"><i class="ti ti-search"></i> 검색 <span style="font-size:10px;color:#b0b6c2;margin-left:4px;border:1px solid #e5e7eb;border-radius:4px;padding:0 4px">Ctrl K</span></button>
       <div class="clock-bar-wrap">
-        <button class="btn btn-sm" onclick="toggleWorldClock(event)" title="세계 시각 펼치기"><i class="ti ti-world"></i> 세계 시각</button>
-        <div id="world-clock-panel" class="clock-bar" style="display:none;position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);z-index:60">
+        <div class="clock-bar">
           🇰🇷 <b>KR</b> <span id="clock-kr">--:--:--</span>
           <div class="sep"></div>🇹🇼 <b>TW</b> <span id="clock-tw">--:--</span>
           <div class="sep"></div>🇹🇭 <b>TH</b> <span id="clock-th">--:--</span>
@@ -701,18 +700,6 @@ function toggleMobileMenu(){
 function closeMobileMenu(){
   document.getElementById('mobile-menu').classList.remove('open');
 }
-// 7단계: 상단에 늘 떠 있던 5개 세계 시계를 눌러야 보이는 팝오버로 정리 (헤더 혼잡도 완화)
-function toggleWorldClock(e){
-  if(e) e.stopPropagation();
-  var el=document.getElementById('world-clock-panel');
-  if(!el) return;
-  el.style.display=(el.style.display==='none')?'flex':'none';
-}
-document.addEventListener('click',function(e){
-  var panel=document.getElementById('world-clock-panel');
-  if(!panel||panel.style.display==='none') return;
-  if(!panel.contains(e.target)) panel.style.display='none';
-});
 function buildMobileNav(){
   var html='';
   SIDEBAR_MENU.forEach(function(item){
