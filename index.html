@@ -1261,8 +1261,8 @@ function renderDashboard(){
     '<div class="lg:col-span-2">'+userDistSummaryHtml+'</div>'+
     '<div class="space-y-4">'+annualHtml+iosMini+'</div>'+
     '</div>'
-    +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-list-details text-gray-400"></i> 전체 지표</span><button class="btn btn-sm" onclick="toggleDashMoreStats(this)"><i class="ti ti-chevron-down"></i> 전체 지표 펼치기</button></div>'
-    +'<div id="dash-more-stats" style="display:none" class="mb-5">'
+    +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-list-details text-gray-400"></i> 전체 지표</span><button class="btn btn-sm" onclick="toggleDashMoreStats(this)"><i class="ti ti-chevron-up"></i> 접기</button></div>'
+    +'<div id="dash-more-stats" class="mb-5">'
     +'<div class="text-[11px] text-gray-400 font-semibold mb-1.5 mt-2">'+weekLabel+' 주간</div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">'+restWeeklyHtml+'</div>'
     +'<div class="flex items-center gap-2 flex-wrap text-[11px] text-gray-400 font-semibold mb-1.5">'+monthLabel+monthTargetHtml+'</div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">'+monthlyCards+'</div>'
     +'</div>'
