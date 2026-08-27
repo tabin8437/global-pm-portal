@@ -2603,12 +2603,22 @@ function renderUserDistSummary(){
     if(puSet&&puSet.weekly&&puSet.weekly.length){
       var pr=puSet.weekly, pLast=pr[pr.length-1], pPrev=pr[pr.length-2];
       var pCur=sumVals(pLast), pPrevSum=sumVals(pPrev);
-      // 결제금액 구간별로 묶어서 상위(고액) 구간을 보여준다 — 최다 구간(=거의 항상 최하단)은
-      // "대부분 소액 결제"라는 당연한 얘기라 무의미해서, 사람이 있는 구간 중 가장 위(고액)를 찾는다
-      var pGrouped=udGroupPuValues_(puSet.buckets,pLast.values)||[];
-      var pTopIdx=pGrouped.length-1; while(pTopIdx>0&&!pGrouped[pTopIdx]) pTopIdx--;
-      var pSub=pGrouped.length?'최상위 구간 '+esc(UD_PU_GROUPS[pTopIdx].label)+' · '+(pGrouped[pTopIdx]||0).toLocaleString('ko-KR')+'명':'';
-      rowsHtml+=row('ti-coin','violet','결제유저(PU)', pCur.toLocaleString('ko-KR')+'명'+changeBadge(pCur,pPrevSum), pSub, 'pu');
+      // 결제금액 1~7그룹별 인원수 + 전주 대비 증감을 그대로 나열한다 (누적/최근3개월 같은 기간비교 아님, 순수 주간)
+      var pGroupedCur=udGroupPuValues_(puSet.buckets,pLast.values)||[];
+      var pGroupedPrev=pPrev?(udGroupPuValues_(puSet.buckets,pPrev.values)||[]):[];
+      var pGroupRows=UD_PU_GROUPS.map(function(g,i){
+        var cur=pGroupedCur[i]||0, prev=pGroupedPrev[i]||0;
+        var diffHtml='';
+        if(prev){
+          var diff=(cur-prev)/prev*100;
+          diffHtml=' <span class="text-[9px] font-bold '+(diff>=0?'text-red-500':'text-blue-600')+'">'+(diff>=0?'▲':'▼')+Math.abs(diff).toFixed(1)+'%</span>';
+        }
+        return'<div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">'+(i+1)+'. '+esc(g.label)+'</span><span class="text-[11px] font-bold text-gray-800">'+cur.toLocaleString('ko-KR')+'명'+diffHtml+'</span></div>';
+      }).join('');
+      rowsHtml+='<div class="py-2 border-b border-gray-100 last:border-none cursor-pointer hover:bg-gray-50 rounded-lg" style="margin:0 -6px;padding-left:6px;padding-right:6px" onclick="udSummaryGoto(\'pu\')">'
+        +'<div class="flex items-center justify-between mb-1"><span class="text-xs text-gray-600 flex items-center gap-1.5"><i class="ti ti-coin text-violet-500"></i>결제유저(PU)</span>'
+        +'<span class="text-xs font-bold text-gray-900 flex items-center gap-1">'+pCur.toLocaleString('ko-KR')+'명'+changeBadge(pCur,pPrevSum)+' <i class="ti ti-chevron-right text-gray-300"></i></span></div>'
+        +pGroupRows+'</div>';
     }
     var powerSet=d.sets.power;
     if(powerSet&&powerSet.weekly&&powerSet.weekly.length){
@@ -2625,20 +2635,28 @@ function renderUserDistSummary(){
     var segSet=d.sets.segment;
     if(segSet&&segSet.weekly&&segSet.weekly.length){
       var sr=segSet.weekly, sLast=sr[sr.length-1];
+      // 지역(아시아/북미유럽 등) 구분 없이 "전체" 기준의 누적/최근3개월만 — 상세 페이지 카드와 동일하게
       var coreCumIdx=-1, core3mIdx=-1;
       segSet.buckets.forEach(function(b,i){
         var s=String(b);
-        if(/둘다/.test(s)){ if(/^누적/.test(s)) coreCumIdx=i; else if(/^3M/i.test(s)) core3mIdx=i; }
+        if(/둘다/.test(s)&&/전체/.test(s)){ if(/^누적/.test(s)) coreCumIdx=i; else if(/^3M/i.test(s)) core3mIdx=i; }
       });
       if(coreCumIdx===-1&&core3mIdx===-1){
-        segSet.buckets.forEach(function(b,i){ if(coreCumIdx===-1&&/둘다/.test(String(b))) coreCumIdx=i; });
+        segSet.buckets.forEach(function(b,i){
+          var s=String(b);
+          if(/둘다/.test(s)){ if(/^누적/.test(s)) coreCumIdx=i; else if(/^3M/i.test(s)) core3mIdx=i; }
+        });
       }
-      var segLabelBase=esc(udSegmentRelabel_(segSet.buckets[coreCumIdx!==-1?coreCumIdx:core3mIdx]).replace(/\(.*\)$/,''));
-      var segSubParts=[];
-      if(coreCumIdx!==-1) segSubParts.push('누적 '+(sLast.values[coreCumIdx]||0).toLocaleString('ko-KR')+'명');
-      if(core3mIdx!==-1) segSubParts.push('최근3개월 '+(sLast.values[core3mIdx]||0).toLocaleString('ko-KR')+'명');
-      var segMainIdx=coreCumIdx!==-1?coreCumIdx:core3mIdx;
-      rowsHtml+=row('ti-users-group','orange','CP&PAY', (sLast.values[segMainIdx]||0).toLocaleString('ko-KR')+'명', segLabelBase+(segSubParts.length?' · '+segSubParts.join(' / '):''), 'segment');
+      if(coreCumIdx!==-1||core3mIdx!==-1){
+        var segLabelBase=esc(udSegmentRelabel_(segSet.buckets[coreCumIdx!==-1?coreCumIdx:core3mIdx]).replace(/\(.*\)$/,''));
+        var segLines='';
+        if(coreCumIdx!==-1) segLines+='<div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">누적</span><span class="text-[11px] font-bold text-gray-800">'+(sLast.values[coreCumIdx]||0).toLocaleString('ko-KR')+'명</span></div>';
+        if(core3mIdx!==-1) segLines+='<div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">최근3개월</span><span class="text-[11px] font-bold text-gray-800">'+(sLast.values[core3mIdx]||0).toLocaleString('ko-KR')+'명</span></div>';
+        rowsHtml+='<div class="py-2 border-b border-gray-100 last:border-none cursor-pointer hover:bg-gray-50 rounded-lg" style="margin:0 -6px;padding-left:6px;padding-right:6px" onclick="udSummaryGoto(\'segment\')">'
+          +'<div class="flex items-center justify-between mb-1"><span class="text-xs text-gray-600 flex items-center gap-1.5"><i class="ti ti-users-group text-orange-500"></i>CP&PAY</span><i class="ti ti-chevron-right text-gray-300"></i></div>'
+          +'<div class="text-[10px] font-bold text-gray-500 mb-0.5">'+segLabelBase+'</div>'
+          +segLines+'</div>';
+      }
     }
     if(!rowsHtml) rowsHtml='<div class="text-center py-6 text-xs text-gray-400">표시할 데이터가 없습니다</div>';
   }
