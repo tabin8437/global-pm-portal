@@ -1353,11 +1353,103 @@ function milestoneDayGap(t){
   var today=new Date();today.setHours(0,0,0,0);
   return Math.round((d-today)/86400000);
 }
+/* ── 4단계: 통합 마일스톤 가로 타임라인 (가로=날짜, 세로=권역, 다이아몬드=마일스톤) ──
+   원본 데이터가 날짜 하나짜리 이벤트 목록이라(시작~종료 기간이 없음) "운영 기간 막대"나
+   "지연 배지"는 뒷받침할 데이터가 없어 넣지 않았다 — 있는 데이터로 정직하게 그린다. */
+var MS_REGION_ROWS=[{k:'kr',l:'🇰🇷 KR',clr:'#ef4444'},{k:'tw',l:'🇹🇼 TW',clr:'#3b82f6'},{k:'jp',l:'🇯🇵 JP',clr:'#10b981'},{k:'gl',l:'🌐 GL',clr:'#a855f7'}];
+function msTimelineSetRange(r){ window._msTimelineRange=r; renderMilestonePage(); }
+function msTimelineSelect(idx){
+  window._msTimelineSelectedIdx=idx;
+  var panel=document.getElementById('ms-detail-panel');
+  if(panel) panel.outerHTML=msDetailPanelHtml_(window._milestoneTimeline||[],idx);
+  var chartWrap=document.getElementById('ms-timeline-chart');
+  if(chartWrap) chartWrap.innerHTML=renderMilestoneTimelineChart_(window._milestoneTimeline||[]);
+}
+function msDetailPanelHtml_(timeline,idx){
+  var t=timeline[idx];
+  if(!t) return'<div id="ms-detail-panel" class="card" style="width:280px;flex-shrink:0"><div class="text-xs text-gray-400 text-center py-10">마일스톤을 선택하세요</div></div>';
+  var gap=milestoneDayGap(t);
+  var ddayHtml=gap===0?'<span class="text-[11px] font-extrabold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">오늘</span>'
+    :gap>0?'<span class="text-[11px] font-extrabold text-indigo-600 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md">D-'+gap+'</span>'
+    :'<span class="text-[11px] font-bold text-gray-400 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-md">'+Math.abs(gap)+'일 전</span>';
+  var body=MS_REGION_ROWS.map(function(r){
+    var arr=t[r.k];
+    if(!arr||!arr.length) return'';
+    return'<div class="mb-2.5"><div class="text-[10px] font-bold mb-1" style="color:'+r.clr+'">'+r.l+'</div><ul class="text-xs text-gray-700 leading-relaxed list-disc list-inside space-y-0.5">'+arr.map(function(s){return'<li>'+esc(s)+'</li>';}).join('')+'</ul></div>';
+  }).join('');
+  return'<div id="ms-detail-panel" class="card" style="width:280px;flex-shrink:0"><div class="flex items-center justify-between mb-1"><span class="font-bold text-sm text-gray-900">'+esc(t.date)+'</span>'+ddayHtml+'</div>'
+    +(t.version?'<div class="text-[11px] text-gray-400 mb-3">'+esc(t.version)+'</div>':'<div class="mb-3"></div>')
+    +(body||'<div class="text-xs text-gray-400">세부 내용 없음</div>')+'</div>';
+}
+function renderMilestoneTimelineChart_(timeline){
+  if(!timeline.length) return'<div class="text-xs text-gray-400 text-center py-10">타임라인 데이터가 없습니다</div>';
+  var dated=timeline.map(function(t,i){return{t:t,i:i,d:milestoneDate(t)};}).filter(function(x){return x.d;});
+  if(!dated.length) return'<div class="text-xs text-gray-400 text-center py-10">날짜를 읽을 수 없습니다</div>';
+  var today=new Date();today.setHours(0,0,0,0);
+  var range=window._msTimelineRange||'3m';
+  var rangeStart,rangeEnd;
+  if(range==='all'){
+    rangeStart=new Date(Math.min.apply(null,dated.map(function(x){return x.d.getTime();})));
+    rangeEnd=new Date(Math.max.apply(null,dated.map(function(x){return x.d.getTime();})));
+  } else {
+    var months=range==='6m'?6:3;
+    rangeStart=new Date(today);rangeStart.setMonth(rangeStart.getMonth()-1);
+    rangeEnd=new Date(today);rangeEnd.setMonth(rangeEnd.getMonth()+months);
+  }
+  var visible=dated.filter(function(x){return x.d>=rangeStart&&x.d<=rangeEnd;});
+  if(!visible.length) visible=dated;
+
+  var rowH=36,PL=68,PR=20,PT=20;
+  var W=Math.max(700,visible.length*36);
+  var chartH=MS_REGION_ROWS.length*rowH;
+  var spanMs=(rangeEnd.getTime()-rangeStart.getTime())||1;
+  function X(d){ return PL+(W-PL-PR)*((d.getTime()-rangeStart.getTime())/spanMs); }
+
+  var monthTicks='',cur=new Date(rangeStart.getFullYear(),rangeStart.getMonth(),1);
+  var guard=0;
+  while(cur<=rangeEnd&&guard<36){
+    if(cur>=rangeStart){
+      var x=X(cur);
+      monthTicks+='<line x1="'+x.toFixed(1)+'" y1="'+PT+'" x2="'+x.toFixed(1)+'" y2="'+(PT+chartH)+'" stroke="#f1f5f9" stroke-width="1"/>'
+        +'<text x="'+x.toFixed(1)+'" y="'+(PT-6)+'" font-size="10" fill="#9ca3af">'+(cur.getMonth()+1)+'월</text>';
+    }
+    cur.setMonth(cur.getMonth()+1); guard++;
+  }
+  var rowLines=MS_REGION_ROWS.map(function(r,ri){
+    var y=PT+ri*rowH+rowH/2;
+    return'<text x="4" y="'+(y+4).toFixed(1)+'" font-size="11" font-weight="700" fill="'+r.clr+'">'+r.l+'</text>'
+      +'<line x1="'+PL+'" y1="'+(PT+ri*rowH+rowH)+'" x2="'+(W-PR)+'" y2="'+(PT+ri*rowH+rowH)+'" stroke="#f3f4f6" stroke-width="1"/>';
+  }).join('');
+  var todayLine='';
+  if(today>=rangeStart&&today<=rangeEnd){
+    var tx=X(today);
+    todayLine='<line x1="'+tx.toFixed(1)+'" y1="'+PT+'" x2="'+tx.toFixed(1)+'" y2="'+(PT+chartH)+'" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,3"/>'
+      +'<text x="'+tx.toFixed(1)+'" y="'+(PT+chartH+14)+'" font-size="9" fill="#f59e0b" font-weight="700" text-anchor="middle">오늘</text>';
+  }
+  var markers='';
+  visible.forEach(function(x){
+    var t=x.t,dx=X(x.d);
+    MS_REGION_ROWS.forEach(function(r,ri){
+      var arr=t[r.k];
+      if(!arr||!arr.length) return;
+      var y=PT+ri*rowH+rowH/2;
+      var isSel=window._msTimelineSelectedIdx===x.i;
+      var size=isSel?7:5.5;
+      markers+='<rect x="'+(dx-size).toFixed(1)+'" y="'+(y-size).toFixed(1)+'" width="'+(size*2).toFixed(1)+'" height="'+(size*2).toFixed(1)+'" fill="'+r.clr+'" stroke="'+(isSel?'#111827':'#fff')+'" stroke-width="'+(isSel?2:1.5)+'" transform="rotate(45 '+dx.toFixed(1)+' '+y.toFixed(1)+')" style="cursor:pointer" onclick="msTimelineSelect('+x.i+')"><title>'+esc(t.date+' · '+r.l+' · '+arr.join(', '))+'</title></rect>';
+    });
+  });
+  return'<div style="overflow-x-auto"><svg viewBox="0 0 '+W+' '+(PT+chartH+22)+'" style="width:100%;min-width:'+W+'px;height:auto;display:block">'+monthTicks+rowLines+todayLine+markers+'</svg></div>';
+}
+
 function renderMilestonePage(){
   var c=document.getElementById('content-area');
   var timeline=window._milestoneTimeline||[];
   // 시트 하이라이트가 안 옮겨졌어도 오늘 기준으로 "현재"를 자동 판정
   var curIdx=milestoneCurrentIdx(timeline), nextIdx=milestoneNextIdx(timeline);
+  if(window._msTimelineSelectedIdx==null||window._msTimelineSelectedIdx>=timeline.length){
+    window._msTimelineSelectedIdx=(nextIdx!==-1?nextIdx:curIdx);
+  }
+  window._msTimelineRange=window._msTimelineRange||'3m';
   timeline.forEach(function(t,i){
     t.isCurrent=(i===curIdx);
     t.isNext=(i===nextIdx);
@@ -1396,7 +1488,17 @@ function renderMilestonePage(){
       +'</tr>';
   }).join(''):'<tr><td colspan="5" class="px-3 py-10 text-center text-gray-400 text-xs">타임라인 데이터를 불러오는 중...</td></tr>';
 
-  c.innerHTML='<div class="card" style="padding:0;overflow:hidden;max-width:1320px;margin:0 auto">'
+  var rangeBtns=[{v:'3m',l:'최근 3개월'},{v:'6m',l:'최근 6개월'},{v:'all',l:'전체'}].map(function(o){
+    return'<button class="btn btn-sm'+(window._msTimelineRange===o.v?' btn-primary':'')+'" onclick="msTimelineSetRange(\''+o.v+'\')">'+o.l+'</button>';
+  }).join('');
+  var timelineChartHtml='<div class="card" style="max-width:1320px;margin:0 auto 16px">'
+    +'<div class="card-header"><span class="card-title text-sm"><i class="ti ti-timeline-event text-blue-500"></i> 타임라인 보기</span><div class="flex gap-1.5">'+rangeBtns+'</div></div>'
+    +'<div class="flex gap-4 items-start flex-wrap">'
+    +'<div id="ms-timeline-chart" style="flex:1;min-width:320px">'+renderMilestoneTimelineChart_(timeline)+'</div>'
+    +msDetailPanelHtml_(timeline,window._msTimelineSelectedIdx)
+    +'</div></div>';
+  c.innerHTML=timelineChartHtml
+    +'<div class="card" style="padding:0;overflow:hidden;max-width:1320px;margin:0 auto">'
     +'<div class="card-header" style="padding:14px 16px"><span class="card-title"><i class="ti ti-route text-blue-500"></i> 통합 마일스톤 타임라인</span><a href="'+MILESTONE_SHEET_EDIT_URL+'" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-pencil"></i> 원본 시트 편집</a></div>'
     +'<style>.milestone-row{border-bottom:1px solid #f3f4f6}.milestone-row:hover{background:#fafbff}.milestone-row.is-current{background:#fffbeb}.milestone-row.is-current:hover{background:#fef3c7}.milestone-row.is-next{background:#eef2ff}.milestone-row.is-next:hover{background:#e0e7ff}</style>'
     +'<div style="overflow-x:auto"><table class="text-xs border-collapse" style="width:100%;table-layout:fixed">'
