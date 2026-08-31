@@ -1122,6 +1122,31 @@ function buildHeroRow_(){
   }).join('');
 }
 // 권역별 매출 미니 추세 — 전권역 주간 매출 추이 페이지의 데이터를 재사용, 홈에서는 요약만
+// 위 주간 미니 추세와 같은 모양으로, 월간 버전을 짝으로 그 아래에 둔다 (데이터는 월별 누적매출 추이와 동일 소스)
+function buildRegionMiniRowMonthly_(){
+  var f=window._globalFilter;
+  var byR=window._monthTrendCache;
+  var hasRegion=byR&&['kr','tw','jp'].some(function(k){return(byR[k]||[]).length>0;});
+  if(!hasRegion) return'';
+  var regionList=(f.region!=='all')?TREND_REGIONS.filter(function(r){return r.key===f.region;}):TREND_REGIONS;
+  var cards=regionList.map(function(r){
+    var arr=(byR[r.key]||[]).slice().sort(function(a,b){return String(a.period).localeCompare(String(b.period));});
+    if(!arr.length) return'';
+    var lastN=arr.slice(-6);
+    var vals=lastN.map(function(t){var v=Number(t.revenue);return v>0?v:null;});
+    var lastT=lastN[lastN.length-1],prevT=lastN[lastN.length-2];
+    var lastV=lastT?Number(lastT.revenue):null,prevV=prevT?Number(prevT.revenue):null;
+    var changeTxt='';
+    if(lastV!=null&&prevV){var diff=(lastV-prevV)/prevV*100;changeTxt='<span class="text-[10px] font-bold '+(diff>=0?'text-red-500':'text-blue-600')+'">'+(diff>=0?'▲':'▼')+Math.abs(diff).toFixed(1)+'%</span>';}
+    var spark=miniSparkline_(vals,r.color);
+    return'<div class="kpi-card" style="padding:14px 16px;cursor:pointer" onclick="nav(\'kpi\')">'
+      +'<div class="kpi-label" style="font-size:11px">'+r.label+' 매출</div>'
+      +'<div class="flex items-center gap-1.5 mt-0.5"><span class="font-extrabold" style="font-size:17px;color:'+r.color+'">'+(lastV!=null?fmtNum(lastV):'-')+'</span>'+changeTxt+'</div>'
+      +(spark?'<div class="mt-1.5">'+spark+'</div>':'')+'</div>';
+  }).join('');
+  if(!cards) return'';
+  return'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-calendar-dollar text-amber-500"></i> 권역별 매출 추이 <span class="text-[11px] text-gray-400 font-medium ml-1">(월간, 최근 6개월)</span></span></div><div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">'+cards+'</div>';
+}
 function buildRegionMiniRow_(){
   var f=window._globalFilter;
   var byR=window._trendByRegionCache;
@@ -1267,6 +1292,7 @@ function renderDashboard(){
     +'<div class="flex items-center gap-2 flex-wrap text-[11px] text-gray-400 font-semibold mb-1.5">'+monthLabel+monthTargetHtml+'</div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">'+monthlyCards+'</div>'
     +'</div>'
     +buildRegionMiniRow_()
+    +buildRegionMiniRowMonthly_()
     +'<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">'+
     '<div class="lg:col-span-2">'+userDistSummaryHtml+'</div>'+
     '<div>'+annualHtml+buildNextMilestoneCard_()+iosMini+'</div>'+
