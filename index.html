@@ -1228,7 +1228,18 @@ function renderDashboard(){
   var iosMini='<div class="card cursor-pointer hover:shadow-md transition-shadow" onclick="nav(\'platform\')"><div class="card-header"><span class="card-title">🍎 App Store 심의 요약</span><i class="ti ti-chevron-right text-gray-400"></i></div><div class="grid grid-cols-3 gap-2 text-center text-xs"><div class="bg-emerald-50 p-2.5 rounded-lg border border-emerald-100"><span class="block text-gray-400 text-[10px]">🌐 글로벌</span><span class="block text-emerald-700 font-bold my-0.5" id="mini-v-global">1.9.2</span><span class="text-[9px] text-emerald-600 font-bold">✅ 통과</span></div><div class="bg-emerald-50 p-2.5 rounded-lg border border-emerald-100"><span class="block text-gray-400 text-[10px]">🇹🇼 대만</span><span class="block text-emerald-700 font-bold my-0.5" id="mini-v-tw">1.47.1</span><span class="text-[9px] text-emerald-600 font-bold">✅ 통과</span></div><div class="bg-emerald-50 p-2.5 rounded-lg border border-emerald-100"><span class="block text-gray-400 text-[10px]">🇯🇵 일본</span><span class="block text-emerald-700 font-bold my-0.5" id="mini-v-jp">1.10.9</span><span class="text-[9px] text-emerald-600 font-bold">✅ 통과</span></div></div></div>';
 
   var weekNum=Math.ceil(now.getDate()/7);
-  var weekLabel=now.getFullYear()+'년 '+(now.getMonth()+1)+'월 '+weekNum+'주차';
+  // "N주차"만으로는 정확히 언제부터 언제까지인지 안 보여서 실제 날짜 범위를 같이 붙인다.
+  // 실데이터(주차별 추이의 최신 기간)가 있으면 그걸 쓰고, 아직 안 불러왔으면 이번 주 월~일로 대체 계산한다.
+  var trendLastRow=(window._trendCache||[]).slice(-1)[0];
+  var weekRangeLabel;
+  if(trendLastRow&&trendLastRow.period){
+    weekRangeLabel=String(trendLastRow.period);
+  } else {
+    var mondayD=new Date(now); mondayD.setDate(now.getDate()-((now.getDay()+6)%7));
+    var sundayD=new Date(mondayD); sundayD.setDate(mondayD.getDate()+6);
+    weekRangeLabel=(mondayD.getMonth()+1)+'/'+mondayD.getDate()+'~'+(sundayD.getMonth()+1)+'/'+sundayD.getDate();
+  }
+  var weekLabel=now.getFullYear()+'년 '+(now.getMonth()+1)+'월 '+weekNum+'주차 <span style="font-weight:500;color:#94a3b8">('+esc(weekRangeLabel)+')</span>';
   var yesterday=now.getDate()-1;if(yesterday<1)yesterday=1;
 
   // 연간매출 위젯
