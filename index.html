@@ -1153,8 +1153,18 @@ function buildRegionMiniRow_(){
   var hasRegion=byR&&['kr','tw','jp'].some(function(k){return(byR[k]||[]).length>0;});
   if(!hasRegion) return'';
   var regionList=(f.region!=='all')?TREND_REGIONS.filter(function(r){return r.key===f.region;}):TREND_REGIONS;
-  // 롤링 N주 대신 "이번 달" 안에 속한 주차만 잘라서 보여준다 (월 단위로 딱 끊어서)
-  var now=new Date(),curY=now.getFullYear(),curM=now.getMonth();
+  // 롤링 N주 대신 "이번 달" 안에 속한 주차만 잘라서 보여준다 (월 단위로 딱 끊어서).
+  // "이번 달"의 기준은 오늘 날짜가 아니라 실제 최신 주간 데이터가 속한 달로 잡는다 — 오늘
+  // 날짜로 잡으면 월초에 아직 이번 달 주간 데이터가 없을 때 헤더는 "9월"인데 카드 내용은
+  // 지난달 데이터가 그대로 나오는 불일치가 생긴다(주간 지표 현황 헤더와 같은 기준으로 통일).
+  var trendLastRow_=(window._trendCache||[]).slice(-1)[0];
+  var refD_=null;
+  if(trendLastRow_&&trendLastRow_.period){
+    var refTs_=weekKeyOf(shortPeriod(trendLastRow_.period));
+    if(refTs_) refD_=new Date(refTs_);
+  }
+  if(!refD_) refD_=new Date();
+  var curY=refD_.getFullYear(),curM=refD_.getMonth();
   var cards=regionList.map(function(r){
     var arr=collapseToWeekly(byR[r.key]||[]);
     if(!arr.length) return'';
@@ -1295,8 +1305,9 @@ function renderDashboard(){
   // 연간매출 위젯
   var annualHtml='<div id="annual-revenue-widget"></div>';
 
-  // 월간 목표 뱃지
-  var monthTargetHtml='<span id="month-target-badge" class="text-[11px] text-gray-400 font-medium">1일 ~ '+(now.getMonth()+1)+'월 '+yesterday+'일 기준</span>';
+  // 월간 목표 뱃지 — 실제 데이터가 로드되기 전 잠깐 보이는 자리표시자라도 monthLabel과
+  // 같은 dispMonth 기준으로 맞춰야 "8월 누적"인데 "9월 1일 기준"처럼 어긋나 보이지 않는다.
+  var monthTargetHtml='<span id="month-target-badge" class="text-[11px] text-gray-400 font-medium">'+(showPrevMonth?dispMonth+'월 확정 기준':'1일 ~ '+dispMonth+'월 '+yesterday+'일 기준')+'</span>';
 
   c.innerHTML=globalFilterBarHtml_()
     +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-flame text-emerald-500"></i> 주간 지표 현황</span><span class="text-[11px] text-gray-400 font-medium">'+weekLabel+' 기준</span></div>'
