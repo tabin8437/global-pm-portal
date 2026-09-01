@@ -1228,17 +1228,26 @@ function globalFilterBarHtml_(){
     +(f.region!=='all'?'<span class="text-[10px] text-gray-400">홈 화면의 핵심 카드가 선택한 권역 기준으로 바뀝니다</span>':'')+'</div>';
 }
 
-function renderDashboard(){
-  var c=document.getElementById('content-area');
-  // 월간 누적 — 첫째주 토요일 이전(월~금)은 전월 누적 표시
-  var now=new Date();var yesterday=now.getDate()-1;if(yesterday<1)yesterday=1;
-  // 이번 달 첫 번째 토요일 계산
+// 새 달 첫 토요일 전까지는 "당월 누적/목표" 데이터가 실제로는 아직 지난달 최종 확정치다.
+// 화면 라벨을 그냥 오늘 날짜(now.getMonth())로만 계산하면 "9월 목표"인데 누적 수치는
+// 8월 것이 그대로 나오는 식으로 라벨과 실제 데이터가 어긋나 보인다. 대시보드·KPI 상세
+// 페이지가 각자 이 계산을 따로 하다 서로 어긋난 적이 있어 공통 함수로 통일한다.
+function dashDisplayMonth_(now){
+  now=now||new Date();
   var firstDay=new Date(now.getFullYear(),now.getMonth(),1).getDay(); // 0=일
   var daysToSat=(6-firstDay+7)%7; // 1일에서 첫 토요일까지 남은 일수
   var firstSat=new Date(now.getFullYear(),now.getMonth(),1+daysToSat);
   var showPrevMonth=now<firstSat; // 첫 토요일 전이면 전월 표시
   var dispMonth=showPrevMonth?(now.getMonth()===0?12:now.getMonth()):(now.getMonth()+1);
   var dispYear=showPrevMonth?(now.getMonth()===0?now.getFullYear()-1:now.getFullYear()):now.getFullYear();
+  return{year:dispYear,month:dispMonth,isPrev:showPrevMonth};
+}
+function renderDashboard(){
+  var c=document.getElementById('content-area');
+  // 월간 누적 — 첫째주 토요일 이전(월~금)은 전월 누적 표시
+  var now=new Date();var yesterday=now.getDate()-1;if(yesterday<1)yesterday=1;
+  var dm_=dashDisplayMonth_(now);
+  var showPrevMonth=dm_.isPrev,dispMonth=dm_.month,dispYear=dm_.year;
   var monthLabel=dispYear+'년 '+dispMonth+'월 누적'+(showPrevMonth?' <span style="font-size:10px;font-weight:600;color:#f59e0b;margin-left:4px">전월 확정</span>':' <span style="font-size:11px;font-weight:500;color:#94a3b8;margin-left:6px">1일 ~ '+dispMonth+'월 '+yesterday+'일 기준</span>');
   var monthlyCards=KPI_MONTHLY.map(function(k){
     return'<div class="kpi-card" style="padding:14px 16px"><div class="kpi-label">'+k.label+'</div><div class="kpi-value" style="font-size:20px;color:'+k.color+';margin:4px 0 3px">'+k.value+'</div><span class="kpi-change '+changeClass_(k.change)+'" style="font-size:11px"><span class="text-[9px] opacity-60">전월비</span> '+k.change+'</span></div>';
@@ -2339,7 +2348,9 @@ function renderKpiPage(){
   var c=document.getElementById('content-area');
   var regions=window._regionsCache||{};
   var an=window._annualCache||{};
-  var now=new Date(),mon=now.getMonth()+1;
+  var now=new Date();
+  var kpiDm_=dashDisplayMonth_(now);
+  var mon=kpiDm_.month,monTag=kpiDm_.isPrev?' <span style="font-size:10px;font-weight:600;color:#f59e0b;margin-left:2px">전월 확정</span>':'';
   var defs=[
     {key:'kr',label:'🇰🇷 한국',color:'red'},
     {key:'tw',label:'🇹🇼 대만',color:'blue'},
@@ -2381,7 +2392,7 @@ function renderKpiPage(){
       var aN=parseFloat(String(tgt.achieve||'').replace(/[^0-9.]/g,''))||0;
       var aC=aN>=100?'emerald':aN>=90?'blue':aN>=80?'amber':'red';
       var actualBlock=m.revenue?'<div class="mt-1.5 pt-1.5 border-t border-dashed border-gray-200">'+cumRevRow(m)+cumRateHtml(m.revenue,tgt.plan,tgt.estimate)+'</div>':'';
-      targetHtml2='<div class="mt-2.5 pt-2.5 border-t border-'+def.color+'-100"><div class="text-[10px] font-bold text-'+def.color+'-400 mb-1">🎯 '+mon+'월 목표</div><div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">계획/추정</span><span class="text-[10px] font-bold text-gray-700">'+fmtNum(tgt.plan*1000000)+' / '+fmtNum(tgt.estimate*1000000)+'</span></div><div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">추정/계획</span><span class="text-[10px] font-bold text-'+aC+'-600">'+tgt.achieve+'</span></div>'
+      targetHtml2='<div class="mt-2.5 pt-2.5 border-t border-'+def.color+'-100"><div class="text-[10px] font-bold text-'+def.color+'-400 mb-1">🎯 '+mon+'월 목표'+monTag+'</div><div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">계획/추정</span><span class="text-[10px] font-bold text-gray-700">'+fmtNum(tgt.plan*1000000)+' / '+fmtNum(tgt.estimate*1000000)+'</span></div><div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">추정/계획</span><span class="text-[10px] font-bold text-'+aC+'-600">'+tgt.achieve+'</span></div>'
         +actualBlock+'</div>';
     } else if(m.revenue){
       // 목표가 없는 권역은 당월 누적만 따로 보여준다
@@ -2402,7 +2413,7 @@ function renderKpiPage(){
     var mt=an.monthlyTarget;
     var achNum=parseFloat(String(mt.achieve||'').replace(/[^0-9.]/g,''))||0;
     var achClr=achNum>=100?'emerald':achNum>=90?'blue':achNum>=80?'amber':'red';
-    targetHtml='<div class="card"><div class="font-bold text-sm text-gray-800 mb-3"><i class="ti ti-target text-indigo-500"></i> '+mon+'월 목표</div><div class="grid grid-cols-3 gap-3 text-center"><div class="bg-gray-50 p-3 rounded-xl"><div class="text-[10px] text-gray-400 font-bold">계획</div><div class="text-base font-extrabold text-gray-900 mt-1">'+fmtNum(mt.plan*1000000)+'</div></div><div class="bg-gray-50 p-3 rounded-xl"><div class="text-[10px] text-gray-400 font-bold">추정</div><div class="text-base font-extrabold text-gray-900 mt-1">'+fmtNum(mt.estimate*1000000)+'</div></div><div class="bg-'+achClr+'-50 p-3 rounded-xl"><div class="text-[10px] text-'+achClr+'-600 font-bold">추정/계획</div><div class="text-base font-extrabold text-'+achClr+'-700 mt-1">'+mt.achieve+'</div></div></div></div>';
+    targetHtml='<div class="card"><div class="font-bold text-sm text-gray-800 mb-3"><i class="ti ti-target text-indigo-500"></i> '+mon+'월 목표'+monTag+'</div><div class="grid grid-cols-3 gap-3 text-center"><div class="bg-gray-50 p-3 rounded-xl"><div class="text-[10px] text-gray-400 font-bold">계획</div><div class="text-base font-extrabold text-gray-900 mt-1">'+fmtNum(mt.plan*1000000)+'</div></div><div class="bg-gray-50 p-3 rounded-xl"><div class="text-[10px] text-gray-400 font-bold">추정</div><div class="text-base font-extrabold text-gray-900 mt-1">'+fmtNum(mt.estimate*1000000)+'</div></div><div class="bg-'+achClr+'-50 p-3 rounded-xl"><div class="text-[10px] text-'+achClr+'-600 font-bold">추정/계획</div><div class="text-base font-extrabold text-'+achClr+'-700 mt-1">'+mt.achieve+'</div></div></div></div>';
   }
   var annualHtml='';
   if(an.quarterly&&an.quarterly.length){
