@@ -1252,18 +1252,21 @@ function renderDashboard(){
   // iOS mini widget
   var iosMini='<div class="card cursor-pointer hover:shadow-md transition-shadow" onclick="nav(\'platform\')"><div class="card-header"><span class="card-title">🍎 App Store 심의 요약</span><i class="ti ti-chevron-right text-gray-400"></i></div><div class="grid grid-cols-3 gap-2 text-center text-xs"><div class="bg-emerald-50 p-2.5 rounded-lg border border-emerald-100"><span class="block text-gray-400 text-[10px]">🌐 글로벌</span><span class="block text-emerald-700 font-bold my-0.5" id="mini-v-global">1.9.2</span><span class="text-[9px] text-emerald-600 font-bold">✅ 통과</span></div><div class="bg-emerald-50 p-2.5 rounded-lg border border-emerald-100"><span class="block text-gray-400 text-[10px]">🇹🇼 대만</span><span class="block text-emerald-700 font-bold my-0.5" id="mini-v-tw">1.47.1</span><span class="text-[9px] text-emerald-600 font-bold">✅ 통과</span></div><div class="bg-emerald-50 p-2.5 rounded-lg border border-emerald-100"><span class="block text-gray-400 text-[10px]">🇯🇵 일본</span><span class="block text-emerald-700 font-bold my-0.5" id="mini-v-jp">1.10.9</span><span class="text-[9px] text-emerald-600 font-bold">✅ 통과</span></div></div></div>';
 
-  var weekNum=Math.ceil(now.getDate()/7);
   // "N주차"만으로는 정확히 언제부터 언제까지인지 안 보여서 실제 날짜 범위(월~일)를 같이 붙인다.
   // 주차별 추이의 최신 기간은 시작일 하나만 주므로(예:"8/24") 거기서 +6일해서 끝나는 날짜를 계산한다.
   // 데이터가 아직 없으면 "이번 주"가 아니라 "가장 최근에 끝난 주"로 대체한다 — 이번 주 월~일을 그대로
   // 쓰면 오늘이 주 초반일 때 아직 안 지난 미래 날짜까지 범위에 나와버리는 문제가 있었다.
+  // "N월 N주차"의 연/월/주차 숫자도 반드시 이 날짜 범위(주 시작일) 기준으로 계산한다 — 오늘 날짜(now) 기준으로
+  // 따로 계산하면 월이 바뀐 직후 데이터가 아직 지난달 마지막 주일 때 "9월 1주차 (8/24~8/30)"처럼
+  // 월과 실제 범위가 어긋나 보이는 문제가 있었다.
   var trendLastRow=(window._trendCache||[]).slice(-1)[0];
-  var weekRangeLabel=null;
+  var weekRefD=null,weekRangeLabel=null;
   if(trendLastRow&&trendLastRow.period){
     var startLbl=shortPeriod(trendLastRow.period);
     var startTs=weekKeyOf(startLbl);
     if(startTs){
       var startD=new Date(startTs), endD=new Date(startTs); endD.setDate(startD.getDate()+6);
+      weekRefD=startD;
       weekRangeLabel=(startD.getMonth()+1)+'/'+startD.getDate()+'~'+(endD.getMonth()+1)+'/'+endD.getDate();
     } else {
       weekRangeLabel=startLbl;
@@ -1272,9 +1275,12 @@ function renderDashboard(){
   if(!weekRangeLabel){
     var mondayD=new Date(now); mondayD.setDate(now.getDate()-((now.getDay()+6)%7)-7);
     var sundayD=new Date(mondayD); sundayD.setDate(mondayD.getDate()+6);
+    weekRefD=mondayD;
     weekRangeLabel=(mondayD.getMonth()+1)+'/'+mondayD.getDate()+'~'+(sundayD.getMonth()+1)+'/'+sundayD.getDate();
   }
-  var weekLabel=now.getFullYear()+'년 '+(now.getMonth()+1)+'월 '+weekNum+'주차 <span style="font-weight:500;color:#94a3b8">('+esc(weekRangeLabel)+')</span>';
+  if(!weekRefD) weekRefD=now;
+  var weekNum=Math.ceil(weekRefD.getDate()/7);
+  var weekLabel=weekRefD.getFullYear()+'년 '+(weekRefD.getMonth()+1)+'월 '+weekNum+'주차 <span style="font-weight:500;color:#94a3b8">('+esc(weekRangeLabel)+')</span>';
   var yesterday=now.getDate()-1;if(yesterday<1)yesterday=1;
 
   // 연간매출 위젯
