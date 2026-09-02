@@ -1143,10 +1143,18 @@ function buildRegionMiniRowMonthly_(){
   var hasRegion=byR&&['kr','tw','jp'].some(function(k){return(byR[k]||[]).length>0;});
   if(!hasRegion) return'';
   var regionList=(f.region!=='all')?TREND_REGIONS.filter(function(r){return r.key===f.region;}):TREND_REGIONS;
+  // 월초 첫 토요일 전에는 이번 달이 아직 하루이틀치 부분 실적뿐이라, 이걸 "지난달 대비"로
+  // 비교하면 "-90%"처럼 말도 안 되는 하락으로 보인다. 대시보드 다른 곳과 같은 기준으로
+  // 아직 안 끝난 이번 달은 이 그래프에서도 제외하고 마지막 확정 월까지만 쓴다.
+  var effDm_=dashDisplayMonth_();
+  var effKey_=effDm_.year+'-'+(effDm_.month<10?'0'+effDm_.month:effDm_.month);
+  var monthCount_=0;
   var cards=regionList.map(function(r){
     var arr=(byR[r.key]||[]).slice().sort(function(a,b){return String(a.period).localeCompare(String(b.period));});
+    arr=arr.filter(function(t){return String(t.period)<=effKey_;});
     if(!arr.length) return'';
     var lastN=arr.slice(-6);
+    if(lastN.length>monthCount_) monthCount_=lastN.length;
     var vals=lastN.map(function(t){var v=Number(t.revenue);return v>0?v:null;});
     var lastT=lastN[lastN.length-1],prevT=lastN[lastN.length-2];
     var lastV=lastT?Number(lastT.revenue):null,prevV=prevT?Number(prevT.revenue):null;
@@ -1159,7 +1167,7 @@ function buildRegionMiniRowMonthly_(){
       +(spark?'<div class="mt-1.5">'+spark+'</div>':'')+'</div>';
   }).join('');
   if(!cards) return'';
-  return'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-calendar-dollar text-amber-500"></i> 권역별 매출 추이 <span class="text-[11px] text-gray-400 font-medium ml-1">(월간, 최근 6개월)</span></span></div><div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">'+cards+'</div>';
+  return'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-calendar-dollar text-amber-500"></i> 권역별 매출 추이 <span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded ml-1">월간</span> <span class="text-[11px] text-gray-400 font-medium ml-1">(최근 '+monthCount_+'개월 · '+effDm_.month+'월 기준)</span></span></div><div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">'+cards+'</div>';
 }
 function buildRegionMiniRow_(){
   var f=window._globalFilter;
@@ -1256,15 +1264,12 @@ function globalFilterBarHtml_(){
 // 화면 라벨을 그냥 오늘 날짜(now.getMonth())로만 계산하면 "9월 목표"인데 누적 수치는
 // 8월 것이 그대로 나오는 식으로 라벨과 실제 데이터가 어긋나 보인다. 대시보드·KPI 상세
 // 페이지가 각자 이 계산을 따로 하다 서로 어긋난 적이 있어 공통 함수로 통일한다.
+// "첫 토요일 전엔 전월로 표시" 같은 캘린더 추측을 넣었더니 실제 데이터가 이미 새 달로
+// 넘어간 뒤에도 며칠씩 지난달에 머물러 있는 문제가 생겼다(사용자 확인). 추측하지 말고
+// 그냥 오늘 실제 날짜를 그대로 쓴다 — 이번 달 데이터가 아직 적으면 적은 대로 보여주면 된다.
 function dashDisplayMonth_(now){
   now=now||new Date();
-  var firstDay=new Date(now.getFullYear(),now.getMonth(),1).getDay(); // 0=일
-  var daysToSat=(6-firstDay+7)%7; // 1일에서 첫 토요일까지 남은 일수
-  var firstSat=new Date(now.getFullYear(),now.getMonth(),1+daysToSat);
-  var showPrevMonth=now<firstSat; // 첫 토요일 전이면 전월 표시
-  var dispMonth=showPrevMonth?(now.getMonth()===0?12:now.getMonth()):(now.getMonth()+1);
-  var dispYear=showPrevMonth?(now.getMonth()===0?now.getFullYear()-1:now.getFullYear()):now.getFullYear();
-  return{year:dispYear,month:dispMonth,isPrev:showPrevMonth};
+  return{year:now.getFullYear(),month:now.getMonth()+1,isPrev:false};
 }
 function renderDashboard(){
   var c=document.getElementById('content-area');
@@ -2658,6 +2663,13 @@ function renderUserDistSummary(){
       +'<span class="text-right"><span class="text-xs font-bold text-gray-900 flex items-center justify-end gap-1">'+valueHtml+' <i class="ti ti-chevron-right text-gray-300"></i></span>'
       +(subHtml?'<span class="block text-[10px] text-gray-400 mt-0.5">'+subHtml+'</span>':'')+'</span></div>';
   }
+  // 그룹별/전투력 스파크라인이 정확히 몇 주치를 보여주는지 표시하는 캡션 — period가 "yyyy-MM-dd"(주 시작일)라서 M/D로 바꿔 붙인다
+  function mdFromISO_(s){ var p=String(s).split('-'); return p.length===3?(+p[1])+'/'+(+p[2]):s; }
+  function trendRangeCaption_(weeks){
+    if(!weeks||weeks.length<2) return'';
+    var f=weeks[0],l=weeks[weeks.length-1];
+    return' <span class="text-[9px] text-gray-400 font-normal">(그래프: 최근 '+weeks.length+'주 · '+mdFromISO_(f.period)+'~'+mdFromISO_(l.period)+')</span>';
+  }
   var rowsHtml='';
   if(!d){
     rowsHtml='<div class="text-center py-6 text-xs text-gray-400"><i class="ti ti-loader-2 animate-spin"></i> 불러오는 중...</div>';
@@ -2685,7 +2697,7 @@ function renderUserDistSummary(){
         return'<div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">'+(i+1)+'. '+esc(g.label)+'</span><span class="flex items-center gap-1.5"><span class="text-[11px] font-bold text-gray-800">'+cur.toLocaleString('ko-KR')+'명'+diffHtml+'</span>'+gSpark+'</span></div>';
       }).join('');
       rowsHtml+='<div class="py-2 border-b border-gray-100 last:border-none cursor-pointer hover:bg-gray-50 rounded-lg" style="margin:0 -6px;padding-left:6px;padding-right:6px" onclick="udSummaryGoto(\'pu\')">'
-        +'<div class="flex items-center justify-between mb-1"><span class="text-xs text-gray-600 flex items-center gap-1.5"><i class="ti ti-coin text-violet-500"></i>결제유저(PU)</span>'
+        +'<div class="flex items-center justify-between mb-1"><span class="text-xs text-gray-600 flex items-center gap-1.5"><i class="ti ti-coin text-violet-500"></i>결제유저(PU)'+trendRangeCaption_(pWeeksForSpark)+'</span>'
         +'<span class="text-xs font-bold text-gray-900 flex items-center gap-1">'+pCur.toLocaleString('ko-KR')+'명'+changeBadge(pCur,pPrevSum)+' <i class="ti ti-chevron-right text-gray-300"></i></span></div>'
         +pGroupRows+'</div>';
     }
