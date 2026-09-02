@@ -337,11 +337,12 @@ var SIDEBAR_MENU = [
 // 문서 페이지 URL 매핑 (preview / edit)
 var MILESTONE_SHEET_EDIT_URL='https://docs.google.com/spreadsheets/d/1wFr-DdDyyUu0nAGl6qGMNfyl3_ipxP_uqAw7Rs2PFX4/edit?gid=1910558778';
 var DOC_URLS = {
-  event:         {preview:'https://docs.google.com/spreadsheets/d/1zf7wfWfrC_ajBPcSCg-NTZqLevnLWBNpTfI0hiUzjJE/htmlview?gid=664837488',edit:'https://docs.google.com/spreadsheets/d/1zf7wfWfrC_ajBPcSCg-NTZqLevnLWBNpTfI0hiUzjJE/edit?gid=664837488'},
-  product:       {preview:'https://docs.google.com/spreadsheets/d/12f4V6PEwuU5Ep96J-9TLI7cJuIykCMOkxjQjI-9Ioeg/htmlview?gid=1208981964',edit:'https://docs.google.com/spreadsheets/d/12f4V6PEwuU5Ep96J-9TLI7cJuIykCMOkxjQjI-9Ioeg/edit?gid=1208981964'},
-  'report-kpi':  {preview:'https://docs.google.com/spreadsheets/d/1Axv-pPON-Oni82wC-EDXKxWPk1_2K_EtjWE7ymeqPPo/htmlview?gid=1704819295',edit:'https://docs.google.com/spreadsheets/d/1Axv-pPON-Oni82wC-EDXKxWPk1_2K_EtjWE7ymeqPPo/edit?gid=1704819295'},
-  'server-migration':{preview:'https://docs.google.com/spreadsheets/d/1ngG6bARiHTitu6UF1K_b8KpIomrxrvYk8QemYJoz6jc/htmlview?gid=1592848189',edit:'https://docs.google.com/spreadsheets/d/1ngG6bARiHTitu6UF1K_b8KpIomrxrvYk8QemYJoz6jc/edit?gid=1592848189'},
-  localization:  {preview:'https://docs.google.com/spreadsheets/d/1lUXRnwXK0ABi7ejxx_agQfAxKoMzhEzA/htmlview?gid=97953191',edit:'https://docs.google.com/spreadsheets/d/1lUXRnwXK0ABi7ejxx_agQfAxKoMzhEzA/edit?gid=97953191',extra:[
+  // htmlview 임베드는 시트 하단 탭바(다른 시트로 전환하는 UI)가 안 나온다 — preview 임베드는 나온다
+  event:         {preview:'https://docs.google.com/spreadsheets/d/1zf7wfWfrC_ajBPcSCg-NTZqLevnLWBNpTfI0hiUzjJE/preview?gid=664837488',edit:'https://docs.google.com/spreadsheets/d/1zf7wfWfrC_ajBPcSCg-NTZqLevnLWBNpTfI0hiUzjJE/edit?gid=664837488'},
+  product:       {preview:'https://docs.google.com/spreadsheets/d/12f4V6PEwuU5Ep96J-9TLI7cJuIykCMOkxjQjI-9Ioeg/preview?gid=1208981964',edit:'https://docs.google.com/spreadsheets/d/12f4V6PEwuU5Ep96J-9TLI7cJuIykCMOkxjQjI-9Ioeg/edit?gid=1208981964'},
+  'report-kpi':  {preview:'https://docs.google.com/spreadsheets/d/1Axv-pPON-Oni82wC-EDXKxWPk1_2K_EtjWE7ymeqPPo/preview?gid=1704819295',edit:'https://docs.google.com/spreadsheets/d/1Axv-pPON-Oni82wC-EDXKxWPk1_2K_EtjWE7ymeqPPo/edit?gid=1704819295'},
+  'server-migration':{preview:'https://docs.google.com/spreadsheets/d/1ngG6bARiHTitu6UF1K_b8KpIomrxrvYk8QemYJoz6jc/preview?gid=1592848189',edit:'https://docs.google.com/spreadsheets/d/1ngG6bARiHTitu6UF1K_b8KpIomrxrvYk8QemYJoz6jc/edit?gid=1592848189'},
+  localization:  {preview:'https://docs.google.com/spreadsheets/d/1lUXRnwXK0ABi7ejxx_agQfAxKoMzhEzA/preview?gid=97953191',edit:'https://docs.google.com/spreadsheets/d/1lUXRnwXK0ABi7ejxx_agQfAxKoMzhEzA/edit?gid=97953191',extra:[
     {url:'rollback-checker.html',label:'롤백 검사기',icon:'ti-list-search',clr:'indigo',desc:'정상본 대비 번체/간체 롤백·변경 자동 검출'},
     {url:'https://docs.google.com/spreadsheets/d/100SwdEzMEDNX3WAcLyulkarC7bBVyihpp_a69wq02Ks/edit?gid=2114670632#gid=2114670632',label:'성우 녹음 대본',icon:'ti-microphone',clr:'purple',desc:'Odin_Query — 보이스 녹음용 대본 시트'},
     {url:'https://kakaogames.agit.in/g/300093319/wall',label:'번역요청서-내부현지화셀',icon:'ti-file-description',clr:'blue',desc:'내부 현지화셀 번역 요청 게시판',noEmbed:true}
@@ -1738,7 +1739,8 @@ function renderArchive(type,containerId){
   // 폼 HTML
   var formHtml='<div id="mt-form" style="display:none" class="card mb-4">'
     +'<div class="card-header"><span class="card-title" id="mt-form-title">회의록 추가</span></div>'
-    +'<div class="form-group"><label>제목</label><input type="text" id="mt-title"></div>'
+    +'<div class="form-group"><label>제목</label><input type="text" id="mt-title" list="mt-title-list" autocomplete="off"><datalist id="mt-title-list"></datalist>'
+    +'<span class="text-[10px] text-gray-400">기존 회의와 제목을 똑같이 입력하면 하나의 스레드로 이어져요 — 입력하면 아래 기존 제목 목록이 자동완성으로 떠요</span></div>'
     +'<div class="grid2"><div class="form-group"><label>일자</label><input type="date" id="mt-date"></div>'
     +'<div class="form-group"><label>참석자</label><input type="text" id="mt-attendees" placeholder="홍길동, 김철수"></div></div>'
     +'<div class="form-group"><label>요약</label><input type="text" id="mt-summary" placeholder="한 줄 요약 (카드에 말풍선으로 바로 보여요)"></div>'
@@ -1809,8 +1811,9 @@ function renderArchive(type,containerId){
     // "줄줄이 사탕"처럼 회차별로 이어붙인 하나의 시리즈 카드로 묶는다.
     var order=[], byTitle={};
     list.forEach(function(m){
-      if(!byTitle[m.title]){ byTitle[m.title]={title:m.title,items:[]}; order.push(byTitle[m.title]); }
-      byTitle[m.title].items.push(m);
+      var key=String(m.title||'').trim();   // 앞뒤 공백 차이로 같은 회의가 다른 스레드로 갈리지 않게 방어
+      if(!byTitle[key]){ byTitle[key]={title:m.title,items:[]}; order.push(byTitle[key]); }
+      byTitle[key].items.push(m);
     });
 
     var listHtml=list.length
@@ -1843,6 +1846,19 @@ function renderArchive(type,containerId){
 
 var _mtCurrentType='weekly';
 var _mtTypeNames={weekly:'주간회의',report:'보고/분석',internal:'내부 회의'};
+// 새 회의를 기존 시리즈에 이어붙이려면 제목이 정확히 같아야 하는데, 매번 새로 타이핑하다 보니
+// 오타·띄어쓰기 차이로 스레드가 끊기는 일이 잦았다. 기존 제목을 자동완성 목록으로 띄워
+// 그대로 선택할 수 있게 해서, "새로 작성" 시에도 스레드가 안 끊기게 한다.
+function populateMtTitleList_(type){
+  var dl=document.getElementById('mt-title-list');
+  if(!dl)return;
+  var seen={},opts=[];
+  (_meetingCache[type]||[]).forEach(function(m){
+    var t=String(m.title||'').trim();
+    if(t&&!seen[t]){seen[t]=true;opts.push(t);}
+  });
+  dl.innerHTML=opts.map(function(t){return'<option value="'+esc(t)+'">';}).join('');
+}
 function openMeetingForm(type){
   _mtCurrentType=type;
   editTarget={type:type,id:null};
@@ -1851,6 +1867,7 @@ function openMeetingForm(type){
   });
   var d=document.getElementById('mt-date');
   if(d)d.value=new Date().toISOString().slice(0,10);
+  populateMtTitleList_(type);
   document.getElementById('mt-form-title').textContent=(_mtTypeNames[type]||'회의록')+' 추가';
   document.getElementById('mt-form').style.display='block';
 }
@@ -1859,6 +1876,7 @@ function openMeetingFormEdit(id, type){
   var list=_meetingCache[type]||[];
   var m=list.find(function(x){return x.id===id;});
   if(!m)return;
+  populateMtTitleList_(type);
   editTarget={type:type,id:id};
   document.getElementById('mt-title').value=m.title||'';
   document.getElementById('mt-date').value=String(m.date||'').slice(0,10);
