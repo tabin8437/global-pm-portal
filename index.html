@@ -2560,6 +2560,23 @@ function udSegmentRelabel_(b){
   return s+suffix;
 }
 function udPick_(arr,idx){ return arr?idx.map(function(i){ return arr[i]; }):arr; }
+// 챕터진도 시트에 "챕터N 클리어"/"챕터N 정체" 컬럼이 원본 "챕터N"(있다면) 옆에 섞여 들어오면서
+// x축이 종류별로 묶이지 않고 뒤섞여 보였다. 종류(원본→클리어→정체)별로 묶고 챕터 번호 순으로 정렬한다.
+function udChapterSortIdx_(buckets){
+  var groupRank={'':0,'클리어':1,'정체':2};
+  var parsed=buckets.map(function(b,i){
+    var s=String(b==null?'':b);
+    var m=s.match(/챕터\s*(\d+)\s*(클리어|정체)?/);
+    if(m) return{i:i,ch:+m[1],grp:m[2]||''};
+    var n=Number(s);
+    return isNaN(n)?{i:i,ch:9999,grp:'zzz'}:{i:i,ch:n,grp:''};
+  });
+  parsed.sort(function(a,b){
+    var ga=groupRank[a.grp]!==undefined?groupRank[a.grp]:9, gb=groupRank[b.grp]!==undefined?groupRank[b.grp]:9;
+    return ga!==gb?ga-gb:a.ch-b.ch;
+  });
+  return parsed.map(function(p){return p.i;});
+}
 
 // 결제금액 세분 구간(1만원 이하~1억원 초과)을 업무상 보는 7개 그룹으로 묶는다.
 // upto는 원본 버킷 라벨과 정확히 일치해야 그 구간에서 그룹을 끊는다.
@@ -3029,6 +3046,15 @@ function udRenderChart(){
 
   var mainRange=udResolveRange_(buckets,rangeCfg.main);
   var html;
+  // 챕터진도 시트에 "챕터N 클리어"/"챕터N 정체" 컬럼이 늘면서, 원본 시트 열 순서 그대로
+  // 뽑으면 종류가 뒤섞여서(클리어/정체/원본이 번갈아) x축에서 비교하기 어려웠다.
+  // 종류별로 묶고 챕터 번호 순으로 다시 정렬한다.
+  if(window._udMetric==='chapter'){
+    var _cIdx=udChapterSortIdx_(buckets);
+    buckets=udPick_(buckets,_cIdx);
+    valsA=udPick_(valsA,_cIdx);
+    if(valsB) valsB=udPick_(valsB,_cIdx);
+  }
   if(window._udMetric==='segment'){
     // CP&PAY 항목은 서로 다른(일부 교집합) 조건별 인원수라 차트로 이으면 왜곡되고,
     // 규모 차이도 커서(Lv40+ 2만대 vs 둘다_북미 수백대) 공유축 그래프 자체가 안 맞는다.
@@ -3099,6 +3125,11 @@ function udRenderChart(){
       var dBuckets=dKeepIdx.map(function(i){ return udSegmentRelabel_(cur.buckets[i]); });
       var dDaily=cur.daily.map(function(r){ return { date:r.date, values:udPick_(r.values,dKeepIdx) }; });
       html+=udDailyLogTable_(dBuckets,dDaily,true);
+    }else if(window._udMetric==='chapter'){
+      var chIdx=udChapterSortIdx_(cur.buckets);
+      var chBuckets=udPick_(cur.buckets,chIdx);
+      var chDaily=cur.daily.map(function(r){ return { date:r.date, values:udPick_(r.values,chIdx) }; });
+      html+=udDailyLogTable_(chBuckets,chDaily,false);
     }else{
       html+=udDailyLogTable_(cur.buckets,cur.daily,false);
     }
@@ -3149,14 +3180,20 @@ function udChartBlock_(chartId,title,buckets,valsA,valsB,rowA,rowB,pctMode,metri
     var gap=valsB?bw*0.18:0;
     buckets.forEach(function(b,i){
       var cxi=cx(i);
-      if(valsB){
+      // 비교 기간에 이 구간 자체가 없던(새로 생긴 컬럼이라 지난 기록엔 0인) 경우, 비교값이
+      // 0이라 회색 막대가 사실상 안 보이는데도 "증감 있음"처럼 보이는 문제가 있었다.
+      // 이럴 땐 비교 막대를 아예 생략하고, 현재 막대도 accent색 대신 회색으로 그려서
+      // "아직 비교할 과거 데이터가 없다"는 걸 분명히 한다.
+      var hasCompare=!!(valsB&&valsB[i]);
+      if(hasCompare){
         var ya=cy(valsA[i]), ha=Math.max(0,PT+plotH-ya);
         var yb=cy(valsB[i]), hb=Math.max(0,PT+plotH-yb);
         lines+='<rect x="'+(cxi-bw-gap/2).toFixed(1)+'" y="'+ya.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+ha.toFixed(1)+'" rx="2" fill="'+metricHex+'"/>'
           +'<rect x="'+(cxi+gap/2).toFixed(1)+'" y="'+yb.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+hb.toFixed(1)+'" rx="2" fill="#94a3b8" opacity=".75"/>';
       }else{
         var ya2=cy(valsA[i]), ha2=Math.max(0,PT+plotH-ya2);
-        lines+='<rect x="'+(cxi-bw/2).toFixed(1)+'" y="'+ya2.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+ha2.toFixed(1)+'" rx="2" fill="'+metricHex+'"/>';
+        var barColor=valsB?'#cbd5e1':metricHex;   // valsB가 아예 없는 차트(비교 없음 모드)는 원래 색 유지
+        lines+='<rect x="'+(cxi-bw/2).toFixed(1)+'" y="'+ya2.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+ha2.toFixed(1)+'" rx="2" fill="'+barColor+'"/>';
       }
     });
   }else{
