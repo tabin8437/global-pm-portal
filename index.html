@@ -1351,6 +1351,11 @@ function renderDashboard(){
     +milestoneHtml;
   switchMilestoneTab('cross');
   renderUserDistSummary();
+  // App Store 심의 미니 위젯(#mini-v-*)은 iosMini 안에 고정 텍스트로 박혀 있어서
+  // 실제 심의 데이터를 안 불러오면 예전 버전이 계속 보인다. loadAppleMails()가
+  // renderAppleUI() 안에서 #mini-v-* 를 최신 버전으로 채워주는 로직을 이미 갖고 있으니
+  // (App Store 페이지 방문 여부와 상관없이) 대시보드에서도 직접 한 번 불러온다.
+  loadAppleMails();
 
   // 연간매출 위젯 채우기
   var aw=document.getElementById('annual-revenue-widget');
@@ -1694,14 +1699,19 @@ function renderAppleUI(data){
   // 버전 미표기(Apple 신형 메일) 건은 전부 제외 — 버전이 있는 심의만 표시
   var hist=(data.history||[]).filter(function(m){return hasVer(m.version);});
   ['global','tw','jp'].forEach(function(r){
-    var box=document.getElementById('apple-box-'+r);if(!box)return;
+    // #apple-box-*(플랫폼 상세 페이지)가 없어도 #mini-v-*(대시보드 미니 위젯)는 항상
+    // 갱신해야 한다 — 예전엔 box가 없으면 여기서 그냥 return 해버려서, 대시보드에 있을 땐
+    // mini-v 갱신 줄까지 아예 도달을 못 해 예전 버전(하드코딩 초기값)이 계속 보였다.
     var m=hist.filter(function(x){return x.region===r;})[0]||(hasVer((latest[r]||{}).version)?latest[r]:null);
     if(!m)return;
     var ver=m.version.replace(/\s*for\s*iOS/i,'');
-    box.classList.add('approved');
-    box.querySelector('.apple-region-body').innerHTML=
-      '<div class="text-lg font-bold text-emerald-700 my-1">'+esc(ver)+' <span class="text-[11px] font-medium text-emerald-600">for iOS</span></div>'
-      +'<div class="text-[11px] text-emerald-600">✅ 심의 통과 · '+esc(String(m.date).slice(0,10))+'</div>';
+    var box=document.getElementById('apple-box-'+r);
+    if(box){
+      box.classList.add('approved');
+      box.querySelector('.apple-region-body').innerHTML=
+        '<div class="text-lg font-bold text-emerald-700 my-1">'+esc(ver)+' <span class="text-[11px] font-medium text-emerald-600">for iOS</span></div>'
+        +'<div class="text-[11px] text-emerald-600">✅ 심의 통과 · '+esc(String(m.date).slice(0,10))+'</div>';
+    }
     if(document.getElementById('mini-v-'+r))document.getElementById('mini-v-'+r).textContent=ver;
   });
   var hc=document.getElementById('apple-mail-history');if(!hc||!hist.length)return;
