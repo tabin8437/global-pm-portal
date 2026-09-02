@@ -2726,11 +2726,13 @@ function renderUserDistSummary(){
   }
   // 값 한 줄 + 구간/범위를 보여주는 보조 줄을 같이 쓰는 행 (요약이라 숫자만 덜렁 있으면 뭘 보는 건지 안 잡혀서 보강)
   // sparkHtml: 최근 N주 등락 흐름을 한눈에 보여주는 아주 작은 스파크라인 (없으면 생략)
+  // sparkHtml은 값 옆(체브런 앞)에 바로 붙여서 그린다 — 예전엔 label과 value 사이 flex
+  // 가운데 칸에 따로 끼워 넣어서 "뜬금없이 중간에" 떠 보였다. 결제유저(PU) 그룹 행처럼
+  // 값에 딱 붙는 위치로 통일.
   function row(icon,clr,label,valueHtml,subHtml,metric,sparkHtml){
     return'<div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-none cursor-pointer hover:bg-gray-50 rounded-lg" style="margin:0 -6px;padding-left:6px;padding-right:6px" onclick="udSummaryGoto(\''+metric+'\')">'
       +'<span class="text-xs text-gray-600 flex items-center gap-1.5"><i class="ti '+icon+' text-'+clr+'-500"></i>'+label+'</span>'
-      +(sparkHtml||'')
-      +'<span class="text-right"><span class="text-xs font-bold text-gray-900 flex items-center justify-end gap-1">'+valueHtml+' <i class="ti ti-chevron-right text-gray-300"></i></span>'
+      +'<span class="text-right"><span class="text-xs font-bold text-gray-900 flex items-center justify-end gap-1.5">'+valueHtml+(sparkHtml||'')+' <i class="ti ti-chevron-right text-gray-300"></i></span>'
       +(subHtml?'<span class="block text-[10px] text-gray-400 mt-0.5">'+subHtml+'</span>':'')+'</span></div>';
   }
   // 그룹별/전투력 스파크라인이 정확히 몇 주치를 보여주는지 표시하는 캡션 — period가 "yyyy-MM-dd"(주 시작일)라서 M/D로 바꿔 붙인다
@@ -3399,7 +3401,10 @@ function udTip(ev,idx,chartId){
 function udTipHide(chartId){ var b=document.getElementById('ud-tip-'+chartId); if(b) b.style.display='none'; }
 
 function renderDevMeeting(containerId){
-  document.getElementById(containerId||'content-area').innerHTML='<div class="doc-viewer"><div class="doc-toolbar"><span class="title"><i class="ti ti-code text-purple-500"></i> 개발사 회의록 <span style="font-size:11px;color:#9ca3af;font-weight:400;margin-left:8px">읽기 전용 · 탭 이동 가능</span></span><a href="https://docs.google.com/spreadsheets/d/1JvOfFWcvssvFZP91OFvtd66SThG1XxKAJSf3hJ6FEVw/edit?gid=1146934928" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-pencil"></i> 새창에서 편집</a></div><div class="doc-iframe-wrap"><iframe src="https://docs.google.com/spreadsheets/d/1JvOfFWcvssvFZP91OFvtd66SThG1XxKAJSf3hJ6FEVw/htmlview?gid=1146934928"></iframe></div></div>';
+  // renderDocViewer와 같은 이유로, 라이브 운영 문서함처럼 자체 탭바 아래 #hub-body에
+  // 끼워질 땐 .doc-viewer의 margin:-24px가 그 탭바를 가려버린다 — 하위 컨테이너일 땐 상쇄 안 함.
+  var nested=!!containerId;
+  document.getElementById(containerId||'content-area').innerHTML='<div class="doc-viewer"'+(nested?' style="margin:0;height:70vh;border:1px solid var(--border);border-radius:12px;overflow:hidden"':'')+'><div class="doc-toolbar"><span class="title"><i class="ti ti-code text-purple-500"></i> 개발사 회의록 <span style="font-size:11px;color:#9ca3af;font-weight:400;margin-left:8px">읽기 전용 · 탭 이동 가능</span></span><a href="https://docs.google.com/spreadsheets/d/1JvOfFWcvssvFZP91OFvtd66SThG1XxKAJSf3hJ6FEVw/edit?gid=1146934928" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-pencil"></i> 새창에서 편집</a></div><div class="doc-iframe-wrap"><iframe src="https://docs.google.com/spreadsheets/d/1JvOfFWcvssvFZP91OFvtd66SThG1XxKAJSf3hJ6FEVw/preview?gid=1146934928"></iframe></div></div>';
 }
 
 function renderAI(){
