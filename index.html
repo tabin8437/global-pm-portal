@@ -1145,18 +1145,21 @@ function buildRegionMiniRowMonthly_(){
   var hasRegion=byR&&['kr','tw','jp'].some(function(k){return(byR[k]||[]).length>0;});
   if(!hasRegion) return'';
   var regionList=(f.region!=='all')?TREND_REGIONS.filter(function(r){return r.key===f.region;}):TREND_REGIONS;
-  // 월초 첫 토요일 전에는 이번 달이 아직 하루이틀치 부분 실적뿐이라, 이걸 "지난달 대비"로
-  // 비교하면 "-90%"처럼 말도 안 되는 하락으로 보인다. 대시보드 다른 곳과 같은 기준으로
-  // 아직 안 끝난 이번 달은 이 그래프에서도 제외하고 마지막 확정 월까지만 쓴다.
-  var effDm_=dashDisplayMonth_();
-  var effKey_=effDm_.year+'-'+(effDm_.month<10?'0'+effDm_.month:effDm_.month);
-  var monthCount_=0;
+  // 이번 달은 며칠이 지났든 "아직 끝나지 않은 달"이라 완결된 지난달과 비교하면 항상
+  // 왜곡된 등락률이 나온다(예: 이제 막 시작한 이번 달 며칠치 vs 꽉 찬 지난달 한 달).
+  // 캘린더 추측(며칠 기다리기) 대신, 주간 그래프와 같은 방식으로 "끝난 달"까지만 쓴다 —
+  // 이번 달은 끝나는 순간(다음 달 1일) 자동으로 자연스럽게 포함된다.
+  var now_=new Date();
+  var curYM_=now_.getFullYear()+'-'+(now_.getMonth()+1<10?'0':'')+(now_.getMonth()+1);
+  var monthCount_=0,lastPeriodLabel_='';
   var cards=regionList.map(function(r){
     var arr=(byR[r.key]||[]).slice().sort(function(a,b){return String(a.period).localeCompare(String(b.period));});
-    arr=arr.filter(function(t){return String(t.period)<=effKey_;});
+    arr=arr.filter(function(t){return String(t.period)<curYM_;});
     if(!arr.length) return'';
     var lastN=arr.slice(-6);
     if(lastN.length>monthCount_) monthCount_=lastN.length;
+    var lastPer=String(lastN[lastN.length-1].period||'');
+    if(lastPer>lastPeriodLabel_) lastPeriodLabel_=lastPer;
     var vals=lastN.map(function(t){var v=Number(t.revenue);return v>0?v:null;});
     var lastT=lastN[lastN.length-1],prevT=lastN[lastN.length-2];
     var lastV=lastT?Number(lastT.revenue):null,prevV=prevT?Number(prevT.revenue):null;
@@ -1169,7 +1172,8 @@ function buildRegionMiniRowMonthly_(){
       +(spark?'<div class="mt-1.5">'+spark+'</div>':'')+'</div>';
   }).join('');
   if(!cards) return'';
-  return'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-calendar-dollar text-amber-500"></i> 권역별 매출 추이 <span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded ml-1">월간</span> <span class="text-[11px] text-gray-400 font-medium ml-1">(최근 '+monthCount_+'개월 · '+effDm_.month+'월 기준)</span></span></div><div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">'+cards+'</div>';
+  var lastMonthNum_=lastPeriodLabel_?(+lastPeriodLabel_.slice(5,7)):'';
+  return'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-calendar-dollar text-amber-500"></i> 권역별 매출 추이 <span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded ml-1">월간</span> <span class="text-[11px] text-gray-400 font-medium ml-1">(최근 '+monthCount_+'개월 · '+lastMonthNum_+'월까지 마감)</span></span></div><div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">'+cards+'</div>';
 }
 function buildRegionMiniRow_(){
   var f=window._globalFilter;
