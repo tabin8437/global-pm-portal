@@ -278,6 +278,7 @@ table tbody tr:hover{background:#f9fafb}
         </div>
       </div>
       <button class="btn btn-sm" onclick="try{localStorage.removeItem('kpi_cache')}catch(e){};location.reload()" title="전체 새로고침 (문서 · 지표 최신화)"><i class="ti ti-refresh"></i> 새로고침</button>
+      <button class="btn btn-sm" onclick="forceHardRefresh_()" title="서비스워커 캐시까지 완전히 지우고 새로고침 — 새로고침 눌러도 옛날 화면이 계속 보일 때 이걸로"><i class="ti ti-refresh-alert"></i> 강제 새로고침</button>
     </div>
 
     <div class="content" id="content-area"></div>
@@ -3815,6 +3816,23 @@ window.addEventListener('DOMContentLoaded',function(){
   }
 });
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
+// 일반 새로고침은 서비스워커가 물고 있는 캐시(Cache Storage)까지는 안 지워서, 배포한 새 버전이
+// 있어도 예전 화면이 그대로 보이는 경우가 있었다. 서비스워커 등록 해제 + 캐시 전체 삭제 후
+// 다시 불러오면, 다음 로드 때 전부 네트워크에서 새로 받아온다.
+async function forceHardRefresh_(){
+  try{
+    if('serviceWorker' in navigator){
+      var regs=await navigator.serviceWorker.getRegistrations();
+      for(var i=0;i<regs.length;i++) await regs[i].unregister();
+    }
+    if(window.caches){
+      var keys=await caches.keys();
+      for(var i=0;i<keys.length;i++) await caches.delete(keys[i]);
+    }
+  }catch(e){}
+  try{ localStorage.removeItem('kpi_cache'); }catch(e){}
+  location.reload();
+}
 </script>
 </body>
 </html>
