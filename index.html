@@ -2908,9 +2908,19 @@ function renderWhaleAlert(){
   var riskN=noPayN+movedDropN+spendDropN;
   var riskPct=totalN?(riskN/totalN*100):0;
   var tone=riskPct>=30?{color:'red',icon:'ti-alert-triangle'}:riskPct>=15?{color:'amber',icon:'ti-alert-circle'}:{color:'emerald',icon:'ti-shield-check'};
+  // 월 1회 조회되는 지표라 "지난달 대비 늘었는지/줄었는지"가 핵심 신호다. 시트에 전월 스냅샷이
+  // 남아있으면(prevSummary) 위험군 인원 변화를 같이 보여준다 — 권역 필터를 걸면 전월 값은
+  // 권역별로 다시 셀 수 없어(백엔드가 전체 기준으로만 계산) 전체 선택일 때만 표기한다.
+  var prevRiskChip='';
+  if(!curRegion&&d.prevSummary&&d.prevSummary.length){
+    var prevByStatus={}; d.prevSummary.forEach(function(s){ prevByStatus[s.status]=s.count; });
+    var prevRiskN=(prevByStatus.NO_PAY_30D||0)+(prevByStatus.MOVED_AND_DROP||0)+(prevByStatus.SPEND_DROP||0);
+    var riskDiff=riskN-prevRiskN;
+    prevRiskChip=' <span class="text-[11px] font-bold '+(riskDiff>0?'text-red-600':riskDiff<0?'text-blue-600':'text-gray-400')+'">('+esc(d.prevBaseYmd)+' 대비 '+(riskDiff>0?'▲':riskDiff<0?'▼':'-')+Math.abs(riskDiff)+'명)</span>';
+  }
   var insightHtml=totalN?'<div class="mb-3 flex items-start gap-2 text-[13px] font-semibold px-3.5 py-2.5 rounded-xl bg-'+tone.color+'-50 border border-'+tone.color+'-200 text-'+tone.color+'-800">'
     +'<i class="ti '+tone.icon+' text-'+tone.color+'-500 mt-0.5"></i>'
-    +'<span>'+(curRegion?esc(curRegion)+' ':'전체 ')+totalN.toLocaleString('ko-KR')+'명 중 <b>'+riskN.toLocaleString('ko-KR')+'명('+riskPct.toFixed(0)+'%)</b>이 결제 이탈·급감 위험군이에요'
+    +'<span>'+(curRegion?esc(curRegion)+' ':'전체 ')+totalN.toLocaleString('ko-KR')+'명 중 <b>'+riskN.toLocaleString('ko-KR')+'명('+riskPct.toFixed(0)+'%)</b>이 결제 이탈·급감 위험군이에요'+prevRiskChip
     +(riskN?' — 30일 미결제 '+noPayN.toLocaleString('ko-KR')+'명, 결제 급감 '+(movedDropN+spendDropN).toLocaleString('ko-KR')+'명(서버이동+급감 '+movedDropN+' · 같은서버 '+spendDropN+')':'')
     +'</span></div>':'';
 
@@ -2920,11 +2930,18 @@ function renderWhaleAlert(){
 
   // 핵심 — 상태별 집계 카드 (문제 있는 상태부터 왼쪽에 오도록 이미 심각도순으로 정렬돼서 옴)
   // 색·아이콘만으로는 뭘 뜻하는지 안 보인다는 피드백 반영 — 라벨 아래 기준 설명을 한 줄 더 붙였다.
+  var prevCountByStatus={};
+  if(!curRegion&&d.prevSummary) d.prevSummary.forEach(function(s){ prevCountByStatus[s.status]=s.count; });
   var cards=regionSummary.map(function(s){
+    var prevChip='';
+    if(!curRegion&&d.prevSummary){
+      var pv=prevCountByStatus[s.status]||0, diff=s.count-pv;
+      prevChip=' <span class="text-[10px] font-bold '+(diff>0?'text-red-500':diff<0?'text-blue-600':'text-gray-400')+'">'+(diff>0?'▲':diff<0?'▼':'-')+Math.abs(diff)+'</span>';
+    }
     return'<div class="kpi-card" style="padding:14px 16px">'
       +'<div class="kpi-label" style="display:flex;align-items:center;gap:5px"><i class="ti '+(STATUS_ICON[s.status]||'ti-tag')+' text-'+s.color+'-500"></i>'+esc(s.label)+'</div>'
-      +'<div class="kpi-value text-'+s.color+'-700" style="font-size:26px">'+s.count.toLocaleString('ko-KR')+'<span style="font-size:12px;color:#9ca3af;font-weight:600"> 명</span></div>'
-      +(s.desc?'<div class="text-[10px] text-gray-400 mt-1 leading-snug">'+esc(s.desc)+'</div>':'')+'</div>';
+      +'<div class="kpi-value text-'+s.color+'-700" style="font-size:26px">'+s.count.toLocaleString('ko-KR')+'<span style="font-size:12px;color:#9ca3af;font-weight:600"> 명</span>'+prevChip+'</div>'
+      +(s.desc?'<div class="text-[10px] text-gray-400 mt-1 leading-snug">'+esc(s.desc)+(!curRegion&&d.prevSummary?' · 전월비':'')+'</div>':'')+'</div>';
   }).join('');
 
   function badge(status){
