@@ -875,7 +875,12 @@ function renderDocViewer(id, containerId){
       +'<div class="grid grid-cols-1 md:grid-cols-2 gap-4">'+cards+'</div>';
     return;
   }
-  c.innerHTML='<div class="doc-viewer"><div class="doc-toolbar"><span class="title"><i class="ti ti-file-spreadsheet text-emerald-600"></i> '+(pageNames[id]||id)+' <span style="font-size:11px;color:#9ca3af;font-weight:400;margin-left:8px">읽기 전용</span></span><div style="display:flex;gap:6px"><a href="'+doc.edit+'" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-pencil"></i> 새창에서 편집</a></div></div><div class="doc-iframe-wrap"><iframe src="'+(doc.preview||doc.edit)+'"></iframe></div></div>';
+  // .doc-viewer의 margin:-24px는 #content-area를 통째로 채울 때 그 패딩을 상쇄해서
+  // 가장자리까지 꽉 채우려는 용도다. 라이브 운영 문서함처럼 자체 탭바 아래 #hub-body
+  // 같은 하위 컨테이너에 끼워 넣을 땐 이 음수 마진이 위에 있는 탭바를 그대로 가려버린다
+  // — containerId가 따로 지정된 경우(=전체 화면이 아님)엔 마진/높이를 상쇄하지 않는다.
+  var nested=!!containerId;
+  c.innerHTML='<div class="doc-viewer"'+(nested?' style="margin:0;height:70vh;border:1px solid var(--border);border-radius:12px;overflow:hidden"':'')+'><div class="doc-toolbar"><span class="title"><i class="ti ti-file-spreadsheet text-emerald-600"></i> '+(pageNames[id]||id)+' <span style="font-size:11px;color:#9ca3af;font-weight:400;margin-left:8px">읽기 전용</span></span><div style="display:flex;gap:6px"><a href="'+doc.edit+'" target="_blank" class="btn btn-primary btn-sm"><i class="ti ti-pencil"></i> 새창에서 편집</a></div></div><div class="doc-iframe-wrap"><iframe src="'+(doc.preview||doc.edit)+'"></iframe></div></div>';
 }
 
 // 여러 페이지를 탭 하나로 묶는 허브 공통 탭바
@@ -901,7 +906,7 @@ function renderLiveOpsHub(){
 
 /* ── 회의 기록 아카이브 (주간회의 / 보고·분석 / 내부 회의 / 개발사 회의록) ── */
 var ARCHIVE_TABS=[
-  {id:'weekly',label:'주간회의',icon:'ti-file-text'},
+  {id:'weekly',label:'팀/실 주간회의',icon:'ti-file-text'},
   {id:'report',label:'보고/분석',icon:'ti-report'},
   {id:'internal',label:'내부 회의',icon:'ti-lock'},
   {id:'devmeeting',label:'개발사 회의록',icon:'ti-key'}
@@ -1747,7 +1752,7 @@ function renderSpecs(containerId){
 function renderArchive(type,containerId){
   var iconMap={weekly:'ti-file-text text-blue-500',report:'ti-report text-emerald-500',internal:'ti-lock text-amber-500'};
   var colorMap={weekly:'blue',report:'emerald',internal:'amber'};
-  var titles={weekly:'주간회의',report:'보고/분석',internal:'내부 회의'};
+  var titles={weekly:'팀/실 주간회의',report:'보고/분석',internal:'내부 회의'};
   var clr=colorMap[type]||'blue';
   var c=document.getElementById(containerId||'content-area');
 
@@ -1756,6 +1761,7 @@ function renderArchive(type,containerId){
     +'<div class="card-header"><span class="card-title" id="mt-form-title">회의록 추가</span></div>'
     +'<div class="form-group"><label>제목</label><input type="text" id="mt-title" list="mt-title-list" autocomplete="off"><datalist id="mt-title-list"></datalist>'
     +'<span class="text-[10px] text-gray-400">기존 회의와 제목을 똑같이 입력하면 하나의 스레드로 이어져요 — 입력하면 아래 기존 제목 목록이 자동완성으로 떠요</span></div>'
+    +(type==='weekly'?'<div class="form-group"><label>구분</label><select id="mt-scope"><option value="">선택 안 함</option><option value="팀 회의">팀 회의 (해외사업팀 시절)</option><option value="실 회의">실 회의 (해외사업실)</option></select></div>':'')
     +'<div class="grid2"><div class="form-group"><label>일자</label><input type="date" id="mt-date"></div>'
     +'<div class="form-group"><label>참석자</label><input type="text" id="mt-attendees" placeholder="홍길동, 김철수"></div></div>'
     +'<div class="form-group"><label>요약</label><input type="text" id="mt-summary" placeholder="한 줄 요약 (카드에 말풍선으로 바로 보여요)"></div>'
@@ -1807,6 +1813,7 @@ function renderArchive(type,containerId){
       +'<div class="flex-1 min-w-0">'+(showTitle?'<div class="font-bold text-sm text-gray-900 leading-snug">'+esc(m.title)+'</div>':'')
       +'<div class="flex flex-wrap items-center gap-1.5 '+(showTitle?'mt-2':'')+' text-[11px] text-gray-500">'
       +'<span class="inline-flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded-md font-semibold"><i class="ti ti-calendar text-gray-400"></i> '+esc(String(m.date||'').slice(0,10))+'</span>'
+      +(m.scope?'<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-semibold '+(m.scope==='팀 회의'?'bg-slate-100 text-slate-600':'bg-teal-50 text-teal-700')+'"><i class="ti ti-building"></i> '+esc(m.scope)+'</span>':'')
       +(m.attendees?'<span class="inline-flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded-md font-semibold"><i class="ti ti-users text-gray-400"></i> '+esc(m.attendees)+'</span>':'')
       +(m.author?'<span class="text-gray-300">·</span><span class="text-gray-400">'+esc(m.author.split('@')[0])+'</span>':'')
       +'</div></div>'
@@ -1863,7 +1870,7 @@ function renderArchive(type,containerId){
 }
 
 var _mtCurrentType='weekly';
-var _mtTypeNames={weekly:'주간회의',report:'보고/분석',internal:'내부 회의'};
+var _mtTypeNames={weekly:'팀/실 주간회의',report:'보고/분석',internal:'내부 회의'};
 // 새 회의를 기존 시리즈에 이어붙이려면 제목이 정확히 같아야 하는데, 매번 새로 타이핑하다 보니
 // 오타·띄어쓰기 차이로 스레드가 끊기는 일이 잦았다. 기존 제목을 자동완성 목록으로 띄워
 // 그대로 선택할 수 있게 해서, "새로 작성" 시에도 스레드가 안 끊기게 한다.
@@ -1880,7 +1887,7 @@ function populateMtTitleList_(type){
 function openMeetingForm(type){
   _mtCurrentType=type;
   editTarget={type:type,id:null};
-  ['title','date','attendees','summary','details','fu','imageUrl'].forEach(function(f){
+  ['title','date','attendees','summary','details','fu','imageUrl','scope'].forEach(function(f){
     var el=document.getElementById('mt-'+f);if(el)el.value='';
   });
   var d=document.getElementById('mt-date');
@@ -1908,6 +1915,7 @@ function openMeetingFormEdit(id, type){
   editTarget={type:type,id:id};
   document.getElementById('mt-title').value=m.title||'';
   document.getElementById('mt-date').value=String(m.date||'').slice(0,10);
+  if(document.getElementById('mt-scope'))document.getElementById('mt-scope').value=m.scope||'';
   document.getElementById('mt-attendees').value=m.attendees||'';
   document.getElementById('mt-summary').value=m.summary||'';
   document.getElementById('mt-details').value=m.details||'';
@@ -1968,6 +1976,7 @@ function saveMeeting(){
     fu:document.getElementById('mt-fu').value.trim(),
     file:document.getElementById('mt-file')?document.getElementById('mt-file').value.trim():'',
     imageUrl:document.getElementById('mt-imageUrl').value.trim(),
+    scope:document.getElementById('mt-scope')?document.getElementById('mt-scope').value:'',
     author:_sessionAuth?_sessionAuth.email:''
   };
   if(!params.title){alert('제목을 입력해주세요.');return;}
@@ -3584,9 +3593,14 @@ function applyKpiData(d){
   if(d.milestone&&d.milestone.date){
     var ms=d.milestone;
     window._milestoneTimeline=ms.timeline||[];
-    // 오늘 기준 현재 마일스톤으로 최상위 필드를 덮어씀 (대시보드 위젯·뱃지도 최신 날짜 반영)
-    var _ci=milestoneCurrentIdx(ms.timeline||[]);
+    // 대시보드 위젯은 "다음 예정" 마일스톤을 우선 보여준다 — 예전엔 "오늘 이전 최신"만 써서
+    // 마지막 업데이트로부터 며칠만 지나도 위젯이 옛날 내용에 계속 머물러 있었다
+    // (다음 예정이 없으면 그때만 최신 과거 항목으로 대체).
+    var _ci=milestoneNextIdx(ms.timeline||[]);
+    var _isNext=_ci!==-1;
+    if(_ci===-1) _ci=milestoneCurrentIdx(ms.timeline||[]);
     if(_ci!==-1){var _cur=ms.timeline[_ci];ms.date=_cur.date;ms.version=_cur.version;ms.kr=_cur.kr;ms.tw=_cur.tw;ms.jp=_cur.jp;ms.gl=_cur.gl;}
+    window._milestoneIsNext=_isNext;
     function buildList(items,clr){
       if(!items||!items.length) return'<li class="text-gray-400">내역 없음</li>';
       return items.map(function(s){
@@ -3594,12 +3608,13 @@ function applyKpiData(d){
       }).join('');
     }
     function card(title,clr,items){return'<div class="bg-white p-3 rounded-xl border shadow-sm"><div class="font-bold text-xs text-'+clr+'-600 mb-1.5 border-b border-gray-100 pb-1">'+title+'</div><ul class="text-[11px] text-gray-600 space-y-0.5 list-disc list-inside">'+buildList(items)+'</ul></div>';}
+    var _patchLabel=_isNext?'다음 패치':'최신 패치';
     window.dynamicMilestone={
-      kr:'<div class="bg-amber-50 border border-amber-200 p-3 rounded-xl mb-3 flex items-center justify-between"><span class="text-xs font-bold text-amber-900">최신 패치</span><span class="text-[11px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-bold">'+esc(ms.date)+'</span></div><ul class="space-y-1 text-xs text-gray-700 list-disc list-inside p-3 bg-white rounded-xl border shadow-sm">'+buildList(ms.kr)+'</ul>',
-      tw:'<div class="bg-blue-50 border border-blue-200 p-3 rounded-xl mb-3 flex items-center justify-between"><span class="text-xs font-bold text-blue-900">최신 패치</span><span class="text-[11px] bg-blue-200 text-blue-900 px-2 py-0.5 rounded font-bold">'+esc(ms.date)+'</span></div><ul class="space-y-1 text-xs text-gray-700 list-disc list-inside p-3 bg-white rounded-xl border shadow-sm">'+buildList(ms.tw)+'</ul>',
-      jp:'<div class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl mb-3 flex items-center justify-between"><span class="text-xs font-bold text-emerald-900">최신 패치</span><span class="text-[11px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded font-bold">'+esc(ms.date)+'</span></div><ul class="space-y-1 text-xs text-gray-700 list-disc list-inside p-3 bg-white rounded-xl border shadow-sm">'+buildList(ms.jp)+'</ul>',
-      global:'<div class="bg-purple-50 border border-purple-200 p-3 rounded-xl mb-3 flex items-center justify-between"><span class="text-xs font-bold text-purple-900">글로벌 서비스</span><span class="text-[11px] bg-purple-200 text-purple-900 px-2 py-0.5 rounded font-bold">'+esc(ms.date)+'</span></div><ul class="space-y-1 text-xs text-gray-700 list-disc list-inside p-3 bg-white rounded-xl border shadow-sm">'+buildList(ms.gl)+'</ul>',
-      cross:'<div class="mb-2.5 flex items-center justify-between border-b border-purple-200 pb-2"><span class="font-bold text-purple-900 text-xs"><i class="ti ti-world text-purple-600"></i> 전 권역 크로스체크</span><span class="text-[11px] bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded">'+esc(ms.date)+'</span></div><div class="grid grid-cols-2 gap-2.5">'+card('🇰🇷 한국','red',ms.kr)+card('🇹🇼 대만','blue',ms.tw)+card('🇯🇵 일본','emerald',ms.jp)+card('🌐 글로벌','purple',ms.gl)+'</div>'
+      kr:'<div class="bg-amber-50 border border-amber-200 p-3 rounded-xl mb-3 flex items-center justify-between"><span class="text-xs font-bold text-amber-900">'+_patchLabel+'</span><span class="text-[11px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-bold">'+esc(ms.date)+'</span></div><ul class="space-y-1 text-xs text-gray-700 list-disc list-inside p-3 bg-white rounded-xl border shadow-sm">'+buildList(ms.kr)+'</ul>',
+      tw:'<div class="bg-blue-50 border border-blue-200 p-3 rounded-xl mb-3 flex items-center justify-between"><span class="text-xs font-bold text-blue-900">'+_patchLabel+'</span><span class="text-[11px] bg-blue-200 text-blue-900 px-2 py-0.5 rounded font-bold">'+esc(ms.date)+'</span></div><ul class="space-y-1 text-xs text-gray-700 list-disc list-inside p-3 bg-white rounded-xl border shadow-sm">'+buildList(ms.tw)+'</ul>',
+      jp:'<div class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl mb-3 flex items-center justify-between"><span class="text-xs font-bold text-emerald-900">'+_patchLabel+'</span><span class="text-[11px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded font-bold">'+esc(ms.date)+'</span></div><ul class="space-y-1 text-xs text-gray-700 list-disc list-inside p-3 bg-white rounded-xl border shadow-sm">'+buildList(ms.jp)+'</ul>',
+      global:'<div class="bg-purple-50 border border-purple-200 p-3 rounded-xl mb-3 flex items-center justify-between"><span class="text-xs font-bold text-purple-900">글로벌 서비스 · '+_patchLabel+'</span><span class="text-[11px] bg-purple-200 text-purple-900 px-2 py-0.5 rounded font-bold">'+esc(ms.date)+'</span></div><ul class="space-y-1 text-xs text-gray-700 list-disc list-inside p-3 bg-white rounded-xl border shadow-sm">'+buildList(ms.gl)+'</ul>',
+      cross:'<div class="mb-2.5 flex items-center justify-between border-b border-purple-200 pb-2"><span class="font-bold text-purple-900 text-xs"><i class="ti ti-world text-purple-600"></i> 전 권역 크로스체크 · '+_patchLabel+'</span><span class="text-[11px] bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded">'+esc(ms.date)+'</span></div><div class="grid grid-cols-2 gap-2.5">'+card('🇰🇷 한국','red',ms.kr)+card('🇹🇼 대만','blue',ms.tw)+card('🇯🇵 일본','emerald',ms.jp)+card('🌐 글로벌','purple',ms.gl)+'</div>'
     };
     window._milestoneCurrentDate=ms.date;
   }
@@ -3676,7 +3691,7 @@ function applyKpiData(d){
   // renderDashboard가 DOM을 교체한 뒤에 뱃지 업데이트
   if(window._milestoneCurrentDate){
     var mdEl=document.getElementById('milestone-active-date');
-    if(mdEl) mdEl.textContent='최신: '+window._milestoneCurrentDate;
+    if(mdEl) mdEl.textContent=(window._milestoneIsNext?'다음: ':'최신: ')+window._milestoneCurrentDate;
   }
 }
 
