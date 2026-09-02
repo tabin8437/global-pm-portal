@@ -1218,13 +1218,16 @@ function buildRegionMiniRow_(){
       +(spark?'<div class="mt-1.5">'+spark+'</div>':'')+'</div>';
   }).join('');
   if(!cards) return'';
-  return'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-map-2 text-blue-500"></i> 권역별 매출 추이 <span class="text-[11px] text-gray-400 font-medium ml-1">('+(curM+1)+'월)</span></span></div><div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">'+cards+'</div>';
+  // "(8월)"만 있으면 월간 그래프와 헷갈려서 "왜 아직도 8월?"로 오해받기 쉽다.
+  // 주간 데이터라는 게 분명하도록 "8월 4주"처럼 주차까지 같이 표기한다.
+  var weekOfMonth_=Math.ceil(refD_.getDate()/7);
+  return'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-map-2 text-blue-500"></i> 권역별 매출 추이 <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded ml-1">주간</span> <span class="text-[11px] text-gray-400 font-medium ml-1">('+(curM+1)+'월 '+weekOfMonth_+'주)</span></span></div><div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">'+cards+'</div>';
 }
 // 다음 마일스톤 + D-day
 function buildNextMilestoneCard_(){
   var timeline=window._milestoneTimeline||[];
   var nextIdx=milestoneNextIdx(timeline);
-  if(nextIdx===-1) return'<div class="card"><div class="card-header"><span class="card-title text-sm"><i class="ti ti-flag text-blue-500"></i> 다음 마일스톤</span></div><div class="text-xs text-gray-400 text-center py-6">예정된 마일스톤이 없습니다</div></div>';
+  if(nextIdx===-1) return'<div class="card"><div class="card-header"><span class="card-title text-sm"><i class="ti ti-flag text-blue-500"></i> 다음 마일스톤</span><button onclick="nav(\'milestone\')" class="btn btn-ghost btn-sm">상세 <i class="ti ti-chevron-right text-[10px]"></i></button></div><div class="text-xs text-gray-400 text-center py-6">예정된 마일스톤이 없습니다</div></div>';
   var t=timeline[nextIdx];
   var gap=milestoneDayGap(t);
   var regions=[{k:'kr',l:'🇰🇷 KR'},{k:'tw',l:'🇹🇼 TW'},{k:'jp',l:'🇯🇵 JP'},{k:'gl',l:'🌐 GL'}];
@@ -1235,7 +1238,7 @@ function buildNextMilestoneCard_(){
     var text=!hasVal?'<span class="text-gray-300">일정 없음</span>':(Array.isArray(val)?val.map(function(s){return esc(s);}).join('<br>'):esc(String(val)));
     return'<div class="flex items-start gap-1.5 py-0.5"><span class="text-[10px] font-bold text-gray-400 w-9 shrink-0 mt-px">'+r.l+'</span><span class="text-[11px] text-gray-700 leading-relaxed">'+text+'</span></div>';
   }).join('');
-  return'<div class="card cursor-pointer" onclick="nav(\'milestone\')"><div class="card-header"><span class="card-title text-sm"><i class="ti ti-flag text-blue-500"></i> 다음 마일스톤</span><span class="text-[11px] font-extrabold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">D-'+gap+'</span></div>'
+  return'<div class="card cursor-pointer" onclick="nav(\'milestone\')"><div class="card-header"><span class="card-title text-sm"><i class="ti ti-flag text-blue-500"></i> 다음 마일스톤</span><div class="flex items-center gap-2"><span class="text-[11px] font-extrabold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">D-'+gap+'</span><button onclick="event.stopPropagation();nav(\'milestone\')" class="btn btn-ghost btn-sm">상세 <i class="ti ti-chevron-right text-[10px]"></i></button></div></div>'
     +'<div class="text-sm font-bold text-gray-900 mb-2">'+esc(t.date)+(t.version?' · '+esc(t.version):'')+'</div>'
     +items+'</div>';
 }
@@ -1295,9 +1298,6 @@ function renderDashboard(){
   // 유저 분포 요약 (PU·전투력·CP&PAY·상위고래유저경보 핵심 수치만) — 상세는 유저 분포 페이지 그대로 유지
   var userDistSummaryHtml='<div id="userdist-summary-widget"></div>';
 
-  // Milestone widget
-  var milestoneHtml='<div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-route text-blue-500"></i> 통합 마일스톤 타임라인</span><div class="flex items-center gap-2"><span id="milestone-active-date" class="text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md">최신: -</span><button onclick="nav(\'milestone\')" class="btn btn-ghost btn-sm">상세 <i class="ti ti-chevron-right text-[10px]"></i></button></div></div><div class="flex bg-gray-100 p-0.5 rounded-lg text-[11px] font-bold mb-3"><button onclick="switchMilestoneTab(\'cross\')" id="m-tab-cross" class="flex-1 py-1.5 rounded-md transition-all">전권역</button><button onclick="switchMilestoneTab(\'kr\')" id="m-tab-kr" class="flex-1 py-1.5 rounded-md transition-all">KR</button><button onclick="switchMilestoneTab(\'tw\')" id="m-tab-tw" class="flex-1 py-1.5 rounded-md transition-all">TW</button><button onclick="switchMilestoneTab(\'jp\')" id="m-tab-jp" class="flex-1 py-1.5 rounded-md transition-all">JP</button><button onclick="switchMilestoneTab(\'global\')" id="m-tab-global" class="flex-1 py-1.5 rounded-md transition-all">글로벌</button></div><div id="milestone-widget-body" class="p-3 bg-blue-50/50 border border-blue-100 rounded-xl text-xs max-h-[420px] overflow-y-auto"></div></div>';
-
   // iOS mini widget
   var iosMini='<div class="card cursor-pointer hover:shadow-md transition-shadow" onclick="nav(\'platform\')"><div class="card-header"><span class="card-title">🍎 App Store 심의 요약</span><i class="ti ti-chevron-right text-gray-400"></i></div><div class="grid grid-cols-3 gap-2 text-center text-xs"><div class="bg-emerald-50 p-2.5 rounded-lg border border-emerald-100"><span class="block text-gray-400 text-[10px]">🌐 글로벌</span><span class="block text-emerald-700 font-bold my-0.5" id="mini-v-global">1.9.2</span><span class="text-[9px] text-emerald-600 font-bold">✅ 통과</span></div><div class="bg-emerald-50 p-2.5 rounded-lg border border-emerald-100"><span class="block text-gray-400 text-[10px]">🇹🇼 대만</span><span class="block text-emerald-700 font-bold my-0.5" id="mini-v-tw">1.47.1</span><span class="text-[9px] text-emerald-600 font-bold">✅ 통과</span></div><div class="bg-emerald-50 p-2.5 rounded-lg border border-emerald-100"><span class="block text-gray-400 text-[10px]">🇯🇵 일본</span><span class="block text-emerald-700 font-bold my-0.5" id="mini-v-jp">1.10.9</span><span class="text-[9px] text-emerald-600 font-bold">✅ 통과</span></div></div></div>';
 
@@ -1352,9 +1352,7 @@ function renderDashboard(){
     +'<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">'+
     '<div class="lg:col-span-2">'+userDistSummaryHtml+'</div>'+
     '<div>'+annualHtml+buildNextMilestoneCard_()+iosMini+'</div>'+
-    '</div>'
-    +milestoneHtml;
-  switchMilestoneTab('cross');
+    '</div>';
   renderUserDistSummary();
   // App Store 심의 미니 위젯(#mini-v-*)은 iosMini 안에 고정 텍스트로 박혀 있어서
   // 실제 심의 데이터를 안 불러오면 예전 버전이 계속 보인다. loadAppleMails()가
