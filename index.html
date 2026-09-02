@@ -3066,6 +3066,12 @@ function udRenderChart(){
     html=udStatCards_(segBuckets,segValsA,segValsB,rowA,rowB,pctMode,metricHex);
   }else{
     html=udChartBlock_('main','전체 분포',slice(mainRange,buckets),slice(mainRange,valsA),slice(mainRange,valsB),rowA,rowB,pctMode,metricHex,axisLabel,false,window._udMetric==='chapter');
+    if(window._udMetric==='chapter'){
+      html+='<div class="flex items-center gap-3 text-[10px] text-gray-500 -mt-1 mb-1">'
+        +'<span class="inline-flex items-center gap-1"><span style="width:9px;height:9px;border-radius:2px;background:'+metricHex+';display:inline-block"></span>클리어 = 해당 챕터 이상 도달(누적)</span>'
+        +'<span class="inline-flex items-center gap-1"><span style="width:9px;height:9px;border-radius:2px;background:#d97706;display:inline-block"></span>정체 = 현재 그 챕터에 머무름</span>'
+        +'</div>';
+    }
   }
 
   var zoomRange=udResolveRange_(buckets,rangeCfg.zoom);
@@ -3180,6 +3186,10 @@ function udChartBlock_(chartId,title,buckets,valsA,valsB,rowA,rowB,pctMode,metri
     var gap=valsB?bw*0.18:0;
     buckets.forEach(function(b,i){
       var cxi=cx(i);
+      // "챕터N 정체"(현재 그 챕터에 머무름) 구간은 "챕터N 클리어"(누적 도달)와 같은 색이면
+      // x축 글자만으로 구분해야 해서 잘 안 보인다는 피드백 — 정체는 앰버색으로 따로 표시한다.
+      var isStay=/정체/.test(String(b));
+      var curColor=isStay?'#d97706':metricHex;
       // 비교 기간에 이 구간 자체가 없던(새로 생긴 컬럼이라 지난 기록엔 0인) 경우, 비교값이
       // 0이라 회색 막대가 사실상 안 보이는데도 "증감 있음"처럼 보이는 문제가 있었다.
       // 이럴 땐 비교 막대를 아예 생략하고, 현재 막대도 accent색 대신 회색으로 그려서
@@ -3188,11 +3198,11 @@ function udChartBlock_(chartId,title,buckets,valsA,valsB,rowA,rowB,pctMode,metri
       if(hasCompare){
         var ya=cy(valsA[i]), ha=Math.max(0,PT+plotH-ya);
         var yb=cy(valsB[i]), hb=Math.max(0,PT+plotH-yb);
-        lines+='<rect x="'+(cxi-bw-gap/2).toFixed(1)+'" y="'+ya.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+ha.toFixed(1)+'" rx="2" fill="'+metricHex+'"/>'
+        lines+='<rect x="'+(cxi-bw-gap/2).toFixed(1)+'" y="'+ya.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+ha.toFixed(1)+'" rx="2" fill="'+curColor+'"/>'
           +'<rect x="'+(cxi+gap/2).toFixed(1)+'" y="'+yb.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+hb.toFixed(1)+'" rx="2" fill="#94a3b8" opacity=".75"/>';
       }else{
         var ya2=cy(valsA[i]), ha2=Math.max(0,PT+plotH-ya2);
-        var barColor=valsB?'#cbd5e1':metricHex;   // valsB가 아예 없는 차트(비교 없음 모드)는 원래 색 유지
+        var barColor=valsB?'#cbd5e1':curColor;   // valsB가 아예 없는 차트(비교 없음 모드)는 그룹색 유지
         lines+='<rect x="'+(cxi-bw/2).toFixed(1)+'" y="'+ya2.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+ha2.toFixed(1)+'" rx="2" fill="'+barColor+'"/>';
       }
     });
@@ -3216,8 +3226,10 @@ function udChartBlock_(chartId,title,buckets,valsA,valsB,rowA,rowB,pctMode,metri
       +dots(valsA,metricHex,dotR);
   }
 
-  // x축 라벨: 구간이 많으면(전투력 36, 레벨 100) 촘촘해지므로 10~12개만 골라 표시
-  var step=Math.max(1,Math.ceil(n/12));
+  // x축 라벨: 구간이 많으면(전투력 36, 레벨 100) 촘촘해지므로 10~12개만 골라 표시.
+  // 막대 모드(현재는 챕터진도뿐, 구간이 14개 정도로 적음)는 "클리어/정체 표기가 잘 안
+  // 보인다"는 피드백이 있어 전부 다 보여준다.
+  var step=barMode?1:Math.max(1,Math.ceil(n/12));
   var xLabels='';
   for(var i=0;i<n;i+=step){
     xLabels+='<text x="'+cx(i).toFixed(1)+'" y="'+(PT+plotH+16)+'" font-size="9" fill="#9ca3af" text-anchor="middle">'+esc(udBucketLabel_(buckets[i]))+'</text>';
@@ -3303,7 +3315,10 @@ function udStatCards_(buckets,valsA,valsB,rowA,rowB,pctMode,metricHex){
 // 전투력/레벨 구간 라벨을 읽기 좋게 (숫자면 천단위 콤마)
 function udBucketLabel_(b){
   var n=Number(b);
-  return(b!==''&&!isNaN(n))?n.toLocaleString('ko-KR'):String(b);
+  if(b!==''&&!isNaN(n)) return n.toLocaleString('ko-KR');
+  var s=String(b);
+  var m=s.match(/^챕터\s*(\d+)\s*(클리어|정체)$/);
+  return m?(m[1]+' '+m[2]):s;   // "챕터0 클리어" → "0 클리어" (x축 폭이 좁아 줄여서 표기)
 }
 
 // 증감을 ▲▼ 화살표로 (포탈 전반의 등락 표기 규칙과 통일: 증가=빨강▲, 감소=파랑▼)
