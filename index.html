@@ -1335,10 +1335,10 @@ function renderDashboard(){
   var monthTargetHtml='<span id="month-target-badge" class="text-[11px] text-gray-400 font-medium">'+(showPrevMonth?dispMonth+'월 확정 기준':'1일 ~ '+dispMonth+'월 '+yesterday+'일 기준')+'</span>';
 
   c.innerHTML=globalFilterBarHtml_()
-    +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-flame text-emerald-500"></i> 주간 지표 현황</span><span class="text-[11px] text-gray-400 font-medium">'+weekLabel+' 기준</span></div>'
+    +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-flame text-emerald-500"></i> 주간 지표 현황 <span class="text-[10px] font-bold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded ml-1" title="권역 합산이 아니라 글로벌 권역 자체 수치입니다">🌐 글로벌</span></span><span class="text-[11px] text-gray-400 font-medium">'+weekLabel+' 기준</span></div>'
     +'<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-5">'+buildHeroRow_()+'</div>'
     // 데스크톱은 주간·월간을 이어서 바로 비교하도록 기본 펼침, 모바일은 카드가 길어지니 기본 접힘
-    +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-list-details text-gray-400"></i> 월간 지표</span><button class="btn btn-sm" onclick="toggleDashMoreStats(this)">'+(window.innerWidth<768?'<i class="ti ti-chevron-down"></i> 펼치기':'<i class="ti ti-chevron-up"></i> 접기')+'</button></div>'
+    +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-list-details text-gray-400"></i> 월간 지표 <span class="text-[10px] font-bold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded ml-1" title="권역 합산이 아니라 글로벌 권역 자체 수치입니다">🌐 글로벌</span></span><button class="btn btn-sm" onclick="toggleDashMoreStats(this)">'+(window.innerWidth<768?'<i class="ti ti-chevron-down"></i> 펼치기':'<i class="ti ti-chevron-up"></i> 접기')+'</button></div>'
     +'<div id="dash-more-stats" class="mb-5"'+(window.innerWidth<768?' style="display:none"':'')+'>'
     +'<div class="flex items-center gap-2 flex-wrap text-[11px] text-gray-400 font-semibold mb-1.5">'+monthLabel+monthTargetHtml+'</div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">'+monthlyCards+'</div>'
     +'</div>'
@@ -1411,7 +1411,7 @@ function renderDashboard(){
     if(an.totalPlan){
       totHtml='<div class="flex items-center justify-between mt-2 pt-2 border-t border-gray-200"><span class="text-xs font-bold text-gray-700">연간 합계</span><div class="text-right"><div class="text-[10px] text-gray-500">계획 '+fmtNum(an.totalPlan*1000000)+' · 추정 '+fmtNum(an.totalEstimate*1000000)+'</div><div class="text-xs font-bold '+(parseFloat(String(an.totalAchieve||'').replace(/[^0-9.]/g,''))>=90?'text-emerald-600':'text-amber-600')+'">달성률 '+an.totalAchieve+'</div></div></div>';
     }
-    aw.innerHTML='<div class="card"><div class="card-header"><span class="card-title text-sm"><i class="ti ti-coin text-amber-500"></i> 매출 현황</span></div>'+mcHtml+qHtml+totHtml+'</div>';
+    aw.innerHTML='<div class="card"><div class="card-header"><span class="card-title text-sm"><i class="ti ti-coin text-amber-500"></i> 매출 현황 <span class="text-[10px] font-bold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded ml-1" title="권역 합산이 아니라 글로벌 권역 자체 수치입니다">🌐 글로벌</span></span></div>'+mcHtml+qHtml+totHtml+'</div>';
   }
   // 월간 목표 뱃지 채우기
   var mtb=document.getElementById('month-target-badge');
@@ -1835,7 +1835,9 @@ function renderArchive(type,containerId){
       ?'<div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">'+order.map(function(g){
           if(g.items.length===1){
             return'<div class="bg-white border border-gray-200 rounded-2xl p-4 hover:shadow-md transition-all hover:border-'+clr+'-200">'
-              +renderMeetingEntry(g.items[0],true)+'</div>';
+              +renderMeetingEntry(g.items[0],true)
+              +'<button type="button" class="mt-2.5 text-[11px] font-bold text-gray-400 hover:text-'+clr+'-600 inline-flex items-center gap-1" onclick="openMeetingFormContinue_(\''+type+'\',\''+esc(g.title).replace(/\'/g,"\\\'")+'\')" title="같은 제목으로 이어서 작성하면 하나의 스레드로 묶여요"><i class="ti ti-plus"></i>이어서 작성</button>'
+              +'</div>';
           }
           // 최신 회차가 위로 오게 정렬 (날짜순). 접혀 있을 땐 최신 1건만 보이고, 나머지는 눌러서 펼친다.
           var sorted=g.items.slice().sort(function(a,b){return String(b.date||'').localeCompare(String(a.date||''));});
@@ -1850,6 +1852,7 @@ function renderArchive(type,containerId){
               +'<div style="display:none">'+rest.map(function(m,i){return itemBlock(m,i+1);}).join('')+'</div>':'');
           return'<div class="bg-white border border-gray-200 rounded-2xl p-4 hover:shadow-md transition-all hover:border-'+clr+'-200">'
             +'<div class="flex items-center gap-2"><div class="font-bold text-sm text-gray-900 leading-snug flex-1 min-w-0">'+esc(g.title)+'</div>'
+            +'<button type="button" class="text-[10px] font-bold text-'+clr+'-600 hover:text-'+clr+'-700 inline-flex items-center gap-0.5 shrink-0" onclick="openMeetingFormContinue_(\''+type+'\',\''+esc(g.title).replace(/\'/g,"\\\'")+'\')" title="같은 제목으로 이어서 작성"><i class="ti ti-plus"></i>이어서</button>'
             +'<span class="text-[10px] font-bold text-'+clr+'-700 bg-'+clr+'-50 border border-'+clr+'-200 px-2 py-0.5 rounded-full shrink-0">'+g.items.length+'건 · 반복</span></div>'
             +'<div class="relative border-l-2 border-'+clr+'-100 ml-0.5 mt-2">'+threadHtml+'</div></div>';
         }).join('')+'</div>'
@@ -1885,6 +1888,16 @@ function openMeetingForm(type){
   populateMtTitleList_(type);
   document.getElementById('mt-form-title').textContent=(_mtTypeNames[type]||'회의록')+' 추가';
   document.getElementById('mt-form').style.display='block';
+}
+// 시리즈 카드의 "이어서 작성" 버튼 — 제목을 매번 다시 타이핑하다 오타/공백 차이로
+// 스레드가 끊기는 걸 자동완성으로 완화했었는데, 아예 제목을 미리 채워주면 그럴 일이
+// 없어진다. 새 폼을 연 다음 제목만 해당 시리즈 제목으로 덮어쓰고 날짜 입력에 포커스한다.
+function openMeetingFormContinue_(type,title){
+  openMeetingForm(type);
+  var el=document.getElementById('mt-title');
+  if(el) el.value=title||'';
+  var d=document.getElementById('mt-date');
+  if(d) d.focus();
 }
 function openMeetingFormEdit(id, type){
   _mtCurrentType=type;
