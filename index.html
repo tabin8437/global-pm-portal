@@ -2350,10 +2350,15 @@ function renderDailyGlobal(){
   }
   revLines+=targetLine+'<path d="'+linePath(cumThis)+'" fill="none" stroke="#8b5cf6" stroke-width="2.6"/>'+dotsFor(cumThis,'#8b5cf6',2.8,'매출');
 
+  // 오늘까지의 값만으로는 "이번달 목표/지난달/작년 이맘때가 결국 얼마로 끝났는지" 감이 안 온다는
+  // 요청 — 목표매출·전월 동기·작년 동월은 이미 월말까지 다 그려져 있으니, 그 마지막(월말) 값도
+  // 범례에 같이 표기한다. 이번달 실적(cumThis)은 아직 진행 중이라 최종값 자체가 없어 제외.
+  var cumPrevFull=hasPrev?cumMap(prevMap,totalSlots):null;
+  var cumLYFull=hasLY?cumMap(lyMap,totalSlots):null;
   var lines='',legend=lgChip('#8b5cf6','매출(누적)',fmtNum(cumThis[n-1]))
-    +(hasPrev?lgChip('#c4b5fd','전월 동기(누적)',fmtNum(cumPrev[n-1])):'')
-    +(hasLY?lgChip('#9ca3af','작년 동월(누적)',fmtNum(cumLY[n-1])):'')
-    +(cumTarget?lgChip('#1f2937','목표매출(누적)',fmtNum(cumTarget[n-1]||cumTarget[Math.min(n,totalSlots)-1])):'')
+    +(hasPrev?lgChip('#c4b5fd','전월 동기(누적)',fmtNum(cumPrev[n-1])+' · 최종 '+fmtNum(cumPrevFull[cumPrevFull.length-1])):'')
+    +(hasLY?lgChip('#9ca3af','작년 동월(누적)',fmtNum(cumLY[n-1])+' · 최종 '+fmtNum(cumLYFull[cumLYFull.length-1])):'')
+    +(cumTarget?lgChip('#1f2937','목표매출(누적)',fmtNum(cumTarget[n-1]||cumTarget[Math.min(n,totalSlots)-1])+' · 최종 '+fmtNum(cumTarget[totalSlots-1])):'')
     +(majorDays.length?lgChip('#f59e0b','메이저 업데이트',majorDays.join(', ')+'일'):'');
 
   // 선 3종(일별 값, 각자 min~max로 정규화) — DAU·PU·ARPPU는 누적 개념이 아니므로 그대로 일별 값을 쓴다
