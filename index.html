@@ -1147,38 +1147,33 @@ function buildHeroRow_(){
 function buildRegionMiniRowMonthly_(){
   var f=window._globalFilter;
   var byR=window._monthTrendCache;
+  var regionsData=window._regionsCache||{};
   var hasRegion=byR&&['kr','tw','jp'].some(function(k){return(byR[k]||[]).length>0;});
   if(!hasRegion) return'';
   var regionList=(f.region!=='all')?TREND_REGIONS.filter(function(r){return r.key===f.region;}):TREND_REGIONS;
-  // 이번 달은 며칠이 지났든 "아직 끝나지 않은 달"이라 완결된 지난달과 비교하면 항상
-  // 왜곡된 등락률이 나온다(예: 이제 막 시작한 이번 달 며칠치 vs 꽉 찬 지난달 한 달).
-  // 캘린더 추측(며칠 기다리기) 대신, 주간 그래프와 같은 방식으로 "끝난 달"까지만 쓴다 —
-  // 이번 달은 끝나는 순간(다음 달 1일) 자동으로 자연스럽게 포함된다.
-  var now_=new Date();
-  var curYM_=now_.getFullYear()+'-'+(now_.getMonth()+1<10?'0':'')+(now_.getMonth()+1);
-  var monthCount_=0,lastPeriodLabel_='';
+  // 진행 중인 이번 달을 완결된 지난달과 나란히 비교하면(등락률) 항상 왜곡된다.
+  // 대신 "연초부터 지금까지의 누적매출" 곡선으로 그린다 — 매달 데이터가 더해지기만
+  // 하므로 이번 달이 며칠 지났든 그래프가 항상 자연스럽게 최신 상태를 반영한다.
+  var curMonthLabel_=(new Date().getMonth()+1)+'월';
   var cards=regionList.map(function(r){
     var arr=(byR[r.key]||[]).slice().sort(function(a,b){return String(a.period).localeCompare(String(b.period));});
-    arr=arr.filter(function(t){return String(t.period)<curYM_;});
     if(!arr.length) return'';
-    var lastN=arr.slice(-6);
-    if(lastN.length>monthCount_) monthCount_=lastN.length;
-    var lastPer=String(lastN[lastN.length-1].period||'');
-    if(lastPer>lastPeriodLabel_) lastPeriodLabel_=lastPer;
-    var vals=lastN.map(function(t){var v=Number(t.revenue);return v>0?v:null;});
-    var lastT=lastN[lastN.length-1],prevT=lastN[lastN.length-2];
-    var lastV=lastT?Number(lastT.revenue):null,prevV=prevT?Number(prevT.revenue):null;
-    var changeTxt='';
-    if(lastV!=null&&prevV){var diff=(lastV-prevV)/prevV*100;changeTxt='<span class="text-[10px] font-bold '+(diff>=0?'text-red-500':'text-blue-600')+'">'+(diff>=0?'▲':'▼')+Math.abs(diff).toFixed(1)+'%</span>';}
-    var spark=miniSparkline_(vals,r.color);
+    var running=0;
+    var cumVals=arr.map(function(t){running+=Number(t.revenue)||0;return running;});
+    var reg=regionsData[r.key]||{},ann=reg.annual||{};
+    var annualTotal=ann.cumulative?ann.cumulative*1000000:cumVals[cumVals.length-1];
+    var pctBadge=ann.cumulativePct?'<span class="text-[10px] font-bold text-gray-400">'+ann.cumulativePct+'</span>':'';
+    var curMonthRev=reg.monthly&&reg.monthly.revenue;
+    var spark=miniSparkline_(cumVals,r.color);
     return'<div class="kpi-card" style="padding:14px 16px;cursor:pointer" onclick="nav(\'kpi\')">'
-      +'<div class="kpi-label" style="font-size:11px">'+r.label+' 매출</div>'
-      +'<div class="flex items-center gap-1.5 mt-0.5"><span class="font-extrabold" style="font-size:17px;color:'+r.color+'">'+(lastV!=null?fmtNum(lastV):'-')+'</span>'+changeTxt+'</div>'
-      +(spark?'<div class="mt-1.5">'+spark+'</div>':'')+'</div>';
+      +'<div class="kpi-label" style="font-size:11px">'+r.label+' 매출 (연간 누적)</div>'
+      +'<div class="flex items-center gap-1.5 mt-0.5"><span class="font-extrabold" style="font-size:17px;color:'+r.color+'">'+fmtNum(annualTotal)+'</span>'+pctBadge+'</div>'
+      +(spark?'<div class="mt-1.5">'+spark+'</div>':'')
+      +(curMonthRev?'<div class="text-[10px] text-gray-400 mt-1">'+curMonthLabel_+' 누적 <b class="text-gray-600">'+fmtNum(curMonthRev)+'</b></div>':'')
+      +'</div>';
   }).join('');
   if(!cards) return'';
-  var lastMonthNum_=lastPeriodLabel_?(+lastPeriodLabel_.slice(5,7)):'';
-  return'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-calendar-dollar text-amber-500"></i> 권역별 매출 추이 <span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded ml-1">월간</span> <span class="text-[11px] text-gray-400 font-medium ml-1">(최근 '+monthCount_+'개월 · '+lastMonthNum_+'월까지 마감)</span></span></div><div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">'+cards+'</div>';
+  return'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-calendar-dollar text-amber-500"></i> 권역별 매출 추이 <span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded ml-1">월간</span> <span class="text-[11px] text-gray-400 font-medium ml-1">(연간 누적)</span></span></div><div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">'+cards+'</div>';
 }
 function buildRegionMiniRow_(){
   var f=window._globalFilter;
