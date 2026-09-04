@@ -1151,20 +1151,20 @@ function buildRegionMiniRowMonthly_(){
   var hasRegion=byR&&['kr','tw','jp'].some(function(k){return(byR[k]||[]).length>0;});
   if(!hasRegion) return'';
   var regionList=(f.region!=='all')?TREND_REGIONS.filter(function(r){return r.key===f.region;}):TREND_REGIONS;
-  // 진행 중인 이번 달을 완결된 지난달과 나란히 비교하면(등락률) 항상 왜곡된다.
-  // 대신 "연초부터 지금까지의 누적매출" 곡선으로 그린다 — 매달 데이터가 더해지기만
-  // 하므로 이번 달이 며칠 지났든 그래프가 항상 자연스럽게 최신 상태를 반영한다.
+  // 헤드라인 숫자는 "연초부터 지금까지의 누적매출"(등락률 왜곡 없음), 그래프는 월별 실제
+  // 추이(진행 중인 이번 달도 그대로 마지막 점으로 포함 — 등락률 비교가 아니라 흐름만 보여주므로 왜곡 문제가 없다).
   var curMonthLabel_=(new Date().getMonth()+1)+'월';
   var cards=regionList.map(function(r){
     var arr=(byR[r.key]||[]).slice().sort(function(a,b){return String(a.period).localeCompare(String(b.period));});
     if(!arr.length) return'';
+    var monthVals=arr.map(function(t){var v=Number(t.revenue);return v>0?v:null;});
     var running=0;
     var cumVals=arr.map(function(t){running+=Number(t.revenue)||0;return running;});
     var reg=regionsData[r.key]||{},ann=reg.annual||{};
     var annualTotal=ann.cumulative?ann.cumulative*1000000:cumVals[cumVals.length-1];
     var pctBadge=ann.cumulativePct?'<span class="text-[10px] font-bold text-gray-400">'+ann.cumulativePct+'</span>':'';
     var curMonthRev=reg.monthly&&reg.monthly.revenue;
-    var spark=miniSparkline_(cumVals,r.color);
+    var spark=miniSparkline_(monthVals,r.color);
     return'<div class="kpi-card" style="padding:14px 16px;cursor:pointer" onclick="nav(\'kpi\')">'
       +'<div class="kpi-label" style="font-size:11px">'+r.label+' 매출 (연간 누적)</div>'
       +'<div class="flex items-center gap-1.5 mt-0.5"><span class="font-extrabold" style="font-size:17px;color:'+r.color+'">'+fmtNum(annualTotal)+'</span>'+pctBadge+'</div>'
