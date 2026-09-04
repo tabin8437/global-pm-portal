@@ -1162,7 +1162,10 @@ function buildRegionMiniRowMonthly_(){
     var cumVals=arr.map(function(t){running+=Number(t.revenue)||0;return running;});
     var reg=regionsData[r.key]||{},ann=reg.annual||{};
     var annualTotal=ann.cumulative?ann.cumulative*1000000:cumVals[cumVals.length-1];
-    var pctBadge=ann.cumulativePct?'<span class="text-[10px] font-bold text-gray-400">'+ann.cumulativePct+'</span>':'';
+    // 시트에 있는 cumulativePct 원본 셀은 무엇 대비인지 불명확해서 쓰지 않고,
+    // "추정 대비"임을 확실히 알 수 있도록 직접 계산한다(다른 위젯의 추정대비와 같은 방식).
+    var estPct=ann.estimate?(ann.cumulative/ann.estimate*100):null;
+    var pctBadge=estPct!=null?'<span class="text-[10px] font-bold text-gray-400">추정대비 '+estPct.toFixed(1)+'%</span>':'';
     var curMonthRev=reg.monthly&&reg.monthly.revenue;
     var spark=miniSparkline_(monthVals,r.color);
     return'<div class="kpi-card" style="padding:14px 16px;cursor:pointer" onclick="nav(\'kpi\')">'
