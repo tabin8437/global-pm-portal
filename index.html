@@ -1095,6 +1095,21 @@ function miniSparkline_(vals,color){
   var pts=vals.map(function(v,i){return X(i).toFixed(1)+','+Y(v).toFixed(1);}).join(' L');
   return'<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:28px;display:block"><path d="M'+pts+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="'+X(n-1).toFixed(1)+'" cy="'+Y(vals[n-1]).toFixed(1)+'" r="2.5" fill="'+color+'"/></svg>';
 }
+// miniSparkline_ 그래프 아래에 붙이는 작은 월 숫자 축 — 같은 X(i) 공식을 써서
+// (miniSparkline_이 null값을 걸러낸 뒤의 개수로 좌표를 계산하므로) periods도 동일하게
+// null 제외 후 넘겨야 점 위치와 숫자 위치가 어긋나지 않는다.
+function monthAxisLabels_(periods){
+  var n=periods.length;
+  if(n<2) return'';
+  var W=100,PAD=2;
+  function X(i){return PAD+(W-2*PAD)*(i/(n-1));}
+  var labels=periods.map(function(p,i){
+    var mo=+String(p).slice(5,7);
+    var anchor=i===0?'start':(i===n-1?'end':'middle');
+    return'<text x="'+X(i).toFixed(1)+'" y="8" font-size="7" fill="#9ca3af" text-anchor="'+anchor+'">'+mo+'</text>';
+  }).join('');
+  return'<svg viewBox="0 0 '+W+' 10" style="width:100%;height:10px;display:block">'+labels+'</svg>';
+}
 // 좁은 한 줄(요약 리스트 행) 안에 끼워 넣는 아주 작은 고정 크기 스파크라인 — miniSparkline_은 컨테이너
 // 폭에 맞춰 늘어나는 카드용이라 텍스트 행 옆에 그대로 쓰면 레이아웃이 깨진다.
 function miniSparklineInline_(vals,color,w,h){
@@ -1168,10 +1183,11 @@ function buildRegionMiniRowMonthly_(){
     var pctBadge=estPct!=null?'<span class="text-[10px] font-bold text-gray-400">추정대비 '+estPct.toFixed(1)+'%</span>':'';
     var curMonthRev=reg.monthly&&reg.monthly.revenue;
     var spark=miniSparkline_(monthVals,r.color);
+    var monthAxis=spark?monthAxisLabels_(arr.filter(function(t,i){return monthVals[i]!=null;}).map(function(t){return t.period;})):'';
     return'<div class="kpi-card" style="padding:14px 16px;cursor:pointer" onclick="nav(\'kpi\')">'
       +'<div class="kpi-label" style="font-size:11px">'+r.label+' 매출 (연간 누적)</div>'
       +'<div class="flex items-center gap-1.5 mt-0.5"><span class="font-extrabold" style="font-size:17px;color:'+r.color+'">'+fmtNum(annualTotal)+'</span>'+pctBadge+'</div>'
-      +(spark?'<div class="mt-1.5">'+spark+'</div>':'')
+      +(spark?'<div class="mt-1.5">'+spark+monthAxis+'</div>':'')
       +(curMonthRev?'<div class="text-[10px] text-gray-400 mt-1">'+curMonthLabel_+' 누적 <b class="text-gray-600">'+fmtNum(curMonthRev)+'</b></div>':'')
       +'</div>';
   }).join('');
