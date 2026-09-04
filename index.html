@@ -2356,9 +2356,9 @@ function renderDailyGlobal(){
   var cumPrevFull=hasPrev?cumMap(prevMap,totalSlots):null;
   var cumLYFull=hasLY?cumMap(lyMap,totalSlots):null;
   var lines='',legend=lgChip('#8b5cf6','매출(누적)',fmtNum(cumThis[n-1]))
-    +(hasPrev?lgChip('#c4b5fd','전월 동기(누적)',fmtNum(cumPrev[n-1])+' · 최종 '+fmtNum(cumPrevFull[cumPrevFull.length-1])):'')
-    +(hasLY?lgChip('#9ca3af','작년 동월(누적)',fmtNum(cumLY[n-1])+' · 최종 '+fmtNum(cumLYFull[cumLYFull.length-1])):'')
-    +(cumTarget?lgChip('#1f2937','목표매출(누적)',fmtNum(cumTarget[n-1]||cumTarget[Math.min(n,totalSlots)-1])+' · 최종 '+fmtNum(cumTarget[totalSlots-1])):'')
+    +(hasPrev?lgChip('#c4b5fd','전월 동기(누적)',fmtNum(cumPrev[n-1])+' / 총 <b class="text-gray-700">'+fmtNum(cumPrevFull[cumPrevFull.length-1])+'</b>'):'')
+    +(hasLY?lgChip('#9ca3af','작년 동월(누적)',fmtNum(cumLY[n-1])+' / 총 <b class="text-gray-700">'+fmtNum(cumLYFull[cumLYFull.length-1])+'</b>'):'')
+    +(cumTarget?lgChip('#1f2937','목표매출(누적)',fmtNum(cumTarget[n-1]||cumTarget[Math.min(n,totalSlots)-1])+' / 총 <b class="text-gray-700">'+fmtNum(cumTarget[totalSlots-1])+'</b>'):'')
     +(majorDays.length?lgChip('#f59e0b','메이저 업데이트',majorDays.join(', ')+'일'):'');
 
   // 선 3종(일별 값, 각자 min~max로 정규화) — DAU·PU·ARPPU는 누적 개념이 아니므로 그대로 일별 값을 쓴다
