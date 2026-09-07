@@ -2649,7 +2649,8 @@ function renderUserDist(){
 
   if(window._udMetric==='whale'){
     c.innerHTML='<div class="card-header" style="padding:0;margin-bottom:12px"><span class="card-title"><i class="ti ti-users-group text-indigo-500"></i> 유저 분포</span>'
-      +'<button class="btn btn-sm" onclick="udRefresh()" title="새로고침"><i class="ti ti-refresh"></i></button></div>'
+      +'<span class="flex items-center gap-1.5"><a class="btn btn-sm" href="https://docs.google.com/spreadsheets/d/1Ekqdj6ynfmPNpdRQYHo47APiIwPd60lmx1ONAujfewk/edit?gid=246652220" target="_blank" rel="noopener" title="원본 시트 바로가기"><i class="ti ti-external-link"></i> 원본 시트</a>'
+    +'<button class="btn btn-sm" onclick="udRefresh()" title="새로고침"><i class="ti ti-refresh"></i></button></span></div>'
       +'<div class="card"><div class="flex gap-1.5 flex-wrap mb-3">'+tabs+'</div><div id="whale-wrap"></div></div>';
     renderWhaleAlert();
     return;
@@ -2681,7 +2682,8 @@ function renderUserDist(){
   window._udPickerSync=true;
 
   c.innerHTML='<div class="card-header" style="padding:0;margin-bottom:12px"><span class="card-title"><i class="ti ti-users-group text-indigo-500"></i> 유저 분포</span>'
-    +'<button class="btn btn-sm" onclick="udRefresh()" title="새로고침"><i class="ti ti-refresh"></i></button></div>'
+    +'<span class="flex items-center gap-1.5"><a class="btn btn-sm" href="https://docs.google.com/spreadsheets/d/1Ekqdj6ynfmPNpdRQYHo47APiIwPd60lmx1ONAujfewk/edit?gid=246652220" target="_blank" rel="noopener" title="원본 시트 바로가기"><i class="ti ti-external-link"></i> 원본 시트</a>'
+    +'<button class="btn btn-sm" onclick="udRefresh()" title="새로고침"><i class="ti ti-refresh"></i></button></span></div>'
     +'<div class="card"><div class="flex items-center justify-between flex-wrap gap-2 mb-2"><div class="flex gap-1.5 flex-wrap">'+tabs+'</div>'
     +'<div class="flex items-center gap-2 flex-wrap">'+valueToggle+modeToggle+'</div></div>'
     +'<div class="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-gray-100">'+periodPickers
