@@ -3234,8 +3234,9 @@ function udChartBlock_(chartId,title,buckets,valsA,valsB,rowA,rowB,pctMode,metri
       if(hasCompare){
         var ya=cy(valsA[i]), ha=Math.max(0,PT+plotH-ya);
         var yb=cy(valsB[i]), hb=Math.max(0,PT+plotH-yb);
-        lines+='<rect x="'+(cxi-bw-gap/2).toFixed(1)+'" y="'+ya.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+ha.toFixed(1)+'" rx="2" fill="'+curColor+'"/>'
-          +'<rect x="'+(cxi+gap/2).toFixed(1)+'" y="'+yb.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+hb.toFixed(1)+'" rx="2" fill="#94a3b8" opacity=".75"/>';
+        // 비교(B)가 더 이전 시점이므로 시간 순서대로 왼쪽에 회색(B), 오른쪽에 현재색(A)을 그린다.
+        lines+='<rect x="'+(cxi-bw-gap/2).toFixed(1)+'" y="'+yb.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+hb.toFixed(1)+'" rx="2" fill="#94a3b8" opacity=".75"/>'
+          +'<rect x="'+(cxi+gap/2).toFixed(1)+'" y="'+ya.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+ha.toFixed(1)+'" rx="2" fill="'+curColor+'"/>';
       }else{
         var ya2=cy(valsA[i]), ha2=Math.max(0,PT+plotH-ya2);
         var barColor=valsB?'#cbd5e1':curColor;   // valsB가 아예 없는 차트(비교 없음 모드)는 그룹색 유지
