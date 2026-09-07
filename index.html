@@ -1189,7 +1189,7 @@ function buildRegionMiniRowMonthly_(){
       +'<div class="kpi-label" style="font-size:11px">'+r.label+' 매출 (연간 누적)</div>'
       +'<div class="flex items-center gap-1.5 mt-0.5"><span class="font-extrabold" style="font-size:17px;color:'+r.color+'">'+fmtNum(annualTotal)+'</span>'+pctBadge+'</div>'
       +(spark?'<div class="mt-1.5">'+spark+monthAxis+'</div>':'')
-      +(curMonthRev?'<div class="text-[10px] text-gray-400 mt-1">'+curMonthLabel_+' 누적 <b class="text-gray-600">'+fmtNum(curMonthRev)+'</b></div>':'')
+      +(curMonthRev?'<div class="mt-1.5"><span class="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg" style="background:'+r.color+'1a;color:'+r.color+'">'+curMonthLabel_+' 누적 '+fmtNum(curMonthRev)+'</span></div>':'')
       +'</div>';
   }).join('');
   if(!cards) return'';
