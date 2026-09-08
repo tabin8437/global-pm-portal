@@ -539,20 +539,20 @@ var KPI_API_URL = 'https://script.google.com/macros/s/AKfycbziDjLz0V2RKuvX-oqpbo
 
 // KPI 데이터 (시트 실제값 기본 세팅, API 연동 시 자동 갱신)
 var KPI_DATA = [
-  {label:'일평균 DAU',value:'29,296',change:'▲2.0%',dir:'up',color:'#10b981',trend:[]},
-  {label:'누적 NRU',value:'14,197',change:'▲112.2%',dir:'up',color:'#ef4444',trend:[],alert:true},
-  {label:'주간 WAU',value:'42,764',change:'▲6.8%',dir:'up',color:'#3b82f6',trend:[]},
-  {label:'일평균 PU',value:'336',change:'▼20.0%',dir:'down',color:'#14b8a6',trend:[]},
-  {label:'주간 매출',value:'2.11억',change:'▼29.0%',dir:'down',color:'#8b5cf6',trend:[]}
+  {label:'일평균 DAU',value:'29,296',change:'▲2.0%',dir:'up',trend:[]},
+  {label:'누적 NRU',value:'14,197',change:'▲112.2%',dir:'up',trend:[],alert:true},
+  {label:'주간 WAU',value:'42,764',change:'▲6.8%',dir:'up',trend:[]},
+  {label:'일평균 PU',value:'336',change:'▼20.0%',dir:'down',trend:[]},
+  {label:'주간 매출',value:'2.11억',change:'▼29.0%',dir:'down',trend:[]}
 ];
 
 var KPI_MONTHLY = [
-  {label:'당월 DAU 누적',value:'32,015',change:'▼15.2%',dir:'down',color:'#059669'},
-  {label:'당월 매출 누적',value:'10.0억',change:'▼19.0%',dir:'down',color:'#7c3aed'},
-  {label:'월 MAU',value:'90,397',change:'▼44.5%',dir:'down',color:'#2563eb'},
-  {label:'월 평균 DAU',value:'29,772',change:'▼0.4%',dir:'down',color:'#059669'},
-  {label:'월 PU',value:'5,562명',change:'▲13.7%',dir:'up',color:'#0891b2'},
-  {label:'월 ARPPU',value:'83,770',change:'▼12.8%',dir:'down',color:'#ca8a04'}
+  {label:'당월 DAU 누적',value:'32,015',change:'▼15.2%',dir:'down'},
+  {label:'당월 매출 누적',value:'10.0억',change:'▼19.0%',dir:'down'},
+  {label:'월 MAU',value:'90,397',change:'▼44.5%',dir:'down'},
+  {label:'월 평균 DAU',value:'29,772',change:'▼0.4%',dir:'down'},
+  {label:'월 PU',value:'5,562명',change:'▲13.7%',dir:'up'},
+  {label:'월 ARPPU',value:'83,770',change:'▼12.8%',dir:'down'}
 ];
 
 // 마일스톤 폴백
@@ -1166,17 +1166,19 @@ function buildHeroRow_(){
   var regionData=(f.region!=='all')?((window._regionsCache||{})[f.region]||{}).weekly:null;
   return KPI_DATA.map(function(base){
     var label=base.label, key=HERO_KPI_KEYS[label];
-    var value,change,color=base.color;
+    var value,change;
     if(regionData&&regionData[key]!=null){
       value=fmtNum(regionData[key]);
       change=(regionData.change&&regionData.change[key])||'-';
     } else {
       value=base.value; change=base.change;
     }
-    var spark=miniSparkline_(heroSparkVals_(key,f.region,f.periodWeeks),color);
+    // 지표마다 다른 색을 쓰면 화면이 알록달록해져 산만하다 — 숫자는 중립색으로 통일하고,
+    // 강조는 등락 배지(빨강/파랑)와 이상 신호(NRU 카드의 빨간 테두리)에만 남긴다.
+    var spark=miniSparkline_(heroSparkVals_(key,f.region,f.periodWeeks),'#94a3b8');
     return'<div class="kpi-card'+(base.alert?' ring-2 ring-red-200 bg-red-50/30':'')+'" style="padding:18px 20px;cursor:pointer" onclick="nav(\'kpi\')">'
       +'<div class="kpi-label" style="font-size:12px">'+label+(base.alert?' <span class="text-red-500">⚠</span>':'')+'</div>'
-      +'<div class="kpi-value" style="font-size:26px;color:'+color+';margin:4px 0 2px">'+value+'</div>'
+      +'<div class="kpi-value" style="font-size:26px;color:#1e293b;margin:4px 0 2px">'+value+'</div>'
       +'<span class="kpi-change '+changeClass_(change)+'" style="font-size:11px"><span class="text-[9px] opacity-60">전주비</span> '+change+'</span>'
       +(spark?'<div class="mt-2">'+spark+'</div>':'')+'</div>';
   }).join('');
@@ -1332,7 +1334,7 @@ function renderDashboard(){
   var showPrevMonth=dm_.isPrev,dispMonth=dm_.month,dispYear=dm_.year;
   var monthLabel=dispYear+'년 '+dispMonth+'월 누적'+(showPrevMonth?' <span style="font-size:10px;font-weight:600;color:#f59e0b;margin-left:4px">전월 확정</span>':' <span style="font-size:11px;font-weight:500;color:#94a3b8;margin-left:6px">1일 ~ '+dispMonth+'월 '+yesterday+'일 기준</span>');
   var monthlyCards=KPI_MONTHLY.map(function(k){
-    return'<div class="kpi-card" style="padding:14px 16px"><div class="kpi-label">'+k.label+'</div><div class="kpi-value" style="font-size:20px;color:'+k.color+';margin:4px 0 3px">'+k.value+'</div><span class="kpi-change '+changeClass_(k.change)+'" style="font-size:11px"><span class="text-[9px] opacity-60">전월비</span> '+k.change+'</span></div>';
+    return'<div class="kpi-card" style="padding:14px 16px"><div class="kpi-label">'+k.label+'</div><div class="kpi-value" style="font-size:20px;color:#1e293b;margin:4px 0 3px">'+k.value+'</div><span class="kpi-change '+changeClass_(k.change)+'" style="font-size:11px"><span class="text-[9px] opacity-60">전월비</span> '+k.change+'</span></div>';
   }).join('');
   // 유저 분포 요약 (PU·전투력·CP&PAY·상위고래유저경보 핵심 수치만) — 상세는 유저 분포 페이지 그대로 유지
   var userDistSummaryHtml='<div id="userdist-summary-widget"></div>';
