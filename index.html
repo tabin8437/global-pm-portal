@@ -4085,14 +4085,14 @@ function checkVersionUpdate_(){
   showPatchNotes_(false);
 }
 function showPatchNotes_(manual){
-  var body=PATCH_NOTES.map(function(p,i){
-    return '<div style="margin-bottom:'+(i<PATCH_NOTES.length-1?'16px':'0')+'">'
-      +'<div style="font-weight:800;font-size:13px;color:#1e293b">v'+esc(p.version)+' <span style="font-weight:500;color:#94a3b8;font-size:11px">'+esc(p.date)+'</span></div>'
-      +'<div style="font-size:11px;font-weight:700;color:#94a3b8;margin-top:6px">수정사항</div>'
-      +'<ul style="margin:4px 0 0;padding-left:18px;font-size:12px;color:#475569;line-height:1.7">'
-      +p.items.map(function(t){return '<li>'+esc(t)+'</li>';}).join('')
-      +'</ul></div>';
-  }).join('<hr style="border:none;border-top:1px solid #f1f5f9;margin:14px 0">');
+  // 팝업엔 최신 버전 하나만 보여준다 — 지난 이력까지 다 쌓아서 보여주면 매번 스크롤이 길어짐
+  var p=PATCH_NOTES[0];
+  var body='<div>'
+    +'<div style="font-weight:800;font-size:13px;color:#1e293b">v'+esc(p.version)+' <span style="font-weight:500;color:#94a3b8;font-size:11px">'+esc(p.date)+'</span></div>'
+    +'<div style="font-size:11px;font-weight:700;color:#94a3b8;margin-top:6px">수정사항</div>'
+    +'<ul style="margin:4px 0 0;padding-left:18px;font-size:12px;color:#475569;line-height:1.7">'
+    +p.items.map(function(t){return '<li>'+esc(t)+'</li>';}).join('')
+    +'</ul></div>';
   var overlay=document.createElement('div');
   overlay.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
   overlay.innerHTML='<div style="width:100%;max-width:440px;max-height:80vh;background:#fff;border-radius:16px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3)">'
