@@ -1824,36 +1824,12 @@ function renderArchive(type,containerId){
   var clr=colorMap[type]||'blue';
   var c=document.getElementById(containerId||'content-area');
 
-  // 폼 HTML
-  var formHtml='<div id="mt-form" style="display:none" class="card mb-4">'
-    +'<div class="card-header"><span class="card-title" id="mt-form-title">회의록 추가</span></div>'
-    +'<div class="form-group"><label>제목</label><input type="text" id="mt-title" list="mt-title-list" autocomplete="off"><datalist id="mt-title-list"></datalist>'
-    +'<span class="text-[10px] text-gray-400">기존 회의와 제목을 똑같이 입력하면 하나의 스레드로 이어져요 — 입력하면 아래 기존 제목 목록이 자동완성으로 떠요</span></div>'
-    +(type==='weekly'?'<div class="form-group"><label>구분</label><select id="mt-scope"><option value="">선택 안 함</option><option value="팀 회의">팀 회의 (해외사업팀 시절)</option><option value="실 회의">실 회의 (해외사업실)</option></select></div>':'')
-    +'<div class="grid2"><div class="form-group"><label>일자</label><input type="date" id="mt-date"></div>'
-    +'<div class="form-group"><label>참석자</label><input type="text" id="mt-attendees" placeholder="홍길동, 김철수"></div></div>'
-    +'<div class="form-group"><label>요약</label><input type="text" id="mt-summary" placeholder="한 줄 요약 (카드에 말풍선으로 바로 보여요)"></div>'
-    +'<div class="form-group"><label>상세 내용</label><textarea id="mt-details" style="min-height:120px" placeholder="회의 내용 상세 기록"></textarea></div>'
-    +'<div class="form-group"><label>F/U (Follow-up)</label><textarea id="mt-fu" style="min-height:70px" placeholder="후속 조치 · 담당자 · 기한 등"></textarea></div>'
-    +'<div class="form-group"><label>파일 첨부 (선택)</label>'
-    +'<div class="flex items-center gap-2 flex-wrap">'
-    +'<input type="file" id="mt-upload" class="hidden" onchange="uploadAttach(this)">'
-    +'<button type="button" class="btn btn-sm" onclick="document.getElementById(\'mt-upload\').click()"><i class="ti ti-paperclip"></i> 파일 선택</button>'
-    +'<span id="mt-upload-status" class="text-[11px] text-gray-400">드라이브에 자동 업로드되고 아래 링크가 채워져요 (20MB 이하)</span>'
-    +'</div></div>'
-    +'<div class="form-group"><label>문서 링크 (선택)</label><input type="text" id="mt-file" placeholder="구글 드라이브 · 스프레드시트 URL"></div>'
-    +'<div class="form-group"><label>이미지 URL (선택)</label><input type="text" id="mt-imageUrl" placeholder="구글 드라이브 공유 URL"></div>'
-    +'<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:8px">'
-    +'<button class="btn btn-sm" onclick="closeMeetingForm()">취소</button>'
-    +'<button class="btn btn-sm btn-primary" id="mt-save-btn" onclick="saveMeeting()"><i class="ti ti-device-floppy"></i> 저장</button>'
-    +'</div></div>';
-
   var headerHtml='<div class="card-header mb-3" style="padding:0">'
     +'<span class="card-title"><i class="ti '+iconMap[type]+'"></i> '+titles[type]+' 목록</span>'
     +'<button class="btn btn-sm btn-primary" onclick="openMeetingForm(\''+type+'\')"><i class="ti ti-plus"></i> 추가</button>'
     +'</div>';
 
-  c.innerHTML=formHtml+headerHtml+'<div id="mt-list"><div class="text-center py-10 text-gray-400"><i class="ti ti-loader-2 text-3xl animate-spin block mb-2"></i>불러오는 중...</div></div>';
+  c.innerHTML=headerHtml+'<div id="mt-list"><div class="text-center py-10 text-gray-400"><i class="ti ti-loader-2 text-3xl animate-spin block mb-2"></i>불러오는 중...</div></div>';
 
   // 요약은 말풍선처럼(제목 바로 아래 꼬리가 붙게), F/U는 별도 박스로 구분해서 보여준다.
   // 테두리를 진한 색(-300)으로 써서 흰 카드 배경 위에서도 꼬리/테두리가 또렷하게 보이게 한다.
@@ -1952,17 +1928,71 @@ function populateMtTitleList_(type){
   });
   dl.innerHTML=opts.map(function(t){return'<option value="'+esc(t)+'">';}).join('');
 }
+// 회의록 작성 폼을 #content-area 안에 끼워 넣으면, 다른 페이지를 보러 이동하는 순간
+// (nav()가 content-area를 통째로 갈아치우므로) 작성 중이던 폼이 사라졌다 — "포탈 다른
+// 화면을 같이 보면서 회의록을 쓰고 싶다"는 요청으로, body에 직접 붙는 떠다니는 패널로
+// 바꿔서 페이지를 이동해도 폼이 계속 떠 있게 한다. 헤더를 드래그해서 위치도 옮길 수 있다.
+function ensureMeetingFormFloat_(){
+  var wrap=document.getElementById('mt-form-float');
+  if(wrap) return wrap;
+  wrap=document.createElement('div');
+  wrap.id='mt-form-float';
+  wrap.style.cssText='position:fixed;right:20px;bottom:20px;width:420px;max-width:calc(100vw - 32px);max-height:min(80vh,700px);background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.28);border:1px solid #e5e7eb;z-index:9500;display:none;flex-direction:column;overflow:hidden';
+  document.body.appendChild(wrap);
+  var drag={on:false,sx:0,sy:0,ox:0,oy:0};
+  wrap.addEventListener('mousedown',function(e){
+    if(!e.target.closest('[data-drag-handle]'))return;
+    drag.on=true; drag.sx=e.clientX; drag.sy=e.clientY;
+    var r=wrap.getBoundingClientRect(); drag.ox=r.left; drag.oy=r.top;
+    wrap.style.right='auto'; wrap.style.bottom='auto';
+    wrap.style.left=drag.ox+'px'; wrap.style.top=drag.oy+'px';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove',function(e){
+    if(!drag.on)return;
+    wrap.style.left=Math.max(0,drag.ox+e.clientX-drag.sx)+'px';
+    wrap.style.top=Math.max(0,drag.oy+e.clientY-drag.sy)+'px';
+  });
+  document.addEventListener('mouseup',function(){drag.on=false;});
+  return wrap;
+}
+function meetingFormPanelHtml_(type){
+  return '<div data-drag-handle style="cursor:move;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #e5e7eb;background:#f8fafc;border-radius:16px 16px 0 0">'
+    +'<span class="font-bold text-sm" id="mt-form-title"><i class="ti ti-arrows-move text-gray-300"></i> 회의록 추가</span>'
+    +'<button type="button" onclick="closeMeetingForm()" style="font-size:20px;color:#9ca3af;background:none;border:none;cursor:pointer;line-height:1">×</button></div>'
+    +'<div style="padding:16px;overflow-y:auto;flex:1">'
+    +'<div class="form-group"><label>제목</label><input type="text" id="mt-title" list="mt-title-list" autocomplete="off"><datalist id="mt-title-list"></datalist>'
+    +'<span class="text-[10px] text-gray-400">기존 회의와 제목을 똑같이 입력하면 하나의 스레드로 이어져요 — 입력하면 아래 기존 제목 목록이 자동완성으로 떠요</span></div>'
+    +(type==='weekly'?'<div class="form-group"><label>구분</label><select id="mt-scope"><option value="">선택 안 함</option><option value="팀 회의">팀 회의 (해외사업팀 시절)</option><option value="실 회의">실 회의 (해외사업실)</option></select></div>':'')
+    +'<div class="grid2"><div class="form-group"><label>일자</label><input type="date" id="mt-date"></div>'
+    +'<div class="form-group"><label>참석자</label><input type="text" id="mt-attendees" placeholder="홍길동, 김철수"></div></div>'
+    +'<div class="form-group"><label>요약</label><input type="text" id="mt-summary" placeholder="한 줄 요약 (카드에 말풍선으로 바로 보여요)"></div>'
+    +'<div class="form-group"><label>상세 내용</label><textarea id="mt-details" style="min-height:120px" placeholder="회의 내용 상세 기록"></textarea></div>'
+    +'<div class="form-group"><label>F/U (Follow-up)</label><textarea id="mt-fu" style="min-height:70px" placeholder="후속 조치 · 담당자 · 기한 등"></textarea></div>'
+    +'<div class="form-group"><label>파일 첨부 (선택)</label>'
+    +'<div class="flex items-center gap-2 flex-wrap">'
+    +'<input type="file" id="mt-upload" class="hidden" onchange="uploadAttach(this)">'
+    +'<button type="button" class="btn btn-sm" onclick="document.getElementById(\'mt-upload\').click()"><i class="ti ti-paperclip"></i> 파일 선택</button>'
+    +'<span id="mt-upload-status" class="text-[11px] text-gray-400">드라이브에 자동 업로드되고 아래 링크가 채워져요 (20MB 이하)</span>'
+    +'</div></div>'
+    +'<div class="form-group"><label>문서 링크 (선택)</label><input type="text" id="mt-file" placeholder="구글 드라이브 · 스프레드시트 URL"></div>'
+    +'<div class="form-group"><label>이미지 URL (선택)</label><input type="text" id="mt-imageUrl" placeholder="구글 드라이브 공유 URL"></div>'
+    +'</div>'
+    +'<div style="display:flex;gap:6px;justify-content:flex-end;padding:12px 16px;border-top:1px solid #e5e7eb">'
+    +'<button class="btn btn-sm" onclick="closeMeetingForm()">취소</button>'
+    +'<button class="btn btn-sm btn-primary" id="mt-save-btn" onclick="saveMeeting()"><i class="ti ti-device-floppy"></i> 저장</button>'
+    +'</div>';
+}
 function openMeetingForm(type){
   _mtCurrentType=type;
   editTarget={type:type,id:null};
-  ['title','date','attendees','summary','details','fu','imageUrl','scope'].forEach(function(f){
-    var el=document.getElementById('mt-'+f);if(el)el.value='';
-  });
+  var wrap=ensureMeetingFormFloat_();
+  wrap.innerHTML=meetingFormPanelHtml_(type);
+  wrap.style.display='flex';
   var d=document.getElementById('mt-date');
   if(d)d.value=new Date().toISOString().slice(0,10);
   populateMtTitleList_(type);
-  document.getElementById('mt-form-title').textContent=(_mtTypeNames[type]||'회의록')+' 추가';
-  document.getElementById('mt-form').style.display='block';
+  document.getElementById('mt-form-title').innerHTML='<i class="ti ti-arrows-move text-gray-300"></i> '+(_mtTypeNames[type]||'회의록')+' 추가';
 }
 // 시리즈 카드의 "이어서 작성" 버튼 — 제목을 매번 다시 타이핑하다 오타/공백 차이로
 // 스레드가 끊기는 걸 자동완성으로 완화했었는데, 아예 제목을 미리 채워주면 그럴 일이
@@ -1979,6 +2009,9 @@ function openMeetingFormEdit(id, type){
   var list=_meetingCache[type]||[];
   var m=list.find(function(x){return x.id===id;});
   if(!m)return;
+  var wrap=ensureMeetingFormFloat_();
+  wrap.innerHTML=meetingFormPanelHtml_(type);
+  wrap.style.display='flex';
   populateMtTitleList_(type);
   editTarget={type:type,id:id};
   document.getElementById('mt-title').value=m.title||'';
@@ -1990,11 +2023,12 @@ function openMeetingFormEdit(id, type){
   document.getElementById('mt-fu').value=m.fu||'';
   document.getElementById('mt-imageUrl').value=m.imageUrl||'';
   if(document.getElementById('mt-file'))document.getElementById('mt-file').value=m.file||'';
-  document.getElementById('mt-form-title').textContent=(_mtTypeNames[type]||'회의록')+' 수정';
-  document.getElementById('mt-form').style.display='block';
-  document.getElementById('mt-form').scrollIntoView({behavior:'smooth'});
+  document.getElementById('mt-form-title').innerHTML='<i class="ti ti-arrows-move text-gray-300"></i> '+(_mtTypeNames[type]||'회의록')+' 수정';
 }
-function closeMeetingForm(){document.getElementById('mt-form').style.display='none';}
+function closeMeetingForm(){
+  var el=document.getElementById('mt-form-float');
+  if(el) el.style.display='none';
+}
 
 // 선택한 파일을 드라이브에 올리고, 받은 링크를 문서/이미지 칸에 자동으로 채운다
 function uploadAttach(input){
