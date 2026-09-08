@@ -1122,17 +1122,31 @@ function miniSparkline_(vals,color){
 // miniSparkline_ 그래프 아래에 붙이는 작은 월 숫자 축 — 같은 X(i) 공식을 써서
 // (miniSparkline_이 null값을 걸러낸 뒤의 개수로 좌표를 계산하므로) periods도 동일하게
 // null 제외 후 넘겨야 점 위치와 숫자 위치가 어긋나지 않는다.
-function monthAxisLabels_(periods){
-  var n=periods.length;
+function sparklineAxisSvg_(labelArr,opts){
+  var n=labelArr.length;
   if(n<2) return'';
+  opts=opts||{};
+  var fontSize=opts.fontSize||7, step=opts.step||1;
   var W=100,PAD=2;
   function X(i){return PAD+(W-2*PAD)*(i/(n-1));}
-  var labels=periods.map(function(p,i){
-    var mo=+String(p).slice(5,7);
+  var idx=[];
+  for(var i=0;i<n;i+=step) idx.push(i);
+  if(idx[idx.length-1]!==n-1) idx.push(n-1);   // 끝 점(스파크라인의 강조 점)은 항상 표기
+  var labels=idx.map(function(i){
     var anchor=i===0?'start':(i===n-1?'end':'middle');
-    return'<text x="'+X(i).toFixed(1)+'" y="8" font-size="7" fill="#9ca3af" text-anchor="'+anchor+'">'+mo+'</text>';
+    return'<text x="'+X(i).toFixed(1)+'" y="8" font-size="'+fontSize+'" fill="#9ca3af" text-anchor="'+anchor+'">'+labelArr[i]+'</text>';
   }).join('');
   return'<svg viewBox="0 0 '+W+' 10" style="width:100%;height:10px;display:block">'+labels+'</svg>';
+}
+function monthAxisLabels_(periods){
+  return sparklineAxisSvg_(periods.map(function(p){return +String(p).slice(5,7);}));
+}
+// 주간 스파크라인(점 하나=한 주)의 각 점이 몇 월 며칠 주인지 — "M/d" 라벨을 작은 글씨로 표기.
+// 요일(월화수목금토일)로 표기해봤더니 주가 항상 월요일 시작이라 전부 "월"만 찍혀 의미가
+// 없었음 — 실제로 구분이 되는 날짜로 대체. 점이 많으면(6개 초과) 겹치니 절반만 표기.
+function weekDateAxisLabels_(periods){
+  var step=periods.length>6?2:1;
+  return sparklineAxisSvg_(periods,{fontSize:5.5,step:step});
 }
 // 좁은 한 줄(요약 리스트 행) 안에 끼워 넣는 아주 작은 고정 크기 스파크라인 — miniSparkline_은 컨테이너
 // 폭에 맞춰 늘어나는 카드용이라 텍스트 행 옆에 그대로 쓰면 레이아웃이 깨진다.
@@ -1149,7 +1163,7 @@ function miniSparklineInline_(vals,color,w,h){
   return'<svg viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" style="width:'+w+'px;height:'+h+'px;display:inline-block;vertical-align:middle;flex:none"><path d="M'+pts+'" fill="none" stroke="'+color+'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="'+X(n-1).toFixed(1)+'" cy="'+Y(vals[n-1]).toFixed(1)+'" r="1.8" fill="'+color+'"/></svg>';
 }
 // region이 'all'이면 전권역 합산 추이(_trendCache), 특정 권역이면 그 권역 주차별 추이(_trendByRegionCache)에서 뽑는다
-function heroSparkVals_(key,region,weeks){
+function heroSparkSrc_(region,weeks){
   var src;
   if(region&&region!=='all'&&window._trendByRegionCache&&window._trendByRegionCache[region]){
     src=collapseToWeekly(window._trendByRegionCache[region]);
@@ -1157,7 +1171,17 @@ function heroSparkVals_(key,region,weeks){
     src=(window._trendCache||[]).slice();
     src.sort(function(a,b){return weekKeyOf(shortPeriod(a.period))-weekKeyOf(shortPeriod(b.period));});
   }
-  return src.slice(-weeks).map(function(t){var v=Number(t[key]);return v>0?v:null;});
+  return src.slice(-weeks);
+}
+function heroSparkVals_(key,region,weeks){
+  return heroSparkSrc_(region,weeks).map(function(t){var v=Number(t[key]);return v>0?v:null;});
+}
+// heroSparkVals_와 같은 필터(0/음수 제외)를 거친 뒤에 남는 점들의 주차 라벨만 뽑는다 —
+// miniSparkline_이 null을 걸러낸 뒤 남은 점 개수로 좌표를 잡으므로 축 라벨도 똑같이 걸러야 한다.
+function heroSparkPeriods_(key,region,weeks){
+  return heroSparkSrc_(region,weeks)
+    .filter(function(t){return Number(t[key])>0;})
+    .map(function(t){return shortPeriod(t.period);});
 }
 // 핵심현황 = 주간 KPI 5개 전부(원래 순서 그대로: DAU/NRU/WAU/PU/매출). 따로 추리지 않고 다 보여준다.
 var HERO_KPI_KEYS={'주간 매출':'revenue','일평균 DAU':'dau','일평균 PU':'pu','누적 NRU':'nru','주간 WAU':'wau'};
@@ -1176,11 +1200,12 @@ function buildHeroRow_(){
     // 지표마다 다른 색을 쓰면 화면이 알록달록해져 산만하다 — 숫자는 중립색으로 통일하고,
     // 강조는 등락 배지(빨강/파랑)와 이상 신호(NRU 카드의 빨간 테두리)에만 남긴다.
     var spark=miniSparkline_(heroSparkVals_(key,f.region,f.periodWeeks),'#94a3b8');
+    var weekAxis=spark?weekDateAxisLabels_(heroSparkPeriods_(key,f.region,f.periodWeeks)):'';
     return'<div class="kpi-card'+(base.alert?' ring-2 ring-red-200 bg-red-50/30':'')+'" style="padding:18px 20px;cursor:pointer" onclick="nav(\'kpi\')">'
       +'<div class="kpi-label" style="font-size:12px">'+label+(base.alert?' <span class="text-red-500">⚠</span>':'')+'</div>'
       +'<div class="kpi-value" style="font-size:26px;color:#1e293b;margin:4px 0 2px">'+value+'</div>'
       +'<span class="kpi-change '+changeClass_(change)+'" style="font-size:11px"><span class="text-[9px] opacity-60">전주비</span> '+change+'</span>'
-      +(spark?'<div class="mt-2">'+spark+'</div>':'')+'</div>';
+      +(spark?'<div class="mt-2">'+spark+weekAxis+'</div>':'')+'</div>';
   }).join('');
 }
 // 권역별 매출 미니 추세 — 전권역 주간 매출 추이 페이지의 데이터를 재사용, 홈에서는 요약만
@@ -1253,10 +1278,11 @@ function buildRegionMiniRow_(){
     var changeTxt='';
     if(lastV!=null&&prevV){var diff=(lastV-prevV)/prevV*100;changeTxt='<span class="text-[10px] font-bold '+(diff>=0?'text-red-500':'text-blue-600')+'">'+(diff>=0?'▲':'▼')+Math.abs(diff).toFixed(1)+'%</span>';}
     var spark=miniSparkline_(vals,r.color);
+    var weekAxis=spark?weekDateAxisLabels_(lastN.filter(function(t,i){return vals[i]!=null;}).map(function(t){return shortPeriod(t.period);})):'';
     return'<div class="kpi-card" style="padding:14px 16px;cursor:pointer" onclick="nav(\'kpi\')">'
       +'<div class="kpi-label" style="font-size:11px">'+r.label+' 매출</div>'
       +'<div class="flex items-center gap-1.5 mt-0.5"><span class="font-extrabold" style="font-size:17px;color:'+r.color+'">'+(lastV!=null?fmtNum(lastV):'-')+'</span>'+changeTxt+'</div>'
-      +(spark?'<div class="mt-1.5">'+spark+'</div>':'')+'</div>';
+      +(spark?'<div class="mt-1.5">'+spark+weekAxis+'</div>':'')+'</div>';
   }).join('');
   if(!cards) return'';
   // "(8월)"만 있으면 월간 그래프와 헷갈려서 "왜 아직도 8월?"로 오해받기 쉽다.
