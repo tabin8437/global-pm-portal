@@ -279,6 +279,7 @@ table tbody tr:hover{background:#f9fafb}
       </div>
       <button class="btn btn-sm" onclick="try{localStorage.removeItem('kpi_cache')}catch(e){};location.reload()" title="전체 새로고침 (문서 · 지표 최신화)"><i class="ti ti-refresh"></i> 새로고침</button>
       <button class="btn btn-sm" onclick="forceHardRefresh_()" title="서비스워커 캐시까지 완전히 지우고 새로고침 — 새로고침 눌러도 옛날 화면이 계속 보일 때 이걸로"><i class="ti ti-refresh-alert"></i> 강제 새로고침</button>
+      <button class="btn btn-sm" onclick="showPatchNotes_(true)" title="패치노트 보기"><i class="ti ti-notes"></i> 패치노트</button>
     </div>
 
     <div class="content" id="content-area"></div>
@@ -291,6 +292,19 @@ table tbody tr:hover{background:#f9fafb}
    ═══════════════════════════════════════════ */
 var APPLE_API_URL='https://script.google.com/macros/s/AKfycbyBwthAUjr6jEuuBepCbpiQ513wKc6vVOqxGDL_8md4q0lHerDnh7wjtnLsKM0bASTq/exec';
 var REGION_LABEL={global:'🌐 글로벌',tw:'🇹🇼 대만',jp:'🇯🇵 일본',kr:'🇰🇷 한국'};
+
+// 배포 준비할 때마다 맨 위에 새 버전을 추가한다(최신이 위) — 버전이 바뀌면
+// 로그인 직후 자동으로 패치노트 팝업이 한 번 뜬다.
+var PATCH_NOTES=[
+  {version:'2026.09.08', date:'2026-09-08', items:[
+    '패치노트 팝업 추가 — 새 버전 배포 시 자동으로 한 번 안내',
+    '주간 WAU 그래프가 특정 시점 이후로 0에서 안 움직이던 문제 수정',
+    '권역별 매출 추이(월간)를 "연간 누적 총액 + 월별 흐름 그래프 + 추정대비 달성률"로 개편',
+    '챕터별 진도 차트를 막대 비교 그래프로 정리(회색=이전 → 색상=현재 순서)',
+    '유저 분포 페이지에 원본 시트 바로가기 버튼 추가'
+  ]}
+];
+var CURRENT_VERSION=PATCH_NOTES[0].version;
 
 // 초기 관리자 계정 (최초 1회 시드)
 var SEED_ADMIN = {email:'tabin8437@gmail.com', name:'관리자', role:'admin'};
@@ -3942,6 +3956,7 @@ function initApp(){
   buildMobileNav();
   runClocks();
   fetchKpiData();
+  checkVersionUpdate_();
   renderPage('dashboard');
 }
 
@@ -3955,7 +3970,7 @@ if('serviceWorker' in navigator){window.addEventListener('load',function(){navig
 // 일반 새로고침은 서비스워커가 물고 있는 캐시(Cache Storage)까지는 안 지워서, 배포한 새 버전이
 // 있어도 예전 화면이 그대로 보이는 경우가 있었다. 서비스워커 등록 해제 + 캐시 전체 삭제 후
 // 다시 불러오면, 다음 로드 때 전부 네트워크에서 새로 받아온다.
-async function forceHardRefresh_(){
+async function clearAppCaches_(){
   try{
     if('serviceWorker' in navigator){
       var regs=await navigator.serviceWorker.getRegistrations();
@@ -3967,7 +3982,43 @@ async function forceHardRefresh_(){
     }
   }catch(e){}
   try{ localStorage.removeItem('kpi_cache'); }catch(e){}
+}
+async function forceHardRefresh_(){
+  await clearAppCaches_();
   location.reload();
+}
+
+// 배포된 버전(CURRENT_VERSION)이 이 브라우저가 마지막으로 본 버전과 다르면(=새 배포가 있었으면)
+// 서비스워커 캐시를 조용히 정리해 다음부터도 항상 최신을 받도록 하고, 패치노트 팝업을 띄운다.
+// 처음 방문(저장된 버전이 아예 없음)이면 그냥 지금 버전만 기록하고 팝업은 띄우지 않는다.
+function checkVersionUpdate_(){
+  var last=null;
+  try{ last=localStorage.getItem('portal_seen_version'); }catch(e){}
+  if(last===CURRENT_VERSION) return;
+  try{ localStorage.setItem('portal_seen_version',CURRENT_VERSION); }catch(e){}
+  if(!last) return;   // 첫 방문자에게는 "새 버전" 안내가 의미 없다
+  clearAppCaches_();
+  showPatchNotes_(false);
+}
+function showPatchNotes_(manual){
+  var body=PATCH_NOTES.map(function(p,i){
+    return '<div style="margin-bottom:'+(i<PATCH_NOTES.length-1?'16px':'0')+'">'
+      +'<div style="font-weight:800;font-size:13px;color:#1e293b">v'+esc(p.version)+' <span style="font-weight:500;color:#94a3b8;font-size:11px">'+esc(p.date)+'</span></div>'
+      +'<ul style="margin:6px 0 0;padding-left:18px;font-size:12px;color:#475569;line-height:1.7">'
+      +p.items.map(function(t){return '<li>'+esc(t)+'</li>';}).join('')
+      +'</ul></div>';
+  }).join('<hr style="border:none;border-top:1px solid #f1f5f9;margin:14px 0">');
+  var overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML='<div style="width:100%;max-width:440px;max-height:80vh;background:#fff;border-radius:16px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3)">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #e5e7eb">'
+    +'<span style="font-weight:800;font-size:15px"><i class="ti ti-notes" style="color:#6366f1"></i> 패치노트'+(manual?'':' <span style="font-weight:600;font-size:11px;color:#6366f1;background:#eef2ff;padding:2px 6px;border-radius:6px;margin-left:4px">새 버전</span>')+'</span>'
+    +'<button onclick="this.closest(\'div[style*=inset]\').remove()" style="font-size:20px;color:#9ca3af;background:none;border:none;cursor:pointer;line-height:1">×</button></div>'
+    +'<div style="padding:18px 20px;overflow-y:auto">'+body+'</div>'
+    +'<div style="padding:12px 20px;border-top:1px solid #e5e7eb;text-align:right"><button class="btn btn-sm btn-primary" onclick="this.closest(\'div[style*=inset]\').remove()">확인</button></div>'
+    +'</div>';
+  overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
+  document.body.appendChild(overlay);
 }
 </script>
 </body>
