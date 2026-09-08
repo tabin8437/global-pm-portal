@@ -313,7 +313,7 @@ var SEED_ADMIN = {email:'tabin8437@gmail.com', name:'관리자', role:'admin'};
 var SIDEBAR_MENU = [
   {id:'dashboard',icon:'ti-layout-dashboard',label:'종합 대시보드'},
   {section:'성과 분석'},
-  {id:'kpi',icon:'ti-trending-up',label:'전권역 주간 매출 추이'},
+  {id:'kpi',icon:'ti-trending-up',label:'전권역 매출 추이'},
   {id:'user-dist',icon:'ti-users-group',label:'유저 분포 (PU/전투력/레벨)'},
   {id:'competitor',icon:'ti-radar',label:'경쟁사 모니터링'},
   {id:'report-kpi',icon:'ti-presentation',label:'주/월간 보고용 지표',type:'doc'},
@@ -802,8 +802,18 @@ function toggleMobileGroup(gid){
 /* ═══════════════════════════════════════════
    PAGE NAMES & NAV
    ═══════════════════════════════════════════ */
-var pageNames={dashboard:'종합 대시보드',milestone:'통합 마일스톤','live-schedule':'월던/컨텐츠 오픈시점',settlement:'정산 및 빌링 설계',event:'이벤트 & 보상안',product:'상품안',kpi:'전권역 주간 매출 추이 ','user-dist':'유저 분포','report-kpi':'주/월간 보고용 지표','server-migration':'서버이전/통합',platform:'iOS 관리',weekly:'주간회의 기록',report:'보고/분석',internal:'내부 회의',devmeeting:'개발사 미팅',localization:'현지화','metrics-analysis':'지표분석','shared-drive':'공유 드라이브','screenshot-spec':'마켓 스샷 규격',ai:'AI 도움말','admin-settings':'포탈 설정','live-ops-hub':'라이브 운영 문서함','archive-hub':'회의 기록 아카이브','refdocs-hub':'참고 문서함','tools-hub':'업무 도구'};
+var pageNames={dashboard:'종합 대시보드',milestone:'통합 마일스톤','live-schedule':'월던/컨텐츠 오픈시점',settlement:'정산 및 빌링 설계',event:'이벤트 & 보상안',product:'상품안',kpi:'전권역 매출 추이 ','user-dist':'유저 분포','report-kpi':'주/월간 보고용 지표','server-migration':'서버이전/통합',platform:'iOS 관리',weekly:'주간회의 기록',report:'보고/분석',internal:'내부 회의',devmeeting:'개발사 미팅',localization:'현지화','metrics-analysis':'지표분석','shared-drive':'공유 드라이브','screenshot-spec':'마켓 스샷 규격',ai:'AI 도움말','admin-settings':'포탈 설정','live-ops-hub':'라이브 운영 문서함','archive-hub':'회의 기록 아카이브','refdocs-hub':'참고 문서함','tools-hub':'업무 도구'};
 
+// 대시보드의 주간/월간 지표(글로벌) 헤더를 누르면 "전권역 매출 추이"의 "글로벌 일별 추이"
+// 섹션으로 바로 이동한다. renderPage가 동기적으로 DOM을 다시 그리므로 이동 직후 바로
+// scrollIntoView하되, 레이아웃 반영을 위해 한 틱 늦춘다.
+function navToDailyGlobal_(){
+  nav('kpi');
+  setTimeout(function(){
+    var el=document.getElementById('daily-global-anchor');
+    if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  },50);
+}
 function nav(id,el){
   closeMobileMenu();
   currentPage=id;
@@ -972,7 +982,7 @@ function buildSearchIndex_(){
   function addExternal(label,icon,url){ idx.push({label:label,icon:icon,type:'link',run:function(){ window.open(url,'_blank'); }}); }
 
   addPage('종합 대시보드','ti-layout-dashboard',function(){ nav('dashboard'); });
-  addPage('전권역 주간 매출 추이','ti-trending-up',function(){ nav('kpi'); });
+  addPage('전권역 매출 추이','ti-trending-up',function(){ nav('kpi'); });
   addPage('유저 분포 (PU/전투력/레벨)','ti-users-group',function(){ nav('user-dist'); });
   addPage('경쟁사 모니터링','ti-radar',function(){ nav('competitor'); });
   addPage('주/월간 보고용 지표','ti-presentation',function(){ nav('report-kpi'); });
@@ -1369,10 +1379,10 @@ function renderDashboard(){
   var monthTargetHtml='<span id="month-target-badge" class="text-[11px] text-gray-400 font-medium">'+(showPrevMonth?dispMonth+'월 확정 기준':'1일 ~ '+dispMonth+'월 '+yesterday+'일 기준')+'</span>';
 
   c.innerHTML=globalFilterBarHtml_()
-    +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-flame text-emerald-500"></i> 주간 지표 현황 <span class="text-[10px] font-bold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded ml-1" title="권역 합산이 아니라 글로벌 권역 자체 수치입니다">🌐 글로벌</span></span><span class="text-[11px] text-gray-400 font-medium">'+weekLabel+' 기준</span></div>'
+    +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm" style="cursor:pointer" onclick="navToDailyGlobal_()" title="전권역 매출 추이의 글로벌 일별 추이로 이동"><i class="ti ti-flame text-emerald-500"></i> 주간 지표 현황 <span class="text-[10px] font-bold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded ml-1" title="권역 합산이 아니라 글로벌 권역 자체 수치입니다">🌐 글로벌</span></span><span class="text-[11px] text-gray-400 font-medium">'+weekLabel+' 기준</span></div>'
     +'<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-5">'+buildHeroRow_()+'</div>'
     // 데스크톱은 주간·월간을 이어서 바로 비교하도록 기본 펼침, 모바일은 카드가 길어지니 기본 접힘
-    +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm"><i class="ti ti-list-details text-gray-400"></i> 월간 지표 <span class="text-[10px] font-bold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded ml-1" title="권역 합산이 아니라 글로벌 권역 자체 수치입니다">🌐 글로벌</span></span><button class="btn btn-sm" onclick="toggleDashMoreStats(this)">'+(window.innerWidth<768?'<i class="ti ti-chevron-down"></i> 펼치기':'<i class="ti ti-chevron-up"></i> 접기')+'</button></div>'
+    +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm" style="cursor:pointer" onclick="navToDailyGlobal_()" title="전권역 매출 추이의 글로벌 일별 추이로 이동"><i class="ti ti-list-details text-gray-400"></i> 월간 지표 <span class="text-[10px] font-bold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded ml-1" title="권역 합산이 아니라 글로벌 권역 자체 수치입니다">🌐 글로벌</span></span><button class="btn btn-sm" onclick="toggleDashMoreStats(this)">'+(window.innerWidth<768?'<i class="ti ti-chevron-down"></i> 펼치기':'<i class="ti ti-chevron-up"></i> 접기')+'</button></div>'
     +'<div id="dash-more-stats" class="mb-5"'+(window.innerWidth<768?' style="display:none"':'')+'>'
     +'<div class="flex items-center gap-2 flex-wrap text-[11px] text-gray-400 font-semibold mb-1.5">'+monthLabel+monthTargetHtml+'</div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">'+monthlyCards+'</div>'
     +'</div>'
@@ -2457,7 +2467,7 @@ function renderDailyGlobal(){
       +'</div>';
   }
 
-  return '<div class="card-header" style="padding:0;margin:18px 0 12px"><span class="card-title"><i class="ti ti-chart-histogram text-violet-500"></i> 글로벌 일별 추이 <span class="text-[11px] text-gray-400 font-medium ml-1">'+mLabel+' 1일~'+totalSlots+'일 · 실적은 오늘까지</span></span>'
+  return '<div id="daily-global-anchor" class="card-header" style="padding:0;margin:18px 0 12px"><span class="card-title"><i class="ti ti-chart-histogram text-violet-500"></i> 글로벌 일별 추이 <span class="text-[11px] text-gray-400 font-medium ml-1">'+mLabel+' 1일~'+totalSlots+'일 · 실적은 오늘까지</span></span>'
     +'<span class="text-[11px] text-gray-400 font-medium">굵은 선=누적매출 · 검정 점선=목표매출(누적) · 가는 선=DAU·PU·ARPPU(값은 마우스오버)</span></div>'
     +'<div class="card">'+cmpHtml+'<div class="flex items-center justify-end gap-2.5 flex-wrap mb-2">'+legend+'</div>'+svg+'</div>';
 }
@@ -2555,7 +2565,7 @@ function renderKpiPage(){
   // 지표 분석 (마이비서 연동) — 대시보드에서 이 페이지 맨 아래로 옮김
   var analysisContent=window._analysisCache||'';
   var analysisHtml='<div class="card mt-5"><div class="card-header"><span class="card-title"><i class="ti ti-chart-dots text-purple-500"></i> 지표 분석</span><span class="text-[10px] text-gray-400 font-medium" id="analysis-date"></span></div><div id="analysis-body" class="text-[13px] leading-relaxed text-gray-600">'+(analysisContent||'<div class="bg-slate-50 border border-slate-200 p-5 rounded-xl text-gray-400 text-center">마이비서 분석 데이터를 불러오는 중...</div>')+'</div></div>';
-  c.innerHTML='<div class="card-header" style="padding:0;margin-bottom:12px"><span class="card-title"><i class="ti ti-trending-up text-emerald-500"></i> 전권역 주간 매출 추이</span><a href="https://drive.google.com/drive/folders/1lk_9pMhvy343Wx7J2sHbGIYRo2c-x7vQ" target="_blank" class="btn btn-sm"><i class="ti ti-folder"></i> 보고 폴더</a></div>'+
+  c.innerHTML='<div class="card-header" style="padding:0;margin-bottom:12px"><span class="card-title"><i class="ti ti-trending-up text-emerald-500"></i> 전권역 매출 추이</span><a href="https://drive.google.com/drive/folders/1lk_9pMhvy343Wx7J2sHbGIYRo2c-x7vQ" target="_blank" class="btn btn-sm"><i class="ti ti-folder"></i> 보고 폴더</a></div>'+
     globalFilterBarHtml_()+
     '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">'+cardsHtml+'</div>'+
     renderTrendCharts()+
