@@ -297,7 +297,8 @@ var REGION_LABEL={global:'🌐 글로벌',tw:'🇹🇼 대만',jp:'🇯🇵 일�
 // 로그인 직후 자동으로 패치노트 팝업이 한 번 뜬다.
 var PATCH_NOTES=[
   {version:'2026.09.14', date:'2026-09-14', items:[
-    '데이터 로드 실패 시 대시보드에 예시 숫자 대신 눈에 띄는 경고 배너 + 새로고침 버튼 표시'
+    '데이터 로드 실패 시 경고 배너 대신, 마지막으로 성공했던 실제 데이터를 자동으로 보여주고 백그라운드에서 조용히 재시도',
+    '상위고래유저경보의 권역별 표(계정 수·결제 총액·위험군)에 전주 대비 증감(▲/▼) 표시 추가'
   ]},
   {version:'2026.09.08.3', date:'2026-09-08', items:[
     '회의록 작성 폼을 떠다니는 패널로 변경 — 다른 페이지를 보면서 회의록 작성 가능, 헤더를 드래그해서 위치 이동 가능'
@@ -1419,12 +1420,14 @@ function renderDashboard(){
   // 같은 dispMonth 기준으로 맞춰야 "8월 누적"인데 "9월 1일 기준"처럼 어긋나 보이지 않는다.
   var monthTargetHtml='<span id="month-target-badge" class="text-[11px] text-gray-400 font-medium">'+(showPrevMonth?dispMonth+'월 확정 기준':'1일 ~ '+dispMonth+'월 '+yesterday+'일 기준')+'</span>';
 
-  // 실데이터를 한 번도 못 받아왔으면(fetch 실패 등) 아래 숫자는 코드에 박힌 예시값이다 —
-  // 조용히 예시값만 보여주면 "지표가 틀렸다"는 오해를 사니, 눈에 띄게 경고한다.
-  var kpiLiveWarning=window._kpiLive?'':'<div class="mb-3 p-3 rounded-xl border border-red-200 bg-red-50 flex items-center justify-between flex-wrap gap-2">'
-    +'<span class="text-xs font-bold text-red-700"><i class="ti ti-alert-triangle"></i> 최신 데이터를 불러오지 못했습니다 — 아래 숫자는 실제 값이 아닌 예시입니다</span>'
-    +'<button class="btn btn-sm btn-primary" onclick="try{localStorage.removeItem(\'kpi_cache\')}catch(e){};location.reload()"><i class="ti ti-refresh"></i> 새로고침</button></div>';
-  c.innerHTML=globalFilterBarHtml_()+kpiLiveWarning
+  // 실데이터를 한 번도 못 받아왔으면(fetch 실패 등) fetchKpiData/kpiLoadFailed_ 쪽에서
+  // 마지막으로 성공했던 캐시를 대신 채워 넣는다 — 그래도 정말 캐시가 하나도 없는 극히 드문
+  // 경우(신규 기기 첫 방문 중 로드 실패)만 조용한 로딩 표시로 대체한다. 예전에는 여기서
+  // 빨간 경고 배너를 띄웠지만, 사용자 피드백에 따라 제거했다 — 방해되는 배너보다는
+  // 화면 자체를 항상 실데이터(최신 또는 마지막으로 성공한 캐시)로 채우는 쪽을 택함.
+  var kpiLoadingNotice=window._kpiLive?'':'<div class="mb-3 p-3 rounded-xl border border-gray-200 bg-gray-50 flex items-center gap-2">'
+    +'<i class="ti ti-loader-2 animate-spin text-gray-400"></i><span class="text-xs text-gray-500">데이터를 불러오는 중입니다...</span></div>';
+  c.innerHTML=globalFilterBarHtml_()+kpiLoadingNotice
     +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm" style="cursor:pointer" onclick="navToDailyGlobal_()" title="전권역 매출 추이의 글로벌 일별 추이로 이동"><i class="ti ti-flame text-emerald-500"></i> 주간 지표 현황 <span class="text-[10px] font-bold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded ml-1" title="권역 합산이 아니라 글로벌 권역 자체 수치입니다">🌐 글로벌</span></span><span class="text-[11px] text-gray-400 font-medium">'+weekLabel+' 기준</span></div>'
     +'<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-5">'+buildHeroRow_()+'</div>'
     // 데스크톱은 주간·월간을 이어서 바로 비교하도록 기본 펼침, 모바일은 카드가 길어지니 기본 접힘
@@ -3723,14 +3726,20 @@ function fetchKpiData(){
   var cacheKey='kpi_cache';
   var today=new Date().toISOString().slice(0,10);
   var hour=new Date().getHours();
+  // anyCache: 로드에 끝내 실패했을 때 대신 보여줄 "마지막으로 성공했던 실데이터"
+  // (날짜·시간 무관하게 있으면 무조건 챙겨둔다. 신선도 판단은 아래 freshCache에서 따로 함)
+  var anyCache=null;
   try{
     var cached=JSON.parse(localStorage.getItem(cacheKey)||'null');
-    if(cached&&cached.date===today){
-      var cachedAt=cached.hour*60+(cached.minute||0);
-      var nowAt=hour*60+new Date().getMinutes();
-      var past8=hour>=8;var cachedBefore8=cached.hour<8;
-      if(!(past8&&cachedBefore8)&&(nowAt-cachedAt)<5){
-        applyKpiData(cached.data);return;
+    if(cached){
+      anyCache=cached;
+      if(cached.date===today){
+        var cachedAt=cached.hour*60+(cached.minute||0);
+        var nowAt=hour*60+new Date().getMinutes();
+        var past8=hour>=8;var cachedBefore8=cached.hour<8;
+        if(!(past8&&cachedBefore8)&&(nowAt-cachedAt)<5){
+          applyKpiData(cached.data);return;
+        }
       }
     }
   }catch(e){}
@@ -3748,33 +3757,42 @@ function fetchKpiData(){
         if(data&&data.success){
           try{localStorage.setItem(cacheKey,JSON.stringify({date:today,hour:hour,minute:new Date().getMinutes(),data:data}));}catch(e){}
           applyKpiData(data);
-        }else{ kpiLoadFailed('서버가 데이터를 반환하지 못했습니다.'); }
+        }else{ kpiLoadFailed('서버가 데이터를 반환하지 못했습니다.',anyCache); }
       })
       .catch(function(e){
         clearTimeout(timer);
         console.error('KPI 로드 실패(시도 '+tryNo+'/3):',e);
         if(tryNo<3){ setTimeout(function(){attempt(tryNo+1);},1500*tryNo); }
-        else{ kpiLoadFailed('응답이 없습니다. 네트워크 또는 서버 상태를 확인해주세요.'); }
+        else{ kpiLoadFailed('응답이 없습니다. 네트워크 또는 서버 상태를 확인해주세요.',anyCache); }
       });
   }
   attempt(1);
 }
 
-// 로딩이 끝내 실패했을 때 "불러오는 중" 대신 이유와 재시도 버튼을 보여준다
-function kpiLoadFailed(msg){
-  // 대시보드는 실패해도 예시 숫자가 그대로 남아있어 "로딩중" 텍스트가 없다 — 다시 그려서
-  // 위쪽에 눈에 띄는 경고 배너(kpiLiveWarning)가 뜨게 한다.
-  if(currentPage==='dashboard') renderDashboard();
+// 로딩이 끝내 실패했을 때: 마지막으로 성공했던 실데이터가 있으면 그걸 그대로 보여주고
+// (코드에 박힌 예시 숫자보다 훨씬 정확하고, 사용자를 놀라게 할 배너도 필요 없다)
+// 백그라운드에서 조용히 재시도한다. 캐시조차 없는 극히 드문 경우에만 로딩 상태를 유지한다.
+function kpiLoadFailed(msg,fallbackCache){
+  console.error('KPI 데이터 로드 실패 — 최신 데이터를 못 받아왔습니다:',msg);
+  if(fallbackCache&&fallbackCache.data){
+    applyKpiData(fallbackCache.data);
+    if(currentPage==='dashboard') renderDashboard();
+    setTimeout(fetchKpiData,30000);
+    return;
+  }
+  // 대시보드는 renderDashboard()가 이미 kpiLoadingNotice를 포함해 새로 그렸으므로 끝 —
+  // 아래 boxes 루프까지 돌리면 그 notice 문구("불러오는 중")가 스스로 다시 매치돼서
+  // 방금 그린 화면 전체를 덮어써버린다(직접 테스트로 확인). 다른 페이지(분석·회의록·
+  // 경쟁사 카드)만 아래에서 각자의 로딩 자리를 조용한 스피너로 바꿔준다.
+  if(currentPage==='dashboard'){ renderDashboard(); setTimeout(fetchKpiData,15000); return; }
   var boxes=document.querySelectorAll('#analysis-body,#mt-list,#comp-cards,#content-area');
   Array.prototype.forEach.call(boxes,function(el){
     if(el&&/불러오는 중|로딩/.test(el.textContent||'')){
-      el.innerHTML='<div class="text-center py-8"><i class="ti ti-alert-circle text-3xl text-amber-400"></i>'
-        +'<p class="text-sm text-gray-500 mt-2">데이터를 불러오지 못했습니다.</p>'
-        +'<p class="text-[11px] text-gray-400 mt-1">'+esc(msg)+'</p>'
-        +'<button onclick="try{localStorage.removeItem(\'kpi_cache\')}catch(e){};location.reload()" '
-        +'class="btn btn-sm btn-primary mt-3"><i class="ti ti-refresh"></i> 다시 시도</button></div>';
+      el.innerHTML='<div class="text-center py-8"><i class="ti ti-loader-2 animate-spin text-2xl text-gray-300"></i>'
+        +'<p class="text-xs text-gray-400 mt-2">데이터를 불러오는 중입니다...</p></div>';
     }
   });
+  setTimeout(fetchKpiData,15000);
 }
 
 // KPI_DATA/KPI_MONTHLY는 실데이터가 오기 전까지 코드에 박힌 예시 숫자를 들고 있다.
