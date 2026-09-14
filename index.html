@@ -1416,7 +1416,12 @@ function renderDashboard(){
   // 같은 dispMonth 기준으로 맞춰야 "8월 누적"인데 "9월 1일 기준"처럼 어긋나 보이지 않는다.
   var monthTargetHtml='<span id="month-target-badge" class="text-[11px] text-gray-400 font-medium">'+(showPrevMonth?dispMonth+'월 확정 기준':'1일 ~ '+dispMonth+'월 '+yesterday+'일 기준')+'</span>';
 
-  c.innerHTML=globalFilterBarHtml_()
+  // 실데이터를 한 번도 못 받아왔으면(fetch 실패 등) 아래 숫자는 코드에 박힌 예시값이다 —
+  // 조용히 예시값만 보여주면 "지표가 틀렸다"는 오해를 사니, 눈에 띄게 경고한다.
+  var kpiLiveWarning=window._kpiLive?'':'<div class="mb-3 p-3 rounded-xl border border-red-200 bg-red-50 flex items-center justify-between flex-wrap gap-2">'
+    +'<span class="text-xs font-bold text-red-700"><i class="ti ti-alert-triangle"></i> 최신 데이터를 불러오지 못했습니다 — 아래 숫자는 실제 값이 아닌 예시입니다</span>'
+    +'<button class="btn btn-sm btn-primary" onclick="try{localStorage.removeItem(\'kpi_cache\')}catch(e){};location.reload()"><i class="ti ti-refresh"></i> 새로고침</button></div>';
+  c.innerHTML=globalFilterBarHtml_()+kpiLiveWarning
     +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm" style="cursor:pointer" onclick="navToDailyGlobal_()" title="전권역 매출 추이의 글로벌 일별 추이로 이동"><i class="ti ti-flame text-emerald-500"></i> 주간 지표 현황 <span class="text-[10px] font-bold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded ml-1" title="권역 합산이 아니라 글로벌 권역 자체 수치입니다">🌐 글로벌</span></span><span class="text-[11px] text-gray-400 font-medium">'+weekLabel+' 기준</span></div>'
     +'<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-5">'+buildHeroRow_()+'</div>'
     // 데스크톱은 주간·월간을 이어서 바로 비교하도록 기본 펼침, 모바일은 카드가 길어지니 기본 접힘
@@ -3729,6 +3734,9 @@ function fetchKpiData(){
 
 // 로딩이 끝내 실패했을 때 "불러오는 중" 대신 이유와 재시도 버튼을 보여준다
 function kpiLoadFailed(msg){
+  // 대시보드는 실패해도 예시 숫자가 그대로 남아있어 "로딩중" 텍스트가 없다 — 다시 그려서
+  // 위쪽에 눈에 띄는 경고 배너(kpiLiveWarning)가 뜨게 한다.
+  if(currentPage==='dashboard') renderDashboard();
   var boxes=document.querySelectorAll('#analysis-body,#mt-list,#comp-cards,#content-area');
   Array.prototype.forEach.call(boxes,function(el){
     if(el&&/불러오는 중|로딩/.test(el.textContent||'')){
@@ -3741,8 +3749,14 @@ function kpiLoadFailed(msg){
   });
 }
 
+// KPI_DATA/KPI_MONTHLY는 실데이터가 오기 전까지 코드에 박힌 예시 숫자를 들고 있다.
+// 예전엔 fetch가 실패해도(네트워크 오류 등) 하드코딩된 예시 숫자가 실제 값처럼 그대로
+// 화면에 남아있어서, 사용자가 "지표가 틀렸다"고 오해하는 일이 있었다 — 로드 성공 여부를
+// 플래그로 남겨서, 실패 시엔 예시 숫자 대신 눈에 띄는 경고를 보여준다.
+window._kpiLive=false;
 function applyKpiData(d){
   if(!d)return;
+  window._kpiLive=true;
   var w=d.weekly||{};var c=w.change||{};
   if(w.dau){
     KPI_DATA=[
