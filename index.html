@@ -3711,11 +3711,13 @@ function fetchKpiData(){
       }
     }
   }catch(e){}
-  // KPI API는 시트를 여러 개 갱신하느라 첫 응답이 20초 이상 걸릴 수 있다.
-  // 타임아웃 없이 두면 "불러오는 중"에서 영원히 멈추므로 재시도 + 실패 안내를 붙인다.
+  // KPI API가 시트 여러 개+분석까지 한 번에 처리하느라 실제로 30~40초씩 걸리는 경우를
+  // 직접 측정으로 확인했다(2026-09-14, 실측 37초) — 기존 45초 타임아웃은 여기에 거의
+  // 붙어있어서 응답이 조금만 더 늦어져도 바로 실패로 처리됐다. 90초로 넉넉히 늘린다.
+  // (근본 해결은 서버 쪽 처리 시간 자체를 줄이는 것 — 이건 임시 완화책)
   function attempt(tryNo){
     var ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
-    var timer=setTimeout(function(){if(ctrl)ctrl.abort();},45000);
+    var timer=setTimeout(function(){if(ctrl)ctrl.abort();},90000);
     fetch(KPI_API_URL+'?t='+Date.now(),ctrl?{signal:ctrl.signal}:{})
       .then(function(r){return r.json();})
       .then(function(data){
