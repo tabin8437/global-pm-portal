@@ -2731,7 +2731,8 @@ function udGroupPuValues_(buckets,arr){
 function renderUserDist(){
   var c=document.getElementById('content-area');
   if(!window._userDistCache){
-    c.innerHTML='<div class="card"><p class="text-xs text-gray-400 text-center py-10"><i class="ti ti-loader-2 animate-spin"></i> 유저 분포 데이터 불러오는 중...</p></div>';
+    var udAtt=window._udAttempt?' (재시도 '+window._udAttempt[0]+'/'+window._udAttempt[1]+')':'';
+    c.innerHTML='<div class="card"><p class="text-xs text-gray-400 text-center py-10"><i class="ti ti-loader-2 animate-spin"></i> 유저 분포 데이터 불러오는 중'+udAtt+'...</p></div>';
     udFetch();
     return;
   }
@@ -2809,15 +2810,20 @@ function renderUserDist(){
 // (2026-09-14/15 두 차례 동일 패턴으로 배포 전체가 404 나는 현상과 시점이 겹침)
 // KPI 캐시와 같은 방식으로 짧게 캐싱 + 실패 시 재시도를 추가해 호출 자체를 줄인다.
 // user_dist·whale은 하루~주 단위로만 갱신되는 데이터라 이 정도 캐시는 정확성에 영향 없다.
-function fetchWithRetry_(url,tryNo,maxTry,onDone){
+// 재시도가 조용히 최대 3회(회당 90초)까지 돌면, 실패가 계속될 때 사용자 눈엔 그냥
+// 몇 분간 멈춘 것처럼 보인다 — 회당 타임아웃을 실측 실패 소요시간(20~46초)에 맞춰
+// 40초로 줄이고 재시도를 2회로 줄여 최악의 대기시간을 낮춘다. 진행 상황도
+// window._udAttempt/_whaleAttempt에 남겨서 로딩 문구에 "재시도 중 (2/2)"로 보여준다.
+function fetchWithRetry_(url,tryNo,maxTry,onProgress,onDone){
+  onProgress(tryNo,maxTry);
   var ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
-  var timer=setTimeout(function(){if(ctrl)ctrl.abort();},90000);
+  var timer=setTimeout(function(){if(ctrl)ctrl.abort();},40000);
   fetch(url+'&t='+Date.now(),ctrl?{signal:ctrl.signal}:{})
     .then(function(r){return r.json();})
     .then(function(d){ clearTimeout(timer); onDone(d,null); })
     .catch(function(e){
       clearTimeout(timer);
-      if(tryNo<maxTry){ setTimeout(function(){fetchWithRetry_(url,tryNo+1,maxTry,onDone);},1500*tryNo); }
+      if(tryNo<maxTry){ setTimeout(function(){fetchWithRetry_(url,tryNo+1,maxTry,onProgress,onDone);},1000); }
       else{ onDone(null,e); }
     });
 }
@@ -2834,13 +2840,15 @@ function udFetch(){
     }
   }catch(e){}
   window._udFetching=true;
-  fetchWithRetry_(KPI_API_URL+'?action=user_dist',1,3,function(d,err){
-    window._udFetching=false;
-    if(d){ window._userDistCache=d; if(d.ok){ try{localStorage.setItem(cacheKey,JSON.stringify({ts:Date.now(),data:d}));}catch(e){} } }
-    else{ window._userDistCache={ok:false,error:err.message}; }
-    if(currentPage==='user-dist') renderUserDist();
-    if(currentPage==='dashboard') renderUserDistSummary();
-  });
+  fetchWithRetry_(KPI_API_URL+'?action=user_dist',1,2,
+    function(tryNo,maxTry){ window._udAttempt=[tryNo,maxTry]; if(currentPage==='user-dist') renderUserDist(); },
+    function(d,err){
+      window._udFetching=false; window._udAttempt=null;
+      if(d){ window._userDistCache=d; if(d.ok){ try{localStorage.setItem(cacheKey,JSON.stringify({ts:Date.now(),data:d}));}catch(e){} } }
+      else{ window._userDistCache={ok:false,error:err.message}; }
+      if(currentPage==='user-dist') renderUserDist();
+      if(currentPage==='dashboard') renderUserDistSummary();
+    });
 }
 function udRefresh(){ try{localStorage.removeItem('ud_cache');}catch(e){} window._userDistCache=null; window._whaleCache=null; renderUserDist(); }
 
@@ -2858,13 +2866,15 @@ function whaleFetch(){
     }
   }catch(e){}
   window._whaleFetching=true;
-  fetchWithRetry_(KPI_API_URL+'?action=whale_alert',1,3,function(d,err){
-    window._whaleFetching=false;
-    if(d){ window._whaleCache=d; if(d.ok){ try{localStorage.setItem(cacheKey,JSON.stringify({ts:Date.now(),data:d}));}catch(e){} } }
-    else{ window._whaleCache={ok:false,error:err.message}; }
-    if(currentPage==='user-dist'&&window._udMetric==='whale') renderWhaleAlert();
-    if(currentPage==='dashboard') renderUserDistSummary();
-  });
+  fetchWithRetry_(KPI_API_URL+'?action=whale_alert',1,2,
+    function(tryNo,maxTry){ window._whaleAttempt=[tryNo,maxTry]; if(currentPage==='user-dist'&&window._udMetric==='whale') renderWhaleAlert(); },
+    function(d,err){
+      window._whaleFetching=false; window._whaleAttempt=null;
+      if(d){ window._whaleCache=d; if(d.ok){ try{localStorage.setItem(cacheKey,JSON.stringify({ts:Date.now(),data:d}));}catch(e){} } }
+      else{ window._whaleCache={ok:false,error:err.message}; }
+      if(currentPage==='user-dist'&&window._udMetric==='whale') renderWhaleAlert();
+      if(currentPage==='dashboard') renderUserDistSummary();
+    });
 }
 function whaleRefresh(){ try{localStorage.removeItem('whale_cache');}catch(e){} window._whaleCache=null; renderWhaleAlert(); }
 function whaleSetRegion(r){ window._whaleRegion=r; renderWhaleAlert(); }
@@ -2906,7 +2916,8 @@ function renderUserDistSummary(){
   }
   var rowsHtml='';
   if(!d){
-    rowsHtml='<div class="text-center py-6 text-xs text-gray-400"><i class="ti ti-loader-2 animate-spin"></i> 불러오는 중...</div>';
+    var udAtt2=window._udAttempt?' (재시도 '+window._udAttempt[0]+'/'+window._udAttempt[1]+')':'';
+    rowsHtml='<div class="text-center py-6 text-xs text-gray-400"><i class="ti ti-loader-2 animate-spin"></i> 불러오는 중'+udAtt2+'...</div>';
   } else if(!d.ok){
     rowsHtml='<div class="text-center py-6 text-xs text-gray-400">데이터를 불러오지 못했습니다</div>';
   } else {
@@ -2982,7 +2993,8 @@ function renderUserDistSummary(){
     if(!rowsHtml) rowsHtml='<div class="text-center py-6 text-xs text-gray-400">표시할 데이터가 없습니다</div>';
   }
   if(!w){
-    rowsHtml+='<div class="text-center py-3 text-xs text-gray-400"><i class="ti ti-loader-2 animate-spin"></i> 고래 유저 불러오는 중...</div>';
+    var whAtt2=window._whaleAttempt?' (재시도 '+window._whaleAttempt[0]+'/'+window._whaleAttempt[1]+')':'';
+    rowsHtml+='<div class="text-center py-3 text-xs text-gray-400"><i class="ti ti-loader-2 animate-spin"></i> 고래 유저 불러오는 중'+whAtt2+'...</div>';
   } else if(w.ok&&w.rows&&w.rows.length){
     var RISK=['NO_PAY_30D','MOVED_AND_DROP','SPEND_DROP'];
     var totalN=w.rows.length;
@@ -2998,7 +3010,8 @@ function renderWhaleAlert(){
   var wrap=document.getElementById('whale-wrap');
   if(!wrap)return;
   if(!window._whaleCache){
-    wrap.innerHTML='<p class="text-xs text-gray-400 text-center py-10"><i class="ti ti-loader-2 animate-spin"></i> 고래 유저 경보 불러오는 중...</p>';
+    var whAtt=window._whaleAttempt?' (재시도 '+window._whaleAttempt[0]+'/'+window._whaleAttempt[1]+')':'';
+    wrap.innerHTML='<p class="text-xs text-gray-400 text-center py-10"><i class="ti ti-loader-2 animate-spin"></i> 고래 유저 경보 불러오는 중'+whAtt+'...</p>';
     whaleFetch();
     return;
   }
