@@ -2803,36 +2803,69 @@ function renderUserDist(){
   udRenderChart();
 }
 
-function udFetch(){
-  if(window._udFetching)return;
-  window._udFetching=true;
-  fetch(KPI_API_URL+'?action=user_dist&t='+Date.now())
+// user_dist·whale_alert는 KPI 메인 호출과 달리 캐싱·재시도가 전혀 없어서, 대시보드를
+// 여러 사람이 비슷한 시간에 열 때마다 매번 새로 무거운 백엔드 실행이 겹쳐 쌓였다 —
+// (2026-09-14/15 두 차례 동일 패턴으로 배포 전체가 404 나는 현상과 시점이 겹침)
+// KPI 캐시와 같은 방식으로 짧게 캐싱 + 실패 시 재시도를 추가해 호출 자체를 줄인다.
+// user_dist·whale은 하루~주 단위로만 갱신되는 데이터라 이 정도 캐시는 정확성에 영향 없다.
+function fetchWithRetry_(url,tryNo,maxTry,onDone){
+  var ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
+  var timer=setTimeout(function(){if(ctrl)ctrl.abort();},90000);
+  fetch(url+'&t='+Date.now(),ctrl?{signal:ctrl.signal}:{})
     .then(function(r){return r.json();})
-    .then(function(d){ window._udFetching=false; window._userDistCache=d; if(currentPage==='user-dist') renderUserDist(); if(currentPage==='dashboard') renderUserDistSummary(); })
+    .then(function(d){ clearTimeout(timer); onDone(d,null); })
     .catch(function(e){
-      window._udFetching=false;
-      window._userDistCache={ok:false,error:e.message};
-      if(currentPage==='user-dist') renderUserDist();
-      if(currentPage==='dashboard') renderUserDistSummary();
+      clearTimeout(timer);
+      if(tryNo<maxTry){ setTimeout(function(){fetchWithRetry_(url,tryNo+1,maxTry,onDone);},1500*tryNo); }
+      else{ onDone(null,e); }
     });
 }
-function udRefresh(){ window._userDistCache=null; window._whaleCache=null; renderUserDist(); }
+function udFetch(){
+  if(window._udFetching)return;
+  var cacheKey='ud_cache',ttlMs=10*60*1000;
+  try{
+    var cached=JSON.parse(localStorage.getItem(cacheKey)||'null');
+    if(cached&&cached.ts&&(Date.now()-cached.ts)<ttlMs){
+      window._userDistCache=cached.data;
+      if(currentPage==='user-dist') renderUserDist();
+      if(currentPage==='dashboard') renderUserDistSummary();
+      return;
+    }
+  }catch(e){}
+  window._udFetching=true;
+  fetchWithRetry_(KPI_API_URL+'?action=user_dist',1,3,function(d,err){
+    window._udFetching=false;
+    if(d){ window._userDistCache=d; if(d.ok){ try{localStorage.setItem(cacheKey,JSON.stringify({ts:Date.now(),data:d}));}catch(e){} } }
+    else{ window._userDistCache={ok:false,error:err.message}; }
+    if(currentPage==='user-dist') renderUserDist();
+    if(currentPage==='dashboard') renderUserDistSummary();
+  });
+}
+function udRefresh(){ try{localStorage.removeItem('ud_cache');}catch(e){} window._userDistCache=null; window._whaleCache=null; renderUserDist(); }
 
 // ── 상위 고래 유저 경보 — 분포 차트가 아니라 계정 단위 경보 목록이라 별도 화면으로 그린다 ──
 function whaleFetch(){
   if(window._whaleFetching)return;
-  window._whaleFetching=true;
-  fetch(KPI_API_URL+'?action=whale_alert&t='+Date.now())
-    .then(function(r){return r.json();})
-    .then(function(d){ window._whaleFetching=false; window._whaleCache=d; if(currentPage==='user-dist'&&window._udMetric==='whale') renderWhaleAlert(); if(currentPage==='dashboard') renderUserDistSummary(); })
-    .catch(function(e){
-      window._whaleFetching=false;
-      window._whaleCache={ok:false,error:e.message};
+  var cacheKey='whale_cache',ttlMs=30*60*1000;
+  try{
+    var cached=JSON.parse(localStorage.getItem(cacheKey)||'null');
+    if(cached&&cached.ts&&(Date.now()-cached.ts)<ttlMs){
+      window._whaleCache=cached.data;
       if(currentPage==='user-dist'&&window._udMetric==='whale') renderWhaleAlert();
       if(currentPage==='dashboard') renderUserDistSummary();
-    });
+      return;
+    }
+  }catch(e){}
+  window._whaleFetching=true;
+  fetchWithRetry_(KPI_API_URL+'?action=whale_alert',1,3,function(d,err){
+    window._whaleFetching=false;
+    if(d){ window._whaleCache=d; if(d.ok){ try{localStorage.setItem(cacheKey,JSON.stringify({ts:Date.now(),data:d}));}catch(e){} } }
+    else{ window._whaleCache={ok:false,error:err.message}; }
+    if(currentPage==='user-dist'&&window._udMetric==='whale') renderWhaleAlert();
+    if(currentPage==='dashboard') renderUserDistSummary();
+  });
 }
-function whaleRefresh(){ window._whaleCache=null; renderWhaleAlert(); }
+function whaleRefresh(){ try{localStorage.removeItem('whale_cache');}catch(e){} window._whaleCache=null; renderWhaleAlert(); }
 function whaleSetRegion(r){ window._whaleRegion=r; renderWhaleAlert(); }
 
 // 대시보드용 유저 분포 요약 — 상세 화면(renderUserDist)은 그대로 두고, PU·전투력·CP&PAY·
