@@ -54,6 +54,14 @@ function doGet(e) {
   if(p.name) p.name = decB64(p.name);
   var result = {};
 
+  // kpi-api.gs의 메인 응답에서 같은 유형의 버그를 발견해 고친 적이 있다(2026-09-16) —
+  // 이 함수도 액션 분기 전체가 try/catch로 감싸여 있지 않아서, 어느 액션이든 내부에서
+  // 예외가 나면 doGet 자체가 uncaught exception으로 끝나 클라이언트가 유효한 JSON 대신
+  // 구글의 범용 에러 페이지(HTML)를 받는다. "list"/"check"는 로그인 흐름에 쓰이는
+  // 액션이라 여기서 실패하면 로그인 자체가 막히므로 더 심각하다 — 반드시 유효한 JSON을
+  // 반환하도록 전체를 감싼다.
+  try {
+
   if (action === "list") {
     result = { ok: true, users: getAllUsers() };
 
@@ -289,6 +297,10 @@ function doGet(e) {
       }
     }
     result = { ok: true };
+  }
+
+  } catch (errMain) {
+    result = { ok: false, error: errMain.toString() };
   }
 
   var json = JSON.stringify(result);
