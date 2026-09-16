@@ -1385,8 +1385,22 @@ function renderDashboard(){
   var dm_=dashDisplayMonth_(now);
   var showPrevMonth=dm_.isPrev,dispMonth=dm_.month,dispYear=dm_.year;
   var monthLabel=dispYear+'년 '+dispMonth+'월 누적'+(showPrevMonth?' <span style="font-size:10px;font-weight:600;color:#f59e0b;margin-left:4px">전월 확정</span>':' <span style="font-size:11px;font-weight:500;color:#94a3b8;margin-left:6px">1일 ~ '+dispMonth+'월 '+yesterday+'일 기준</span>');
-  var monthlyCards=KPI_MONTHLY.map(function(k){
-    return'<div class="kpi-card" style="padding:14px 16px"><div class="kpi-label">'+k.label+'</div><div class="kpi-value" style="font-size:20px;color:#1e293b;margin:4px 0 3px">'+k.value+'</div><span class="kpi-change '+changeClass_(k.change)+'" style="font-size:11px"><span class="text-[9px] opacity-60">전월비</span> '+k.change+'</span></div>';
+  // 월간 카드 중 "당월 DAU 누적"/"당월 매출 누적" 2개만 권역별 원본이 있다(각 권역 탭의
+  // "당월누적" 행 — parseRegionTab의 r.monthly). 나머지(월 MAU/월 평균 DAU/월 PU/월 ARPPU)는
+  // 별도의 "월간보고" 섹션에서만 나오는 값이라 권역별로 쪼갤 데이터가 없어 항상 글로벌로 둔다.
+  var mf=window._globalFilter;
+  var monthlyRegionData=(mf.region!=='all')?((window._regionsCache||{})[mf.region]||{}).monthly:null;
+  var MONTHLY_REGION_KEY={'당월 DAU 누적':'dau','당월 매출 누적':'revenue'};
+  var monthlyCards=KPI_MONTHLY.map(function(k,idx){
+    var rk=MONTHLY_REGION_KEY[k.label];
+    var val=k.value,chg=k.change,regionOnly=false;
+    if(rk&&monthlyRegionData&&monthlyRegionData[rk]){
+      val=fmtNum(monthlyRegionData[rk]);
+      chg=monthlyRegionData[rk+'Change']||'-';
+    } else if(rk&&mf.region!=='all'){
+      regionOnly=true;   // 나머지 4개 카드처럼 이 권역엔 데이터가 없어 글로벌 값을 그대로 보여주는 중
+    }
+    return'<div class="kpi-card" style="padding:14px 16px"><div class="kpi-label">'+k.label+(regionOnly?' <span class="text-[9px] text-gray-400 font-normal">(데이터없음·글로벌)</span>':'')+'</div><div class="kpi-value" style="font-size:20px;color:#1e293b;margin:4px 0 3px">'+val+'</div><span class="kpi-change '+changeClass_(chg)+'" style="font-size:11px"><span class="text-[9px] opacity-60">전월비</span> '+chg+'</span></div>';
   }).join('');
   // 유저 분포 요약 (PU·전투력·CP&PAY·상위고래유저경보 핵심 수치만) — 상세는 유저 분포 페이지 그대로 유지
   var userDistSummaryHtml='<div id="userdist-summary-widget"></div>';
@@ -1443,7 +1457,7 @@ function renderDashboard(){
     +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm" style="cursor:pointer" onclick="navToDailyGlobal_()" title="전권역 매출 추이의 글로벌 일별 추이로 이동"><i class="ti ti-flame text-emerald-500"></i> 주간 지표 현황 '+heroRegionBadge_()+'</span><span class="text-[11px] text-gray-400 font-medium">'+weekLabel+' 기준</span></div>'
     +'<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-5">'+buildHeroRow_()+'</div>'
     // 데스크톱은 주간·월간을 이어서 바로 비교하도록 기본 펼침, 모바일은 카드가 길어지니 기본 접힘
-    +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm" style="cursor:pointer" onclick="navToDailyGlobal_()" title="전권역 매출 추이의 글로벌 일별 추이로 이동"><i class="ti ti-list-details text-gray-400"></i> 월간 지표 <span class="text-[10px] font-bold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded ml-1" title="권역 합산이 아니라 글로벌 권역 자체 수치입니다">🌐 글로벌</span></span><button class="btn btn-sm" onclick="toggleDashMoreStats(this)">'+(window.innerWidth<768?'<i class="ti ti-chevron-down"></i> 펼치기':'<i class="ti ti-chevron-up"></i> 접기')+'</button></div>'
+    +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm" style="cursor:pointer" onclick="navToDailyGlobal_()" title="전권역 매출 추이의 글로벌 일별 추이로 이동"><i class="ti ti-list-details text-gray-400"></i> 월간 지표 '+heroRegionBadge_()+'</span><button class="btn btn-sm" onclick="toggleDashMoreStats(this)">'+(window.innerWidth<768?'<i class="ti ti-chevron-down"></i> 펼치기':'<i class="ti ti-chevron-up"></i> 접기')+'</button></div>'
     +'<div id="dash-more-stats" class="mb-5"'+(window.innerWidth<768?' style="display:none"':'')+'>'
     +'<div class="flex items-center gap-2 flex-wrap text-[11px] text-gray-400 font-semibold mb-1.5">'+monthLabel+monthTargetHtml+'</div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">'+monthlyCards+'</div>'
     +'</div>'
