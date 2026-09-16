@@ -1835,7 +1835,18 @@ function renderAppleUI(data){
     return'<div class="row-item"><div style="flex:1"><div class="text-xs font-bold text-gray-800">'+(REGION_LABEL[m.region]||m.region)+' <b class="text-indigo-600">'+esc(m.version.replace(/\s*for\s*iOS/i,''))+'</b> 심의 통과</div><div class="text-[10px] text-gray-400 mt-1">📅 '+esc(m.date)+' · '+esc(m.subject)+'</div></div></div>';
   }).join('');
 }
-function loadAppleMails(){renderAppleUI(backupMails);fetch(APPLE_API_URL+'?t='+Date.now()).then(function(r){return r.json();}).then(function(d){if(d&&d.success&&d.history&&d.history.length)renderAppleUI(d);}).catch(function(){});}
+// backupMails는 2026-06월 하드코딩 예시값이다. 예전엔 대시보드↔iOS 관리 페이지를 오갈 때마다
+// loadAppleMails()가 매번 이 3개월 전 값부터 다시 그리고 나서(수초 뒤) 최신값으로 덮어써서,
+// 실제로는 API가 멀쩡한데도(2026-09-17 확인: 최신 데이터 정상 수신) 페이지 이동할 때마다
+// 잠깐씩 옛날 버전이 다시 보이는 게 "두 화면이 안 맞다"는 오해를 샀다 — 이번 세션에서 한 번
+// 성공한 결과는 캐시해두고, 그 다음부턴 캐시부터 보여준 뒤 백그라운드로만 갱신한다.
+window._appleCache=null;
+function loadAppleMails(){
+  renderAppleUI(window._appleCache||backupMails);
+  fetch(APPLE_API_URL+'?t='+Date.now()).then(function(r){return r.json();}).then(function(d){
+    if(d&&d.success&&d.history&&d.history.length){ window._appleCache=d; renderAppleUI(d); }
+  }).catch(function(){});
+}
 function renderPlatformIssues(){var el=document.getElementById('platform-issue-list');if(!el)return;el.innerHTML=platformData.issues.map(function(iss,i){return'<div class="row-item"><div style="flex:1"><div class="font-semibold">'+iss.title+'</div><div class="text-xs text-gray-500 mt-1">📅 '+iss.date+' · '+iss.status+'</div></div>'+(isAdmin?'<button class="btn btn-sm" onclick="editPlatformIssue('+i+')">수정</button>':'')+'</div>';}).join('');}
 function openPfIssueForm(){editTarget={type:'pf_new',index:null};document.getElementById('pf-issue-form').style.display='block';}
 function editPlatformIssue(i){editTarget={type:'pf_edit',index:i};var s=platformData.issues[i];document.getElementById('pfi-title').value=s.title;document.getElementById('pfi-date').value=s.date;document.getElementById('pfi-status').value=s.status;document.getElementById('pf-issue-form').style.display='block';}
