@@ -1350,7 +1350,15 @@ function setGlobalFilter(key,val){
   renderPage(currentPage);
 }
 var GF_PERIOD_OPTS=[{v:4,l:'최근 4주'},{v:6,l:'최근 6주'},{v:8,l:'최근 8주'},{v:12,l:'최근 12주'}];
-var GF_REGION_OPTS=[{v:'all',l:'전체 권역'},{v:'kr',l:'🇰🇷 한국'},{v:'tw',l:'🇹🇼 대만'},{v:'jp',l:'🇯🇵 일본'},{v:'gl',l:'🌐 글로벌'}];
+var GF_REGION_OPTS=[{v:'all',l:'전체 권역 (기본값 글로벌)'},{v:'kr',l:'🇰🇷 한국'},{v:'tw',l:'🇹🇼 대만'},{v:'jp',l:'🇯🇵 일본'},{v:'gl',l:'🌐 글로벌'}];
+// "주간 지표 현황" 배지 — 필터에서 권역을 고르면 그 권역 라벨로, 전체(기본값)면 글로벌로 표시.
+// buildHeroRow_()가 실제로 f.region 기준 데이터를 보여주므로 배지도 그와 일치해야 한다.
+function heroRegionBadge_(){
+  var region=window._globalFilter.region;
+  var opt=GF_REGION_OPTS.find(function(o){return o.v===region;});
+  var label=(region==='all'||!opt)?'🌐 글로벌':opt.l;
+  return'<span class="text-[10px] font-bold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded ml-1" title="권역 합산이 아니라 '+label.replace(/^\S+\s*/,'')+' 권역 자체 수치입니다">'+label+'</span>';
+}
 function globalFilterBarHtml_(){
   var f=window._globalFilter;
   return'<div class="flex items-center gap-2 flex-wrap mb-4"><span class="text-[11px] text-gray-400 font-semibold flex items-center gap-1"><i class="ti ti-filter"></i> 필터</span>'
@@ -1432,7 +1440,7 @@ function renderDashboard(){
   var kpiLoadingNotice=window._kpiLive?'':'<div class="mb-3 p-3 rounded-xl border border-gray-200 bg-gray-50 flex items-center gap-2">'
     +'<i class="ti ti-loader-2 animate-spin text-gray-400"></i><span class="text-xs text-gray-500">데이터를 불러오는 중입니다...</span></div>';
   c.innerHTML=globalFilterBarHtml_()+kpiLoadingNotice
-    +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm" style="cursor:pointer" onclick="navToDailyGlobal_()" title="전권역 매출 추이의 글로벌 일별 추이로 이동"><i class="ti ti-flame text-emerald-500"></i> 주간 지표 현황 <span class="text-[10px] font-bold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded ml-1" title="권역 합산이 아니라 글로벌 권역 자체 수치입니다">🌐 글로벌</span></span><span class="text-[11px] text-gray-400 font-medium">'+weekLabel+' 기준</span></div>'
+    +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm" style="cursor:pointer" onclick="navToDailyGlobal_()" title="전권역 매출 추이의 글로벌 일별 추이로 이동"><i class="ti ti-flame text-emerald-500"></i> 주간 지표 현황 '+heroRegionBadge_()+'</span><span class="text-[11px] text-gray-400 font-medium">'+weekLabel+' 기준</span></div>'
     +'<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-5">'+buildHeroRow_()+'</div>'
     // 데스크톱은 주간·월간을 이어서 바로 비교하도록 기본 펼침, 모바일은 카드가 길어지니 기본 접힘
     +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm" style="cursor:pointer" onclick="navToDailyGlobal_()" title="전권역 매출 추이의 글로벌 일별 추이로 이동"><i class="ti ti-list-details text-gray-400"></i> 월간 지표 <span class="text-[10px] font-bold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded ml-1" title="권역 합산이 아니라 글로벌 권역 자체 수치입니다">🌐 글로벌</span></span><button class="btn btn-sm" onclick="toggleDashMoreStats(this)">'+(window.innerWidth<768?'<i class="ti ti-chevron-down"></i> 펼치기':'<i class="ti ti-chevron-up"></i> 접기')+'</button></div>'
