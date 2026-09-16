@@ -624,7 +624,10 @@ function fetchMeetings(type, cb){
 
 function apiPostMeeting(params){
   var qs=Object.keys(params).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(params[k]||'');}).join('&');
-  return fetchJsonRetry(KPI_API_URL+'?'+qs+'&t='+Date.now(), 3, 25000);
+  // 저장 요청은 서버가 실제로 30~46초까지 걸리는 경우가 실측으로 확인돼 있어(2026-09), 25초
+  // 타임아웃이면 서버가 이미 저장을 마쳤는데도 클라이언트만 먼저 포기하는 경우가 생긴다.
+  // 40초로 넉넉히 늘리되, 그만큼 시도 횟수는 2회로 줄여 최악의 대기시간이 너무 길어지지 않게 한다.
+  return fetchJsonRetry(KPI_API_URL+'?'+qs+'&t='+Date.now(), 2, 40000);
 }
 var isAdmin=false;
 var currentPage='dashboard';
@@ -2136,7 +2139,17 @@ function saveMeeting(){
       _meetingCache[type]=list;
       renderArchive(type);
     });
-  }).catch(function(e){restoreBtn();alert('저장 실패: '+e.message+'\n작성 내용은 그대로 남아있으니 다시 시도해주세요.');});
+  }).catch(function(e){
+    restoreBtn();
+    // 클라이언트가 타임아웃/오류로 실패 처리해도, 서버는 이미 저장을 마쳤을 수 있다(응답만
+    // 못 받은 경우 — 2026-09 계속 확인된 백엔드 지연 패턴). 그래서 실패 시에도 일단 목록을
+    // 다시 불러와본다 — 실제로 저장됐으면 화면에 바로 반영되고, 폼도 그때 닫는다.
+    alert('저장 응답을 받지 못했습니다: '+e.message+'\n(서버에는 이미 저장됐을 수 있어 목록을 다시 확인합니다)');
+    fetchMeetings(type,function(list){
+      _meetingCache[type]=list;
+      renderArchive(type);
+    });
+  });
 }
 function toDocPreviewUrl(url){
   // 구글 문서/시트/슬라이드 URL은 /preview 형태로 바꿔 카드 안에 깔끔하게 임베드
