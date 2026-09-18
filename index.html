@@ -3253,8 +3253,7 @@ function udEnsureCompare_(n){
 // 전투력은 12만 이후가 전부 0이라 "전체 분포" 쪽도 같은 12만에서 끊어 위아래 축을 맞춘다.
 // 레벨은 별도 확대 없이 전체 분포만 보여준다.
 var UD_RANGE={
-  pu:    { zoom: {fromLabel:'3만원 이하'} },
-  power: { main: {toValue:120000}, zoom: {fromValue:40000,toValue:120000} }
+  pu:    { zoom: {fromLabel:'3만원 이하'} }
 };
 function udResolveRange_(buckets,spec){
   if(!spec) return null;
@@ -3278,10 +3277,96 @@ function udResolveRange_(buckets,spec){
   return(start>0||end<buckets.length-1)?{start:start,end:end}:null;
 }
 
+// 전투력별 DAU 그룹 (2026-09-18: "5만 이상"을 5만~7만/7만 이상으로 분리 요청 반영).
+// min 이상 max 미만(마지막 그룹은 max=Infinity)으로 5,000단위 원본 버킷을 묶는다.
+var POWER_GROUPS_=[
+  {label:'7만 이상 (최상위)', min:70000, max:Infinity, color:'#ef4444'},
+  {label:'5만~7만 (상위)',   min:50000, max:70000,     color:'#f97316'},
+  {label:'3.5~5만 (허리층)',  min:35000, max:50000,     color:'#eab308'},
+  {label:'2~3.5만 (쌀먹)',    min:20000, max:35000,     color:'#10b981'},
+  {label:'2만 미만 (작업장)', min:0,     max:20000,     color:'#6366f1'}
+];
+// 그룹 하나의 요일별 라인차트 — 금주(실선) vs 전주(점선), 같은 Y축 공유
+function udPowerLineSvg_(curVals,prevVals,color){
+  var all=curVals.concat(prevVals||[]).filter(function(v){return v!=null&&isFinite(v);});
+  if(!all.length) return'';
+  var max=Math.max.apply(null,all),min=Math.min.apply(null,all);
+  if(max===min){max+=1;min-=1;}
+  var W=280,H=90,PAD=6,n=curVals.length;
+  function X(i){return PAD+(W-2*PAD)*(n>1?i/(n-1):0.5);}
+  function Y(v){return H-PAD-(H-2*PAD)*((v-min)/(max-min));}
+  function path(vals){return vals.map(function(v,i){return(i===0?'M':'L')+X(i).toFixed(1)+','+Y(v).toFixed(1);}).join('');}
+  var prevPath=(prevVals&&prevVals.length===n)?path(prevVals):'';
+  var dots=curVals.map(function(v,i){return'<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(v).toFixed(1)+'" r="2.5" fill="'+color+'"/>';}).join('');
+  return'<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:90px;display:block">'
+    +(prevPath?'<path d="'+prevPath+'" fill="none" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="4,3"/>':'')
+    +'<path d="'+path(curVals)+'" fill="none" stroke="'+color+'" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'+dots+'</svg>';
+}
+function udPowerAxisSvg_(labels){
+  var n=labels.length; if(!n) return'';
+  var W=280,PAD=6;
+  function X(i){return PAD+(W-2*PAD)*(n>1?i/(n-1):0.5);}
+  return'<svg viewBox="0 0 '+W+' 12" style="width:100%;height:12px;display:block">'
+    +labels.map(function(l,i){return'<text x="'+X(i).toFixed(1)+'" y="8" font-size="9" fill="#9ca3af" text-anchor="middle">'+l+'</text>';}).join('')+'</svg>';
+}
+// 전투력별 DAU 전체 위젯 — 그룹별 카드(요일 라인차트) + 요약표.
+// cur.daily(최근 90일 일별 원본, getUserDist_에서 항상 내려줌)를 그대로 쓴다 — weekly/monthly
+// 집계본은 주 1점이라 요일별 금주/전주 비교가 안 되기 때문에 일부러 daily를 쓴다.
+function udPowerGroupWidget_(cur){
+  var daily=(cur.daily||[]).filter(function(r){return r&&r.date&&r.values;});
+  if(daily.length<8) return'<p class="text-xs text-gray-400 text-center py-10">요일별 비교를 위한 일별 데이터가 부족합니다(최근 '+daily.length+'일)</p>';
+  var last14=daily.slice(-14), n=last14.length;
+  var thisRows=last14.slice(n-7), lastRows=n>=14?last14.slice(n-14,n-7):[];
+  var buckets=cur.buckets||[];
+  function groupSum(row,g){
+    var s=0;
+    for(var i=0;i<buckets.length;i++){ var b=Number(buckets[i]); if(!isNaN(b)&&b>=g.min&&b<g.max) s+=(row.values[i]||0); }
+    return s;
+  }
+  var WD=['일','월','화','수','목','금','토'];
+  var weekdayLabels=thisRows.map(function(r){return WD[new Date(r.date).getDay()];});
+
+  function stat(vals){ if(!vals.length) return null; return{max:Math.max.apply(null,vals),min:Math.min.apply(null,vals),avg:vals.reduce(function(a,b){return a+b;},0)/vals.length}; }
+  function pctCell_(cur,prev){
+    if(cur==null) return'-';
+    var out=Math.round(cur).toLocaleString('ko-KR');
+    if(prev==null||!prev) return out;
+    var d=(cur-prev)/prev*100;
+    if(!d) return out+' <span class="text-[10px] text-gray-400">(-)</span>';
+    return out+' <span class="text-[10px] font-bold '+(d>0?'text-red-500':'text-blue-600')+'">('+(d>0?'+':'')+d.toFixed(1)+'%)</span>';
+  }
+
+  var cardsHtml=POWER_GROUPS_.map(function(g){
+    var curVals=thisRows.map(function(r){return groupSum(r,g);});
+    var prevVals=lastRows.map(function(r){return groupSum(r,g);});
+    return'<div class="border rounded-xl p-3"><div class="text-xs font-bold text-gray-700 mb-2">'+esc(g.label)+'</div>'
+      +udPowerLineSvg_(curVals,prevVals,g.color)+udPowerAxisSvg_(weekdayLabels)+'</div>';
+  }).join('');
+
+  var rowsHtml=POWER_GROUPS_.map(function(g){
+    var curVals=thisRows.map(function(r){return groupSum(r,g);});
+    var prevVals=lastRows.map(function(r){return groupSum(r,g);});
+    var sC=stat(curVals),sP=stat(prevVals);
+    return'<tr><td class="p-2 border-r font-bold text-gray-700">'+esc(g.label)+'</td>'
+      +'<td class="p-2 border-r text-right">'+pctCell_(sC&&sC.max,sP&&sP.max)+'</td>'
+      +'<td class="p-2 border-r text-right">'+pctCell_(sC&&sC.min,sP&&sP.min)+'</td>'
+      +'<td class="p-2 text-right">'+pctCell_(sC&&sC.avg,sP&&sP.avg)+'</td></tr>';
+  }).join('');
+
+  return'<div class="flex items-center gap-3 mb-3 text-[11px] text-gray-500"><span class="flex items-center gap-1"><span style="display:inline-block;width:14px;height:2px;background:#374151"></span>금주</span><span class="flex items-center gap-1"><span style="display:inline-block;width:14px;height:0;border-top:2px dashed #9ca3af"></span>전주</span></div>'
+    +'<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">'+cardsHtml+'</div>'
+    +'<div class="overflow-x-auto border rounded-xl"><table class="w-full text-left border-collapse text-xs">'
+    +'<thead class="bg-gray-100"><tr><th class="p-2 border-b border-r">그룹</th><th class="p-2 border-b border-r text-right">주간 최댓값(전주 대비)</th><th class="p-2 border-b border-r text-right">주간 최솟값(전주 대비)</th><th class="p-2 border-b text-right">주간 평균(전주 대비)</th></tr></thead>'
+    +'<tbody class="divide-y">'+rowsHtml+'</tbody></table></div>';
+}
+
 function udRenderChart(){
   var d=window._userDistCache, cur=d.sets[window._udMetric];
   var wrap=document.getElementById('ud-chart-wrap');
   if(!cur){ wrap.innerHTML='<p class="text-xs text-gray-400 text-center py-10">표시할 데이터가 없습니다</p>'; return; }
+  // 전투력별 DAU는 막대그래프+확대+표 조합이 복잡하다는 피드백(2026-09-18)으로, 다른 팀 리포트
+  // 스타일(그룹별 요일 라인차트 4~5개 + 요약표)을 참고해 별도로 단순하게 그린다.
+  if(window._udMetric==='power'){ wrap.innerHTML=udPowerGroupWidget_(cur); return; }
   var rows=(window._udMode==='weekly'?cur.weekly:cur.monthly)||[];
   if(!rows.length){ wrap.innerHTML='<p class="text-xs text-gray-400 text-center py-10">표시할 구간이 없습니다</p>'; return; }
   var buckets=cur.buckets;
@@ -3344,22 +3429,6 @@ function udRenderChart(){
   // 표는 주간/월간 토글과 무관하게 "이번달 vs 지난달"을 항상 같이 보여준다 (전월대비 참고용 고정 컬럼)
   var monthly=cur.monthly||[];
   var monA=monthly[monthly.length-1], monB=monthly[monthly.length-2];
-
-  // 전투력: 4만~12만 구간별 인원수를 표로도 제공 (차트와 같은 범위)
-  // 원본 시트가 5,000단위로만 쌓이므로 표도 5,000단위 그대로 — 1,000단위로 더 잘게 보려면
-  // 원본 SQL/시트의 구간 폭 자체를 1,000단위로 바꿔야 한다.
-  if(window._udMetric==='power'){
-    var tblRange=udResolveRange_(buckets,{fromValue:40000,toValue:120000});
-    if(tblRange) html+=udDistTable_({
-      title:'전투력 4만~12만 구간별 인원수', note:'(5,000단위 원본 그대로)',
-      buckets:slice(tblRange,buckets),
-      labelFn:function(b){ var n=Number(b); return n.toLocaleString('ko-KR')+' ~ '+(n+4999).toLocaleString('ko-KR'); },
-      weekA:slice(tblRange,rowA.values), weekB:rowB?slice(tblRange,rowB.values):null,
-      weekLabelA:rowA.label, weekLabelB:rowB?rowB.label:null,
-      monA:monA?slice(tblRange,monA.values):null, monB:monB?slice(tblRange,monB.values):null,
-      monLabelA:monA?monA.label:null, monLabelB:monB?monB.label:null
-    });
-  }
 
   // PU: 세분화된 결제금액 구간(1만원 이하~1억원 초과)을 요청받은 7개 그룹으로 묶어 표로 제공
   // TOTAL_UCNT는 합계값이라 그룹 합산에서 제외
