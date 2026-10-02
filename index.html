@@ -1531,7 +1531,35 @@ function renderDashboard(){
   }
   // 월간 목표 뱃지 채우기
   var mtb=document.getElementById('month-target-badge');
-  if(mtb&&window._monthTargetHtml) mtb.innerHTML=window._monthTargetHtml;
+  if(mtb) mtb.innerHTML=monthTargetBadgeHtml_();
+}
+// 월간 지표 상단 요약("계획/추정/누적/계획대비/추정대비") — applyKpiData에서 한 번만 계산해
+// window._monthTargetHtml에 박아두던 걸 그대로 재사용하던 탓에, 권역 필터를 바꿔도 항상
+// 글로벌 수치만 보였다(2026-10-02 실제 보고 — TW 선택했는데 계획/추정/누적이 글로벌 그대로).
+// 매번 현재 필터 기준으로 다시 계산한다 — 권역이 선택돼 있고 그 권역의 당월 목표(target)가
+// 있으면 그걸 쓰고, 없으면(전체/글로벌) 기존 글로벌 집계로 돌아간다.
+function monthTargetBadgeHtml_(){
+  var region=window._globalFilter.region;
+  var an=window._annualCache;
+  if(!an||!an.monthlyTarget||!an.monthlyTarget.plan) return'';
+  var regionData=(region!=='all'&&region!=='gl')?(window._regionsCache||{})[region]:null;
+  var mt,tCum;
+  if(regionData&&regionData.target&&regionData.target.plan){
+    mt=regionData.target;
+    tCum=(regionData.monthly&&regionData.monthly.revenue)||0;
+  }else{
+    mt=an.monthlyTarget;
+    tCum=(window._monthCumCache&&window._monthCumCache.cum)||0;
+  }
+  var achNum=parseFloat(String(mt.achieve||'').replace(/[^0-9.]/g,''))||0;
+  function cumChip(label,tgtM){
+    if(!tCum||!tgtM)return'';
+    var p=tCum/(tgtM*1000000)*100;
+    return pctChip_(label,p,p.toFixed(1)+'%');
+  }
+  return'<div class="flex items-center gap-2 flex-wrap"><span class="text-[11px] text-gray-400">계획 <b class="text-gray-700">'+fmtNum(mt.plan*1000000)+'</b></span><span class="text-[11px] text-gray-400">추정 <b class="text-gray-700">'+fmtNum(mt.estimate*1000000)+'</b></span>'+pctChip_('추정/계획',achNum,mt.achieve)
+    +(tCum?'<span class="text-[11px] text-gray-400">누적 <b class="text-gray-700">'+fmtNum(tCum)+'</b></span>':'')
+    +cumChip('계획대비',mt.plan)+cumChip('추정대비',mt.estimate)+'</div>';
 }
 
 function switchMilestoneTab(region){
@@ -4043,23 +4071,15 @@ function applyKpiData(d){
   if(d.annual){
     var an=d.annual;
     window._annualCache=an;
-    // 월간 목표 뱃지 업데이트
+    // "매출 현황"(글로벌 전용 위젯)의 "당월 누적" 행 + monthTargetBadgeHtml_()의 글로벌
+    // 폴백에서 쓸 전권역 당월 누적 매출을 저장해둔다. 뱃지 HTML 자체는 더 이상 여기서 미리
+    // 만들지 않는다 — 권역 필터와 무관하게 고정된 문자열이 캐시돼버려서, 필터를 바꿔도
+    // 항상 글로벌 수치만 보이는 버그가 있었다(monthTargetBadgeHtml_ 참고).
     if(an.monthlyTarget&&an.monthlyTarget.plan){
       var mt=an.monthlyTarget;
-      var achNum=parseFloat(String(mt.achieve||'').replace(/[^0-9.]/g,''))||0;
-      // 전권역 당월 누적 매출 → 계획/추정 대비 실제 달성률을 함께 표기
       var tCum=(d.monthly&&d.monthly.revenue)||0;
       if(!tCum&&d.regions)['kr','tw','jp','gl'].forEach(function(k){
         var rr=d.regions[k]; if(rr&&rr.monthly&&rr.monthly.revenue)tCum+=rr.monthly.revenue;});
-      function cumChip(label,tgtM){
-        if(!tCum||!tgtM)return'';
-        var p=tCum/(tgtM*1000000)*100;
-        return pctChip_(label,p,p.toFixed(1)+'%');
-      }
-      window._monthTargetHtml='<div class="flex items-center gap-2 flex-wrap"><span class="text-[11px] text-gray-400">계획 <b class="text-gray-700">'+fmtNum(mt.plan*1000000)+'</b></span><span class="text-[11px] text-gray-400">추정 <b class="text-gray-700">'+fmtNum(mt.estimate*1000000)+'</b></span>'+pctChip_('추정/계획',achNum,mt.achieve)
-        +(tCum?'<span class="text-[11px] text-gray-400">누적 <b class="text-gray-700">'+fmtNum(tCum)+'</b></span>':'')
-        +cumChip('계획대비',mt.plan)+cumChip('추정대비',mt.estimate)+'</div>';
-      // "매출 현황" 위젯의 "당월 누적" 행에서 쓸 수 있게 원본 수치도 같이 저장
       window._monthCumCache=tCum?{cum:tCum,estimateM:mt.estimate,pct:(tCum/(mt.estimate*1000000)*100)}:null;
     }
   }
