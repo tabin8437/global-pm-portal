@@ -296,6 +296,15 @@ var REGION_LABEL={global:'🌐 글로벌',tw:'🇹🇼 대만',jp:'🇯🇵 일�
 // 배포 준비할 때마다 맨 위에 새 버전을 추가한다(최신이 위) — 버전이 바뀌면
 // 로그인 직후 자동으로 패치노트 팝업이 한 번 뜬다.
 var PATCH_NOTES=[
+  {version:'2026.10.06', date:'2026-10-06', items:[
+    '매출 현황: "4분기 현재 누적매출"의 계획·추정을 이번 달 한 달치가 아니라 4분기 3개월 합산(계획 26.3억 · 추정 24.1억)으로 표시',
+    '11월·12월에 "N월 목표"가 사라지던 문제 미리 수정(월 헤더 인식 오류)',
+    '유저 분포 > 전투력별 DAU를 5개 그룹(7만 이상~2만 미만)별 요일 라인차트 + 요약표로 단순화',
+    '대시보드 권역 필터: 주간·월간 지표 배지와 월간 상단 요약(계획/추정/누적)이 선택한 권역을 따라감',
+    '상단바 검색 버튼과 시계바가 겹치던 문제 수정',
+    'iOS 심의 현황이 페이지를 오갈 때 옛 버전으로 되돌아가 보이던 문제 수정',
+    '회의록 저장이 느릴 때 "실패"로 보이거나 목록에 안 뜨던 문제 개선'
+  ]},
   {version:'2026.09.15', date:'2026-09-15', items:[
     '고래유저 권역별 표의 증감 칩에 "전주비" 라벨을 붙여 더 명확하게 표시',
     '사이드바 "주/월간 보고용 지표" 메뉴 제거',
@@ -1486,17 +1495,23 @@ function renderDashboard(){
     // "연간 누적매출" 행엔 연간 추정치를 같이 붙여서("누적 / 추정(N%)") 한눈에 보이게 한다.
     var qCurIdx=qList.findIndex(function(q){return /분기.*현재.*누적매출/.test(q.label||'');});
     var qPlanIdx=qList.findIndex(function(q){return /분기.*계획/.test(q.label||'');});
+    var qEstIdx=qList.findIndex(function(q){return /분기.*추정/.test(q.label||'');});
     var annualIdx=qList.findIndex(function(q){return /^연간\s*누적매출/.test(q.label||'');});
     var mergedRows=[];
     if(qCurIdx!==-1){
-      var qCur=qList[qCurIdx], qPlan=qPlanIdx!==-1?qList[qPlanIdx]:null;
+      // 분기 계획·추정은 백엔드(computeQuarterly_)가 분기 3개월 합계로 내려준다 — 예전엔 이번 달
+      // 한 달치 계획(예: 10월 8.8억)만 "4분기 계획"으로 나와 달성률이 실제보다 크게 보였다.
+      var qCur=qList[qCurIdx], qPlan=qPlanIdx!==-1?qList[qPlanIdx]:null, qEst=qEstIdx!==-1?qList[qEstIdx]:null;
       var pNum=parseFloat(String(qCur.pct||'').replace(/[^0-9.]/g,''))||0;
+      var eNum=qEst?(parseFloat(String(qEst.pct||'').replace(/[^0-9.]/g,''))||0):0;
       var stale=quarterStale(qCur.label);
-      mergedRows.push('<div class="flex items-center justify-between py-1.5 border-b border-gray-100"><span class="text-xs text-gray-600">'+esc(qCur.label)
+      mergedRows.push('<div class="flex items-center justify-between gap-2 py-1.5 border-b border-gray-100"><span class="text-xs text-gray-600">'+esc(qCur.label)
         +(stale?' <span class="text-[9px] font-bold text-red-600 bg-red-50 border border-red-200 px-1 py-0.5 rounded ml-1" title="원본 시트가 아직 '+stale+'분기 기준입니다. 시트 갱신이 필요합니다.">'+stale+'분기 기준 · 갱신필요</span>':'')
-        +'</span><div class="flex items-center gap-1.5"><span class="text-xs font-bold text-gray-900">'+fmtNum(qCur.value*1000000)
-        +(qPlan?' <span class="text-gray-400 font-normal">/ 계획 '+fmtNum(qPlan.value*1000000)+'</span>':'')+'</span>'
-        +(qCur.pct?pctChip_('',pNum,qCur.pct):'')+'</div></div>');
+        +'</span><div class="flex items-center gap-1.5 flex-wrap justify-end"><span class="text-xs font-bold text-gray-900">'+fmtNum(qCur.value*1000000)
+        +(qPlan?' <span class="text-gray-400 font-normal">/ 계획 '+fmtNum(qPlan.value*1000000)+'</span>':'')
+        +(qEst?' <span class="text-gray-400 font-normal">· 추정 '+fmtNum(qEst.value*1000000)+'</span>':'')+'</span>'
+        +(qCur.pct?pctChip_(qEst?'계획대비':'',pNum,qCur.pct):'')
+        +(qEst&&qEst.pct?pctChip_('추정대비',eNum,qEst.pct):'')+'</div></div>');
     }
     if(annualIdx!==-1){
       var qAnn=qList[annualIdx];
@@ -1508,7 +1523,7 @@ function renderDashboard(){
     }
     // 매치되지 않은 나머지 항목은 예전 방식 그대로 한 줄씩 보여준다 (시트 구조가 바뀌어도 안전하게)
     qList.forEach(function(q,i){
-      if(i===qCurIdx||i===qPlanIdx||i===annualIdx)return;
+      if(i===qCurIdx||i===qPlanIdx||i===qEstIdx||i===annualIdx)return;
       var pNum=parseFloat(String(q.pct||'').replace(/[^0-9.]/g,''))||0;
       mergedRows.push('<div class="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-none"><span class="text-xs text-gray-600">'+esc(q.label)+'</span>'
         +'<div class="flex items-center gap-2"><span class="text-xs font-bold text-gray-900">'+fmtNum(q.value*1000000)+'</span>'
