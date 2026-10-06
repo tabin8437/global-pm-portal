@@ -1507,19 +1507,24 @@ function renderDashboard(){
       var stale=quarterStale(qCur.label);
       mergedRows.push('<div class="flex items-center justify-between gap-2 py-1.5 border-b border-gray-100"><span class="text-xs text-gray-600">'+esc(qCur.label)
         +(stale?' <span class="text-[9px] font-bold text-red-600 bg-red-50 border border-red-200 px-1 py-0.5 rounded ml-1" title="원본 시트가 아직 '+stale+'분기 기준입니다. 시트 갱신이 필요합니다.">'+stale+'분기 기준 · 갱신필요</span>':'')
-        +'</span><div class="flex items-center gap-1.5 flex-wrap justify-end"><span class="text-xs font-bold text-gray-900">'+fmtNum(qCur.value*1000000)
-        +(qPlan?' <span class="text-gray-400 font-normal">/ 계획 '+fmtNum(qPlan.value*1000000)+'</span>':'')
-        +(qEst?' <span class="text-gray-400 font-normal">· 추정 '+fmtNum(qEst.value*1000000)+'</span>':'')+'</span>'
-        +(qCur.pct?pctChip_(qEst?'계획대비':'',pNum,qCur.pct):'')
-        +(qEst&&qEst.pct?pctChip_('추정대비',eNum,qEst.pct):'')+'</div></div>');
+        // 계획은 맨 아래 "연간 합계"에서만 보여주고, 월·분기·연간 행은 모두 "누적 / 추정(N%)" 한 가지
+        // 기준으로 통일한다. 추정을 못 받았을 때(연간 표를 못 읽은 예외)만 예전처럼 계획 기준으로 폴백.
+        +'</span><div class="flex items-center gap-1.5"><span class="text-xs font-bold text-gray-900">'+fmtNum(qCur.value*1000000)
+        +(qEst?' <span class="text-gray-400 font-normal">/ 추정 '+fmtNum(qEst.value*1000000)+'</span>'
+              :(qPlan?' <span class="text-gray-400 font-normal">/ 계획 '+fmtNum(qPlan.value*1000000)+'</span>':''))+'</span>'
+        +(qEst&&qEst.pct?pctChip_('',eNum,qEst.pct):(qCur.pct?pctChip_('',pNum,qCur.pct):''))+'</div></div>');
     }
     if(annualIdx!==-1){
       var qAnn=qList[annualIdx];
-      var aNum=parseFloat(String(qAnn.pct||'').replace(/[^0-9.]/g,''))||0;
+      // 옆에 "/ 추정"을 보여주므로 퍼센트도 추정 기준이어야 한다(백엔드 qAnn.pct는 계획 기준이라
+      // 예전엔 "추정 129.5억 옆에 75.7%(=계획 141.4억 대비)"처럼 기준이 어긋나 보였다).
+      var aEstNum=an.totalEstimate?(qAnn.value/an.totalEstimate*100):null;
+      var aNum=aEstNum!=null?aEstNum:(parseFloat(String(qAnn.pct||'').replace(/[^0-9.]/g,''))||0);
+      var aTxt=aEstNum!=null?aEstNum.toFixed(1)+'%':qAnn.pct;
       mergedRows.push('<div class="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-none"><span class="text-xs text-gray-600">'+esc(qAnn.label)+'</span>'
         +'<div class="flex items-center gap-1.5"><span class="text-xs font-bold text-gray-900">'+fmtNum(qAnn.value*1000000)
         +(an.totalEstimate?' <span class="text-gray-400 font-normal">/ 추정 '+fmtNum(an.totalEstimate*1000000)+'</span>':'')+'</span>'
-        +(qAnn.pct?pctChip_('',aNum,qAnn.pct):'')+'</div></div>');
+        +(aTxt?pctChip_('',aNum,aTxt):'')+'</div></div>');
     }
     // 매치되지 않은 나머지 항목은 예전 방식 그대로 한 줄씩 보여준다 (시트 구조가 바뀌어도 안전하게)
     qList.forEach(function(q,i){
@@ -1540,7 +1545,7 @@ function renderDashboard(){
     }
     var totHtml='';
     if(an.totalPlan){
-      totHtml='<div class="flex items-center justify-between mt-2 pt-2 border-t border-gray-200"><span class="text-xs font-bold text-gray-700">연간 합계</span><div class="text-right"><div class="text-[10px] text-gray-500">계획 '+fmtNum(an.totalPlan*1000000)+' · 추정 '+fmtNum(an.totalEstimate*1000000)+'</div><div class="text-xs font-bold '+(parseFloat(String(an.totalAchieve||'').replace(/[^0-9.]/g,''))>=90?'text-emerald-600':'text-amber-600')+'">달성률 '+an.totalAchieve+'</div></div></div>';
+      totHtml='<div class="flex items-center justify-between mt-2 pt-2 border-t border-gray-200"><span class="text-xs font-bold text-gray-700">연간 합계</span><div class="text-right text-[11px] text-gray-500">계획 '+fmtNum(an.totalPlan*1000000)+' · 추정 '+fmtNum(an.totalEstimate*1000000)+'</div></div>';
     }
     aw.innerHTML='<div class="card"><div class="card-header"><span class="card-title text-sm"><i class="ti ti-coin text-amber-500"></i> 매출 현황 <span class="text-[10px] font-bold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded ml-1" title="권역 합산이 아니라 글로벌 권역 자체 수치입니다">🌐 글로벌</span></span></div>'+mcHtml+qHtml+totHtml+'</div>';
   }
