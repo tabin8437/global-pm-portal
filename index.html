@@ -296,6 +296,9 @@ var REGION_LABEL={global:'🌐 글로벌',tw:'🇹🇼 대만',jp:'🇯🇵 일�
 // 배포 준비할 때마다 맨 위에 새 버전을 추가한다(최신이 위) — 버전이 바뀌면
 // 로그인 직후 자동으로 패치노트 팝업이 한 번 뜬다.
 var PATCH_NOTES=[
+  {version:'2026.10.07', date:'2026-10-07', items:[
+    '월간 지표 첫 카드를 "당월 DAU 누적"(시트에 값이 비어 있음) → "당월 NRU 누적"(시트 당월 누적 행에 실제 값 있음, 전월 동기 대비)으로 교체 (kpi-api.gs 재배포 필요)'
+  ]},
   {version:'2026.10.06.2', date:'2026-10-06', items:[
     '월간 지표 카드에 예시 숫자(32,015 · 90,397 등)가 실제 값처럼 나오던 문제 수정 — 시트에 값이 없으면 "-"로 표시',
     '월 MAU / 월 평균 DAU / 월 PU / 월 ARPPU를 글로벌 탭 하단 월별 표(최근 완료 월 + 전월 대비)에서 읽도록 변경 (kpi-api.gs 재배포 필요)'
@@ -581,7 +584,7 @@ var KPI_DATA = [
 // 실데이터가 오기 전(또는 시트에 값이 없을 때)에는 예시 숫자 대신 "-"를 보여준다 —
 // 예전엔 여기에 박아둔 예시 숫자(32,015·90,397 등)가 실제 값처럼 그대로 화면에 남았다.
 var KPI_MONTHLY = [
-  {label:'당월 DAU 누적',value:'-',change:'-',dir:'neutral'},
+  {label:'당월 NRU 누적',value:'-',change:'-',dir:'neutral'},
   {label:'당월 매출 누적',value:'-',change:'-',dir:'neutral'},
   {label:'월 MAU',value:'-',change:'-',dir:'neutral'},
   {label:'월 평균 DAU',value:'-',change:'-',dir:'neutral'},
@@ -1403,12 +1406,12 @@ function renderDashboard(){
   var dm_=dashDisplayMonth_(now);
   var showPrevMonth=dm_.isPrev,dispMonth=dm_.month,dispYear=dm_.year;
   var monthLabel=dispYear+'년 '+dispMonth+'월 누적'+(showPrevMonth?' <span style="font-size:10px;font-weight:600;color:#f59e0b;margin-left:4px">전월 확정</span>':' <span style="font-size:11px;font-weight:500;color:#94a3b8;margin-left:6px">1일 ~ '+dispMonth+'월 '+yesterday+'일 기준</span>');
-  // 월간 카드 중 "당월 DAU 누적"/"당월 매출 누적" 2개만 권역별 원본이 있다(각 권역 탭의
+  // 월간 카드 중 "당월 NRU 누적"/"당월 매출 누적" 2개만 권역별 원본이 있다(각 권역 탭의
   // "당월누적" 행 — parseRegionTab의 r.monthly). 나머지(월 MAU/월 평균 DAU/월 PU/월 ARPPU)는
   // 별도의 "월간보고" 섹션에서만 나오는 값이라 권역별로 쪼갤 데이터가 없어 항상 글로벌로 둔다.
   var mf=window._globalFilter;
   var monthlyRegionData=(mf.region!=='all')?((window._regionsCache||{})[mf.region]||{}).monthly:null;
-  var MONTHLY_REGION_KEY={'당월 DAU 누적':'dau','당월 매출 누적':'revenue'};
+  var MONTHLY_REGION_KEY={'당월 NRU 누적':'nru','당월 매출 누적':'revenue'};
   var monthlyCards=KPI_MONTHLY.map(function(k,idx){
     var rk=MONTHLY_REGION_KEY[k.label];
     var val=k.value,chg=k.change,regionOnly=false;
@@ -4035,7 +4038,7 @@ function applyKpiData(d){
   }
   var m=d.monthly||{};var mr=d.monthlyReport||{};var mc=mr.change||{};
   var mUpd=[
-    {i:0,val:m.dau,change:m.dauChange},
+    {i:0,val:m.nru,change:m.nruChange},
     {i:1,val:m.revenue,change:m.revenueChange},
     {i:2,val:mr.mau,change:mc.mau},
     {i:3,val:mr.dau,change:mc.dau},
