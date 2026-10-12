@@ -297,6 +297,8 @@ var REGION_LABEL={global:'🌐 글로벌',tw:'🇹🇼 대만',jp:'🇯🇵 일�
 // 로그인 직후 자동으로 패치노트 팝업이 한 번 뜬다.
 var PATCH_NOTES=[
   {version:'2026.10.12', date:'2026-10-12', items:[
+    '유저 분포 > 전투력별 DAU: 상단 기준/비교 선택(주·월)이 반영되지 않던 문제 수정 — 선택한 기간의 일~토(월간은 1일~말일) 일별 추이를 실선(기준) vs 점선(비교)로 비교, 유저수/비중% 전환도 반영',
+    '전투력별 DAU 차트가 카드 폭에 맞게 꽉 차도록 개선, 원본에 없는 날짜는 0이 아닌 빈칸으로 표시(기준/비교 데이터 일수 표기)',
     '유저 분포: 각 항목 상단에 "마지막 데이터" 날짜를 표시하고, 일별 원본 표에서 같은 날짜가 두 줄로 나오던 문제(CP&PAY 09-30) 수정',
     '유저 분포 일별 원본 안내문을 "미러가 돌 때마다 하루씩 쌓임"에서 "원본 시트에 올라온 날짜만 표시"로 정정 (kpi-api.gs 재배포 시 주간/월간 일수 중복 집계도 해소)'
   ]},
@@ -3347,77 +3349,127 @@ var POWER_GROUPS_=[
   {label:'2~3.5만 (쌀먹)',    min:20000, max:35000,     color:'#10b981'},
   {label:'2만 미만 (작업장)', min:0,     max:20000,     color:'#6366f1'}
 ];
-// 그룹 하나의 요일별 라인차트 — 금주(실선) vs 전주(점선), 같은 Y축 공유
+// 그룹 하나의 라인차트 — 기준(실선) vs 비교(점선), 같은 Y축 공유.
+// 값이 null인 날(원본에 그 날짜 행이 없음)은 0으로 그리지 않고 선을 끊는다.
 function udPowerLineSvg_(curVals,prevVals,color){
   var all=curVals.concat(prevVals||[]).filter(function(v){return v!=null&&isFinite(v);});
-  if(!all.length) return'';
+  if(!all.length) return'<div class="text-[11px] text-gray-400 text-center" style="height:90px;line-height:90px">표시할 일별 데이터가 없습니다</div>';
   var max=Math.max.apply(null,all),min=Math.min.apply(null,all);
   if(max===min){max+=1;min-=1;}
-  var W=280,H=90,PAD=6,n=curVals.length;
-  function X(i){return PAD+(W-2*PAD)*(n>1?i/(n-1):0.5);}
-  function Y(v){return H-PAD-(H-2*PAD)*((v-min)/(max-min));}
-  function path(vals){return vals.map(function(v,i){return(i===0?'M':'L')+X(i).toFixed(1)+','+Y(v).toFixed(1);}).join('');}
-  var prevPath=(prevVals&&prevVals.length===n)?path(prevVals):'';
-  var dots=curVals.map(function(v,i){return'<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(v).toFixed(1)+'" r="2.5" fill="'+color+'"/>';}).join('');
-  return'<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:90px;display:block">'
-    +(prevPath?'<path d="'+prevPath+'" fill="none" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="4,3"/>':'')
-    +'<path d="'+path(curVals)+'" fill="none" stroke="'+color+'" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'+dots+'</svg>';
+  // 가로는 카드 폭에 맞춰 늘리고(preserveAspectRatio=none) 선·점 굵기는 화면 픽셀 기준(non-scaling-stroke)이라 안 찌그러진다.
+  var W=280,H=90,PADX=UD_PW_PADX_,PADY=8,n=Math.max(curVals.length,(prevVals||[]).length);
+  function X(i){return PADX+(W-2*PADX)*(n>1?i/(n-1):0.5);}
+  function Y(v){return H-PADY-(H-2*PADY)*((v-min)/(max-min));}
+  function ok(v){return v!=null&&isFinite(v);}
+  function path(vals){
+    var d='',pen=false;
+    vals.forEach(function(v,i){
+      if(!ok(v)){pen=false;return;}
+      d+=(pen?'L':'M')+X(i).toFixed(1)+','+Y(v).toFixed(1);pen=true;
+    });
+    return d;
+  }
+  var prevPath=prevVals?path(prevVals):'';
+  var dw=n>10?3.5:5.5;
+  var dots=curVals.map(function(v,i){return ok(v)?'<path d="M'+X(i).toFixed(1)+','+Y(v).toFixed(1)+'l0.01,0" stroke="'+color+'" stroke-width="'+dw+'" stroke-linecap="round" vector-effect="non-scaling-stroke" fill="none"/>':'';}).join('');
+  return'<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="width:100%;height:90px;display:block">'
+    +(prevPath?'<path d="'+prevPath+'" fill="none" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="5,4" vector-effect="non-scaling-stroke"/>':'')
+    +'<path d="'+path(curVals)+'" fill="none" stroke="'+color+'" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>'+dots+'</svg>';
 }
+// x축 라벨은 SVG text 대신 HTML로 — 가로로 늘어나도 글자가 찌그러지지 않는다. 위치는 차트의 X()와 같은 비율.
+var UD_PW_PADX_=14;
 function udPowerAxisSvg_(labels){
   var n=labels.length; if(!n) return'';
-  var W=280,PAD=6;
-  function X(i){return PAD+(W-2*PAD)*(n>1?i/(n-1):0.5);}
-  return'<svg viewBox="0 0 '+W+' 12" style="width:100%;height:12px;display:block">'
-    +labels.map(function(l,i){return'<text x="'+X(i).toFixed(1)+'" y="8" font-size="9" fill="#9ca3af" text-anchor="middle">'+l+'</text>';}).join('')+'</svg>';
+  var W=280,PADX=UD_PW_PADX_;
+  return'<div style="position:relative;height:14px;margin-top:2px">'
+    +labels.map(function(l,i){
+      if(!l) return'';
+      var pct=(PADX+(W-2*PADX)*(n>1?i/(n-1):0.5))/W*100;
+      return'<span style="position:absolute;left:'+pct.toFixed(2)+'%;transform:translateX(-50%);font-size:10px;color:#9ca3af;line-height:14px">'+l+'</span>';
+    }).join('')+'</div>';
 }
-// 전투력별 DAU 전체 위젯 — 그룹별 카드(요일 라인차트) + 요약표.
-// cur.daily(최근 90일 일별 원본, getUserDist_에서 항상 내려줌)를 그대로 쓴다 — weekly/monthly
-// 집계본은 주 1점이라 요일별 금주/전주 비교가 안 되기 때문에 일부러 daily를 쓴다.
-function udPowerGroupWidget_(cur){
-  var daily=(cur.daily||[]).filter(function(r){return r&&r.date&&r.values;});
-  if(daily.length<8) return'<p class="text-xs text-gray-400 text-center py-10">요일별 비교를 위한 일별 데이터가 부족합니다(최근 '+daily.length+'일)</p>';
-  var last14=daily.slice(-14), n=last14.length;
-  var thisRows=last14.slice(n-7), lastRows=n>=14?last14.slice(n-14,n-7):[];
+
+// 전투력별 DAU 전체 위젯 — 그룹별 카드(라인차트) + 요약표.
+// 상단의 기준/비교 선택(주 또는 월)을 그대로 따른다: 기준=실선, 비교=점선.
+// cur.daily(최근 90일 일별 원본)를 쓴다 — weekly/monthly 집계본은 기간당 1점이라 일자별 비교가 안 된다.
+// 주간은 일~토 7칸, 월간은 1일~말일 칸에 날짜별로 배치하고, 원본에 없는 날짜는 빈칸(null)으로 둔다.
+function udPowerGroupWidget_(cur,rowA,rowB){
+  var mode=window._udMode==='monthly'?'monthly':'weekly';
+  var pctMode=window._udValueMode==='pct';
+  var byDate={};   // 같은 날짜 행이 두 번 들어와 있어도(원본 중복) 한 번만 센다
+  (cur.daily||[]).forEach(function(r){ if(r&&r.date&&r.values) byDate[r.date]=r; });
+  if(Object.keys(byDate).length<7) return'<p class="text-xs text-gray-400 text-center py-10">일별 비교를 위한 데이터가 부족합니다(최근 '+Object.keys(byDate).length+'일)</p>';
   var buckets=cur.buckets||[];
-  function groupSum(row,g){
-    var s=0;
-    for(var i=0;i<buckets.length;i++){ var b=Number(buckets[i]); if(!isNaN(b)&&b>=g.min&&b<g.max) s+=(row.values[i]||0); }
-    return s;
+  function groupVal(row,g){
+    if(!row) return null;
+    var s=0,t=0;
+    for(var i=0;i<buckets.length;i++){
+      var v=row.values[i]||0; t+=v;
+      var b=Number(buckets[i]); if(!isNaN(b)&&b>=g.min&&b<g.max) s+=v;
+    }
+    return pctMode?(t?s/t*100:null):s;
   }
   var WD=['일','월','화','수','목','금','토'];
-  var weekdayLabels=thisRows.map(function(r){return WD[new Date(r.date).getDay()];});
+  function pad2(n){return n<10?'0'+n:''+n;}
+  function slotsOf(row){
+    var o={rows:[],labels:[],found:0,total:0,range:''};
+    if(!row) return o;
+    var p=String(row.period).split('-').map(Number);
+    var start=new Date(p[0],p[1]-1,mode==='monthly'?1:p[2]);
+    var n=mode==='monthly'?new Date(p[0],p[1],0).getDate():7;
+    var last=start;
+    for(var i=0;i<n;i++){
+      var d=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i); last=d;
+      var r=byDate[d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())]||null;
+      o.rows.push(r); if(r) o.found++;
+      o.labels.push(mode==='monthly'?((i===0||(i+1)%5===0)?String(i+1):''):WD[d.getDay()]);
+    }
+    o.total=n;
+    o.range=mode==='monthly'?(row.label||''):((start.getMonth()+1)+'/'+start.getDate()+'~'+(last.getMonth()+1)+'/'+last.getDate());
+    return o;
+  }
+  var A=slotsOf(rowA),B=slotsOf(rowB);
+  if(!A.found) return'<p class="text-xs text-gray-400 text-center py-10">'+esc(rowA?rowA.label:'')+'에는 일별 원본이 없습니다 — 일별 데이터는 최근 90일만 보관됩니다. 다른 '+(mode==='monthly'?'달':'주')+'을 선택해 주세요.</p>';
 
-  function stat(vals){ if(!vals.length) return null; return{max:Math.max.apply(null,vals),min:Math.min.apply(null,vals),avg:vals.reduce(function(a,b){return a+b;},0)/vals.length}; }
-  function pctCell_(cur,prev){
-    if(cur==null) return'-';
-    var out=Math.round(cur).toLocaleString('ko-KR');
-    if(prev==null||!prev) return out;
-    var d=(cur-prev)/prev*100;
-    if(!d) return out+' <span class="text-[10px] text-gray-400">(-)</span>';
-    return out+' <span class="text-[10px] font-bold '+(d>0?'text-red-500':'text-blue-600')+'">('+(d>0?'+':'')+d.toFixed(1)+'%)</span>';
+  function stat(vals){ var v=vals.filter(function(x){return x!=null&&isFinite(x);}); if(!v.length) return null; return{max:Math.max.apply(null,v),min:Math.min.apply(null,v),avg:v.reduce(function(a,b){return a+b;},0)/v.length}; }
+  function cell_(c,p){
+    if(c==null) return'-';
+    var out=pctMode?c.toFixed(1)+'%':Math.round(c).toLocaleString('ko-KR');
+    if(p==null||(!pctMode&&!p)) return out;
+    var d=pctMode?(c-p):((c-p)/p*100);
+    var unit=pctMode?'%p':'%';
+    if(Math.abs(d)<0.05) return out+' <span class="text-[10px] text-gray-400">(-)</span>';
+    return out+' <span class="text-[10px] font-bold '+(d>0?'text-red-500':'text-blue-600')+'">('+(d>0?'+':'')+d.toFixed(1)+unit+')</span>';
   }
 
   var cardsHtml=POWER_GROUPS_.map(function(g){
-    var curVals=thisRows.map(function(r){return groupSum(r,g);});
-    var prevVals=lastRows.map(function(r){return groupSum(r,g);});
+    var curVals=A.rows.map(function(r){return groupVal(r,g);});
+    var prevVals=B.found?B.rows.map(function(r){return groupVal(r,g);}):null;
     return'<div class="border rounded-xl p-3"><div class="text-xs font-bold text-gray-700 mb-2">'+esc(g.label)+'</div>'
-      +udPowerLineSvg_(curVals,prevVals,g.color)+udPowerAxisSvg_(weekdayLabels)+'</div>';
+      +udPowerLineSvg_(curVals,prevVals,g.color)+udPowerAxisSvg_(A.labels)+'</div>';
   }).join('');
 
   var rowsHtml=POWER_GROUPS_.map(function(g){
-    var curVals=thisRows.map(function(r){return groupSum(r,g);});
-    var prevVals=lastRows.map(function(r){return groupSum(r,g);});
-    var sC=stat(curVals),sP=stat(prevVals);
+    var sC=stat(A.rows.map(function(r){return groupVal(r,g);}));
+    var sP=B.found?stat(B.rows.map(function(r){return groupVal(r,g);})):null;
     return'<tr><td class="p-2 border-r font-bold text-gray-700">'+esc(g.label)+'</td>'
-      +'<td class="p-2 border-r text-right">'+pctCell_(sC&&sC.max,sP&&sP.max)+'</td>'
-      +'<td class="p-2 border-r text-right">'+pctCell_(sC&&sC.min,sP&&sP.min)+'</td>'
-      +'<td class="p-2 text-right">'+pctCell_(sC&&sC.avg,sP&&sP.avg)+'</td></tr>';
+      +'<td class="p-2 border-r text-right">'+cell_(sC&&sC.max,sP&&sP.max)+'</td>'
+      +'<td class="p-2 border-r text-right">'+cell_(sC&&sC.min,sP&&sP.min)+'</td>'
+      +'<td class="p-2 text-right">'+cell_(sC&&sC.avg,sP&&sP.avg)+'</td></tr>';
   }).join('');
 
-  return'<div class="flex items-center gap-3 mb-3 text-[11px] text-gray-500"><span class="flex items-center gap-1"><span style="display:inline-block;width:14px;height:2px;background:#374151"></span>금주</span><span class="flex items-center gap-1"><span style="display:inline-block;width:14px;height:0;border-top:2px dashed #9ca3af"></span>전주</span></div>'
+  var unitWord=mode==='monthly'?'달':'주';
+  var legend='<div class="flex items-center gap-3 mb-1 text-[11px] text-gray-500 flex-wrap">'
+    +'<span class="flex items-center gap-1"><span style="display:inline-block;width:14px;height:2px;background:#374151"></span>기준 '+esc(rowA.label)+' ('+esc(A.range)+')</span>'
+    +(B.found?'<span class="flex items-center gap-1"><span style="display:inline-block;width:14px;height:0;border-top:2px dashed #9ca3af"></span>비교 '+esc(rowB.label)+' ('+esc(B.range)+')</span>':'<span class="text-gray-400">비교할 '+unitWord+'의 일별 원본 없음</span>')
+    +'</div>';
+  var cover='기준 '+A.found+'/'+A.total+'일'+(B.found?' · 비교 '+B.found+'/'+B.total+'일':'');
+  var note='<div class="text-[10px] text-gray-400 mb-3">'+cover+' 데이터 기준'+((A.found<A.total||(B.found&&B.found<B.total))?' — 원본에 없는 날짜는 빈칸으로 두고 계산에서 제외합니다':'')+(pctMode?' · 비중%는 그날 전체 DAU 대비 그룹 비율':'')+'</div>';
+
+  return legend+note
     +'<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">'+cardsHtml+'</div>'
     +'<div class="overflow-x-auto border rounded-xl"><table class="w-full text-left border-collapse text-xs">'
-    +'<thead class="bg-gray-100"><tr><th class="p-2 border-b border-r">그룹</th><th class="p-2 border-b border-r text-right">주간 최댓값(전주 대비)</th><th class="p-2 border-b border-r text-right">주간 최솟값(전주 대비)</th><th class="p-2 border-b text-right">주간 평균(전주 대비)</th></tr></thead>'
+    +'<thead class="bg-gray-100"><tr><th class="p-2 border-b border-r">그룹</th><th class="p-2 border-b border-r text-right">'+(mode==='monthly'?'월':'주')+'간 최댓값(비교 대비)</th><th class="p-2 border-b border-r text-right">'+(mode==='monthly'?'월':'주')+'간 최솟값(비교 대비)</th><th class="p-2 border-b text-right">'+(mode==='monthly'?'월':'주')+'간 평균(비교 대비)</th></tr></thead>'
     +'<tbody class="divide-y">'+rowsHtml+'</tbody></table></div>';
 }
 
@@ -3427,13 +3479,14 @@ function udRenderChart(){
   if(!cur){ wrap.innerHTML='<p class="text-xs text-gray-400 text-center py-10">표시할 데이터가 없습니다</p>'; return; }
   // 전투력별 DAU는 막대그래프+확대+표 조합이 복잡하다는 피드백(2026-09-18)으로, 다른 팀 리포트
   // 스타일(그룹별 요일 라인차트 4~5개 + 요약표)을 참고해 별도로 단순하게 그린다.
-  if(window._udMetric==='power'){ wrap.innerHTML=udPowerGroupWidget_(cur); return; }
+  // (전투력은 아래에서 기준/비교 기간이 정해진 뒤 udPowerGroupWidget_로 그린다)
   var rows=(window._udMode==='weekly'?cur.weekly:cur.monthly)||[];
   if(!rows.length){ wrap.innerHTML='<p class="text-xs text-gray-400 text-center py-10">표시할 구간이 없습니다</p>'; return; }
   var buckets=cur.buckets;
   udEnsureCompare_(rows.length);
   var rowA=rows[window._udCompare.aIdx], rowB=rows[window._udCompare.bIdx];
   if(!rowA) rowA=rows[rows.length-1];
+  if(window._udMetric==='power'){ wrap.innerHTML=udPowerGroupWidget_(cur,rowA,rowB); return; }
 
   // 분포 모양 비교가 목적이므로 x축은 "구간"(전투력·레벨·결제구간), y축은 유저수(또는 비중%)
   var pctMode=window._udValueMode==='pct';
