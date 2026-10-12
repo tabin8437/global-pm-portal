@@ -296,6 +296,10 @@ var REGION_LABEL={global:'🌐 글로벌',tw:'🇹🇼 대만',jp:'🇯🇵 일�
 // 배포 준비할 때마다 맨 위에 새 버전을 추가한다(최신이 위) — 버전이 바뀌면
 // 로그인 직후 자동으로 패치노트 팝업이 한 번 뜬다.
 var PATCH_NOTES=[
+  {version:'2026.10.12.2', date:'2026-10-12', items:[
+    '유저 분포 > CP&PAY: 기준/비교를 "9/27주" 같은 주 시작일 대신 원본에 올라온 실제 날짜(8/18 · 8/31 · 9/30)로 표시하고, 각 날짜 시점의 스냅샷 값을 그대로 비교(주간/월간 평균 토글은 CP&PAY에서 제거)',
+    '대시보드 유저 분포 요약의 CP&PAY도 가장 최근 스냅샷과 그 기준 날짜를 표시'
+  ]},
   {version:'2026.10.12', date:'2026-10-12', items:[
     '유저 분포 > 전투력별 DAU: 상단 기준/비교 선택(주·월)이 반영되지 않던 문제 수정 — 선택한 기간의 일~토(월간은 1일~말일) 일별 추이를 실선(기준) vs 점선(비교)로 비교, 유저수/비중% 전환도 반영',
     '전투력별 DAU 차트가 카드 폭에 맞게 꽉 차도록 개선, 원본에 없는 날짜는 0이 아닌 빈칸으로 표시(기준/비교 데이터 일수 표기)',
@@ -2876,7 +2880,7 @@ function renderUserDist(){
   window._udValueMode=window._udValueMode||'count';
 
   var cur=d.sets[window._udMetric];
-  var rows=(window._udMode==='weekly'?cur.weekly:cur.monthly)||[];
+  var rows=udRowsOf_(cur);
   udEnsureCompare_(rows.length);
 
   function seg(group,opts,cur2){
@@ -2885,7 +2889,7 @@ function renderUserDist(){
       return'<button class="btn btn-sm" style="border:none;'+(active?'background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:700':'background:transparent;color:#9ca3af')+'" onclick="'+group+'(\''+o.v+'\')">'+o.l+'</button>';
     }).join('')+'</div>';
   }
-  var modeToggle=seg('udSetMode',[{v:'weekly',l:'주간'},{v:'monthly',l:'월간'}],window._udMode);
+  var modeToggle=window._udMetric==='segment'?'':seg('udSetMode',[{v:'weekly',l:'주간'},{v:'monthly',l:'월간'}],window._udMode);
   var valueToggle=seg('udSetValueMode',[{v:'count',l:'유저수'},{v:'pct',l:'비중%'}],window._udValueMode);
 
   var periodOpts=rows.map(function(r,i){return'<option value="'+i+'">'+esc(r.label)+'</option>';}).join('');
@@ -2903,7 +2907,7 @@ function renderUserDist(){
     +'<div class="card"><div class="flex items-center justify-between flex-wrap gap-2 mb-2"><div class="flex gap-1.5 flex-wrap">'+tabs+'</div>'
     +'<div class="flex items-center gap-2 flex-wrap">'+valueToggle+modeToggle+'</div></div>'
     +'<div class="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-gray-100">'+periodPickers
-    +'<span class="text-[10px] text-gray-400">'+esc(cur.tab)+' · 일평균 기준 최근 '+rows.length+(window._udMode==='weekly'?'주':'개월')+(cur.latestDate?' · 마지막 데이터 '+esc(cur.latestDate):'')+'</span></div>'
+    +'<span class="text-[10px] text-gray-400">'+esc(cur.tab)+(window._udMetric==='segment'?' · 날짜별 스냅샷 '+rows.length+'개':' · 일평균 기준 최근 '+rows.length+(window._udMode==='weekly'?'주':'개월'))+(cur.latestDate?' · 마지막 데이터 '+esc(cur.latestDate):'')+'</span></div>'
     +'<div id="ud-chart-wrap"></div></div>';
 
   var selA=c.querySelector('select[onchange^="udSetCompare(\'a\'"]');
@@ -3074,8 +3078,9 @@ function renderUserDistSummary(){
       rowsHtml+=row('ti-swords','red','전투력 4만+ DAU', highSum.toLocaleString('ko-KR')+'명', '전체의 '+wPct.toFixed(0)+'%', 'power', wSpark);
     }
     var segSet=d.sets.segment;
-    if(segSet&&segSet.weekly&&segSet.weekly.length){
-      var sr=segSet.weekly, sLast=sr[sr.length-1];
+    if(segSet&&(udSnapshotRows_(segSet).length||(segSet.weekly&&segSet.weekly.length))){
+      var sr=udSnapshotRows_(segSet); if(!sr.length) sr=segSet.weekly;
+      var sLast=sr[sr.length-1];
       // 지역(아시아/북미유럽 등) 구분 없이 "전체" 기준의 누적/최근3개월만 — 상세 페이지 카드와 동일하게
       var coreCumIdx=-1, core3mIdx=-1;
       segSet.buckets.forEach(function(b,i){
@@ -3095,7 +3100,7 @@ function renderUserDistSummary(){
         if(core3mIdx!==-1) segLines+='<div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">최근3개월</span><span class="text-[11px] font-bold text-gray-800">'+(sLast.values[core3mIdx]||0).toLocaleString('ko-KR')+'명</span></div>';
         rowsHtml+='<div class="py-2 border-b border-gray-100 last:border-none cursor-pointer hover:bg-gray-50 rounded-lg" style="margin:0 -6px;padding-left:6px;padding-right:6px" onclick="udSummaryGoto(\'segment\')">'
           +'<div class="flex items-center justify-between mb-1"><span class="text-xs text-gray-600 flex items-center gap-1.5"><i class="ti ti-users-group text-orange-500"></i>CP&PAY</span><i class="ti ti-chevron-right text-gray-300"></i></div>'
-          +'<div class="text-[10px] font-bold text-gray-500 mb-0.5">'+segLabelBase+'</div>'
+          +'<div class="text-[10px] font-bold text-gray-500 mb-0.5">'+segLabelBase+' <span class="font-normal text-gray-400">('+esc(sLast.label)+' 기준)</span></div>'
           +segLines+'</div>';
       }
     }
@@ -3303,6 +3308,21 @@ function udSetCompare(which,idx){
   window._udCompare[which==='a'?'aIdx':'bIdx']=parseInt(idx,10);
   udRenderChart();
 }
+// CP&PAY(월별유저규모)는 "그 날짜 시점의 누적/최근3개월 인원 스냅샷"이라 주간·월간 평균을 내면
+// 의미가 없고, "9/27주" 같은 주 시작일 라벨은 실제 기준일(9/30)과도 달라 보였다 — 원본에 올라온
+// 실제 날짜를 그대로 기준/비교 선택지로 쓴다(같은 날짜가 두 번 있으면 마지막 행 하나만).
+function udSnapshotRows_(cur){
+  var by={};(cur.daily||[]).forEach(function(r){ if(r&&r.date&&r.values) by[r.date]=r; });
+  return Object.keys(by).sort().map(function(dt){
+    var p=dt.split('-');
+    return{period:dt,label:(+p[1])+'/'+(+p[2]),days:1,values:by[dt].values};
+  });
+}
+function udRowsOf_(cur){
+  if(window._udMetric==='segment'){ var snap=udSnapshotRows_(cur); if(snap.length) return snap; }
+  return(window._udMode==='weekly'?cur.weekly:cur.monthly)||[];
+}
+
 // 기간(주/월) 개수가 바뀌면(=지표·모드 전환) 기준=최신, 비교=직전으로 되돌린다
 function udEnsureCompare_(n){
   var cmp=window._udCompare;
@@ -3480,7 +3500,7 @@ function udRenderChart(){
   // 전투력별 DAU는 막대그래프+확대+표 조합이 복잡하다는 피드백(2026-09-18)으로, 다른 팀 리포트
   // 스타일(그룹별 요일 라인차트 4~5개 + 요약표)을 참고해 별도로 단순하게 그린다.
   // (전투력은 아래에서 기준/비교 기간이 정해진 뒤 udPowerGroupWidget_로 그린다)
-  var rows=(window._udMode==='weekly'?cur.weekly:cur.monthly)||[];
+  var rows=udRowsOf_(cur);
   if(!rows.length){ wrap.innerHTML='<p class="text-xs text-gray-400 text-center py-10">표시할 구간이 없습니다</p>'; return; }
   var buckets=cur.buckets;
   udEnsureCompare_(rows.length);
@@ -3757,7 +3777,7 @@ function udStatCards_(buckets,valsA,valsB,rowA,rowB,pctMode,metricHex){
   }).join('');
 
   return'<div class="grid grid-cols-2 md:grid-cols-4 gap-3">'+cards+'</div>'
-    +'<div class="text-[10px] text-gray-400 mt-2">'+esc(rowA.label)+' 기준'+(rowB&&!samePeriod?' · 비교: '+esc(rowB.label):'')+' · 항목끼리는 조건이 겹쳐 합계를 내지 않음</div>';
+    +'<div class="text-[10px] text-gray-400 mt-2">'+esc(rowA.label)+' 기준'+(rowB&&!samePeriod?' · 비교: '+esc(rowB.label):'')+' · 각 날짜 시점의 스냅샷 값(평균 아님) · 항목끼리는 조건이 겹쳐 합계를 내지 않음</div>';
 }
 
 // 전투력/레벨 구간 라벨을 읽기 좋게 (숫자면 천단위 콤마)
