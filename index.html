@@ -296,6 +296,9 @@ var REGION_LABEL={global:'🌐 글로벌',tw:'🇹🇼 대만',jp:'🇯🇵 일�
 // 배포 준비할 때마다 맨 위에 새 버전을 추가한다(최신이 위) — 버전이 바뀌면
 // 로그인 직후 자동으로 패치노트 팝업이 한 번 뜬다.
 var PATCH_NOTES=[
+  {version:'2026.10.12.3', date:'2026-10-12', items:[
+    '전투력별 DAU 요약표: 기준/비교 중 한쪽에 일부 날짜만 있으면(진행 중인 주 등) 두 기간 모두 데이터가 있는 같은 요일만으로 계산하고, 계산에 쓰인 날짜가 1일뿐이면 최댓값·최솟값·평균이 같다는 안내를 표시'
+  ]},
   {version:'2026.10.12.2', date:'2026-10-12', items:[
     '유저 분포 > CP&PAY: 기준/비교를 "9/27주" 같은 주 시작일 대신 원본에 올라온 실제 날짜(8/18 · 8/31 · 9/30)로 표시하고, 각 날짜 시점의 스냅샷 값을 그대로 비교(주간/월간 평균 토글은 CP&PAY에서 제거)',
     '대시보드 유저 분포 요약의 CP&PAY도 가장 최근 스냅샷과 그 기준 날짜를 표시'
@@ -3469,9 +3472,16 @@ function udPowerGroupWidget_(cur,rowA,rowB){
       +udPowerLineSvg_(curVals,prevVals,g.color)+udPowerAxisSvg_(A.labels)+'</div>';
   }).join('');
 
+  // 기준/비교 중 한쪽이라도 일부 날짜만 있으면(진행 중인 주, 원본 누락 등) 요약표는 "두 기간 모두 데이터가 있는
+  // 같은 요일(날짜)"만 골라 계산한다 — 안 그러면 1일치 vs 4일치처럼 개수가 다른 값끼리 비교돼 증감이 왜곡된다.
+  var partial=A.found<A.total||(B.found&&B.found<B.total);
+  var commonIdx=[];
+  for(var ci=0;ci<Math.min(A.total,B.found?B.total:A.total);ci++){ if(A.rows[ci]&&(!B.found||B.rows[ci])) commonIdx.push(ci); }
+  var useCommon=!!(B.found&&partial&&commonIdx.length);
+  function sel(rows){ return useCommon?commonIdx.map(function(i){return rows[i];}):rows; }
   var rowsHtml=POWER_GROUPS_.map(function(g){
-    var sC=stat(A.rows.map(function(r){return groupVal(r,g);}));
-    var sP=B.found?stat(B.rows.map(function(r){return groupVal(r,g);})):null;
+    var sC=stat(sel(A.rows).map(function(r){return groupVal(r,g);}));
+    var sP=B.found?stat(sel(B.rows).map(function(r){return groupVal(r,g);})):null;
     return'<tr><td class="p-2 border-r font-bold text-gray-700">'+esc(g.label)+'</td>'
       +'<td class="p-2 border-r text-right">'+cell_(sC&&sC.max,sP&&sP.max)+'</td>'
       +'<td class="p-2 border-r text-right">'+cell_(sC&&sC.min,sP&&sP.min)+'</td>'
@@ -3484,7 +3494,12 @@ function udPowerGroupWidget_(cur,rowA,rowB){
     +(B.found?'<span class="flex items-center gap-1"><span style="display:inline-block;width:14px;height:0;border-top:2px dashed #9ca3af"></span>비교 '+esc(rowB.label)+' ('+esc(B.range)+')</span>':'<span class="text-gray-400">비교할 '+unitWord+'의 일별 원본 없음</span>')
     +'</div>';
   var cover='기준 '+A.found+'/'+A.total+'일'+(B.found?' · 비교 '+B.found+'/'+B.total+'일':'');
-  var note='<div class="text-[10px] text-gray-400 mb-3">'+cover+' 데이터 기준'+((A.found<A.total||(B.found&&B.found<B.total))?' — 원본에 없는 날짜는 빈칸으로 두고 계산에서 제외합니다':'')+(pctMode?' · 비중%는 그날 전체 DAU 대비 그룹 비율':'')+'</div>';
+  var usedN=useCommon?commonIdx.length:A.found;
+  var commonNames=commonIdx.map(function(i){ return mode==='monthly'?(i+1)+'일':A.labels[i]; }).join('·');
+  var note='<div class="text-[10px] text-gray-400 mb-1">'+cover+' 데이터 기준'+(partial?' — 원본에 없는 날짜는 빈칸으로 두고 계산에서 제외합니다':'')+(pctMode?' · 비중%는 그날 전체 DAU 대비 그룹 비율':'')+'</div>'
+    +(useCommon?'<div class="text-[10px] text-gray-500 mb-1">표의 값·증감은 두 기간 모두 데이터가 있는 '+commonIdx.length+'일('+esc(commonNames)+')만으로 계산했습니다</div>':'')
+    +(usedN===1?'<div class="text-[10px] text-amber-600 font-bold mb-1">※ 계산에 쓰인 날짜가 1일뿐이라 최댓값·최솟값·평균이 같게 나옵니다</div>':'')
+    +'<div class="mb-2"></div>';
 
   return legend+note
     +'<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">'+cardsHtml+'</div>'
