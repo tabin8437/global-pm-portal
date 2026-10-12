@@ -296,6 +296,10 @@ var REGION_LABEL={global:'🌐 글로벌',tw:'🇹🇼 대만',jp:'🇯🇵 일�
 // 배포 준비할 때마다 맨 위에 새 버전을 추가한다(최신이 위) — 버전이 바뀌면
 // 로그인 직후 자동으로 패치노트 팝업이 한 번 뜬다.
 var PATCH_NOTES=[
+  {version:'2026.10.12', date:'2026-10-12', items:[
+    '유저 분포: 각 항목 상단에 "마지막 데이터" 날짜를 표시하고, 일별 원본 표에서 같은 날짜가 두 줄로 나오던 문제(CP&PAY 09-30) 수정',
+    '유저 분포 일별 원본 안내문을 "미러가 돌 때마다 하루씩 쌓임"에서 "원본 시트에 올라온 날짜만 표시"로 정정 (kpi-api.gs 재배포 시 주간/월간 일수 중복 집계도 해소)'
+  ]},
   {version:'2026.10.07', date:'2026-10-07', items:[
     '월간 지표 첫 카드를 "당월 DAU 누적"(시트에 값이 비어 있음) → "당월 NRU 누적"(시트 당월 누적 행에 실제 값 있음, 전월 동기 대비)으로 교체 (kpi-api.gs 재배포 필요)'
   ]},
@@ -2897,7 +2901,7 @@ function renderUserDist(){
     +'<div class="card"><div class="flex items-center justify-between flex-wrap gap-2 mb-2"><div class="flex gap-1.5 flex-wrap">'+tabs+'</div>'
     +'<div class="flex items-center gap-2 flex-wrap">'+valueToggle+modeToggle+'</div></div>'
     +'<div class="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-gray-100">'+periodPickers
-    +'<span class="text-[10px] text-gray-400">'+esc(cur.tab)+' · 일평균 기준 최근 '+rows.length+(window._udMode==='weekly'?'주':'개월')+'</span></div>'
+    +'<span class="text-[10px] text-gray-400">'+esc(cur.tab)+' · 일평균 기준 최근 '+rows.length+(window._udMode==='weekly'?'주':'개월')+(cur.latestDate?' · 마지막 데이터 '+esc(cur.latestDate):'')+'</span></div>'
     +'<div id="ud-chart-wrap"></div></div>';
 
   var selA=c.querySelector('select[onchange^="udSetCompare(\'a\'"]');
@@ -3510,7 +3514,7 @@ function udRenderChart(){
   }
 
   // 챕터별 진도·CP&PAY는 아직 원본 데이터가 며칠 안 돼서 주간/월간 비교보다
-  // "일별 원본을 그대로 쌓아" 보여주는 표가 더 유용하다 — 매일 미러가 돌 때마다 한 줄씩 늘어난다.
+  // "일별 원본을 그대로 쌓아" 보여주는 표가 더 유용하다 — 원본에 행이 들어온 날짜만큼만 보인다.
   if((window._udMetric==='chapter'||window._udMetric==='segment')&&cur.daily&&cur.daily.length){
     if(window._udMetric==='segment'){
       var dKeepIdx=udSegmentKeepIdx_(cur.buckets);
@@ -3531,6 +3535,10 @@ function udRenderChart(){
 
 // 일별 원본 로그 표 — 기간 비교가 아니라 "쌓인 날짜만큼" 그대로 나열한다(최신이 위).
 function udDailyLogTable_(buckets,daily,isSegment){
+  // 원본에 같은 날짜 행이 두 번 들어와 있으면(예: CP&PAY 09-30) 마지막 행 하나만 보여준다.
+  var byDate_={};daily.forEach(function(r){ byDate_[r.date]=r; });
+  daily=Object.keys(byDate_).map(function(k){ return byDate_[k]; });
+  var lastDate_=daily.length?daily.map(function(r){ return r.date; }).sort().slice(-1)[0]:'-';
   var rows=daily.slice().sort(function(a,b){ return a.date<b.date?1:-1; }).map(function(r){
     return '<tr><td class="p-2 border-r text-gray-700 font-bold">'+esc(r.date)+'</td>'
       +buckets.map(function(b,i){ return'<td class="p-2 border-r text-right">'+((r.values[i]||0).toLocaleString('ko-KR'))+'</td>'; }).join('')
@@ -3538,7 +3546,7 @@ function udDailyLogTable_(buckets,daily,isSegment){
   }).join('');
   var head=buckets.map(function(b){ return'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">'+esc(udBucketLabel_(b))+'</th>'; }).join('');
   return'<div class="mt-5 pt-4 border-t border-dashed border-gray-200">'
-    +'<div class="text-[11px] font-bold text-gray-700 mb-2">일별 원본 <span class="font-normal text-gray-400">(미러가 돌 때마다 하루씩 쌓입니다'+(isSegment?' · 항목끼리는 조건이 겹쳐 합계 없음':'')+')</span></div>'
+    +'<div class="text-[11px] font-bold text-gray-700 mb-2">일별 원본 <span class="font-normal text-gray-400">(원본 시트에 올라온 날짜만 표시됩니다 · 마지막 데이터 '+esc(lastDate_)+(isSegment?' · 항목끼리는 조건이 겹쳐 합계 없음':'')+')</span></div>'
     +'<div class="overflow-x-auto border rounded-xl" style="max-height:360px;overflow-y:auto">'
     +'<table class="w-full text-left border-collapse text-xs">'
     +'<thead class="sticky top-0 bg-gray-100 z-10"><tr><th class="p-2 font-bold text-gray-700 border-b border-r">날짜</th>'+head+'</tr></thead>'
