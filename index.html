@@ -296,6 +296,10 @@ var REGION_LABEL={global:'🌐 글로벌',tw:'🇹🇼 대만',jp:'🇯🇵 일�
 // 배포 준비할 때마다 맨 위에 새 버전을 추가한다(최신이 위) — 버전이 바뀌면
 // 로그인 직후 자동으로 패치노트 팝업이 한 번 뜬다.
 var PATCH_NOTES=[
+  {version:'2026.10.14', date:'2026-10-14', items:[
+    '대시보드 유저 분포 요약 > 상위고래유저경보 위험군: 전주 대비 인원 증감, 항목별(30일 미결제·같은서버 급감·서버이동+급감) 증감, 주별 위험군 흐름(미니 그래프), 최근 30일 vs 직전 30일 결제 총액 변동, 계정 단위 신규 진입/회복 표시 (kpi-api.gs 재배포 필요 — 이력은 재배포 후 주마다 쌓임)',
+    '상위고래유저경보 상세: "주별 흐름" 표 추가, 권역별 표의 전주비를 이력으로도 계산, 카드 문구 "전월비"→"전주비" 정정'
+  ]},
   {version:'2026.10.12.3', date:'2026-10-12', items:[
     '전투력별 DAU 요약표: 기준/비교 중 한쪽에 일부 날짜만 있으면(진행 중인 주 등) 두 기간 모두 데이터가 있는 같은 요일만으로 계산하고, 계산에 쓰인 날짜가 1일뿐이면 최댓값·최솟값·평균이 같다는 안내를 표시'
   ]},
@@ -3118,11 +3122,74 @@ function renderUserDistSummary(){
     var riskN=w.rows.filter(function(r){return RISK.indexOf(r.status)!==-1;}).length;
     var pct=totalN?(riskN/totalN*100):0;
     var clr=pct>=30?'red':pct>=15?'amber':'emerald';
-    rowsHtml+=row('ti-alert-triangle',clr,'상위고래유저경보 위험군', riskN.toLocaleString('ko-KR')+'명 <span class="text-[10px] font-bold text-'+clr+'-600">('+pct.toFixed(0)+'%)</span>', '전체 '+totalN.toLocaleString('ko-KR')+'명 중 · 30일 미결제·결제 급감 기준', 'whale');
+    // 변동 정보 — ① 전주 대비 인원 증감(이력 탭이 채워진 prevSummary) ② 주별 위험군 흐름 ③ 최근 30일 vs 직전 30일 결제 총액
+    // ④ 계정 단위 신규 진입/회복. 전주 데이터가 없으면 없다고 밝힌다(0으로 보이게 하지 않는다).
+    function stCnt_(arr){ var m={}; (arr||[]).forEach(function(x){ m[x.status]=x.count; }); return m; }
+    function dTxt_(diff){ return diff>0?'▲'+diff:diff<0?'▼'+Math.abs(diff):'-'; }
+    function dCls_(diff){ return diff>0?'text-red-500':diff<0?'text-blue-600':'text-gray-400'; }
+    var curC=stCnt_(w.summary), prevC=w.prevSummary?stCnt_(w.prevSummary):null;
+    var chipHtml='', subLines=['전체 '+totalN.toLocaleString('ko-KR')+'명 중 · 30일 미결제·결제 급감 기준'];
+    if(prevC){
+      var prevRisk=(prevC.NO_PAY_30D||0)+(prevC.MOVED_AND_DROP||0)+(prevC.SPEND_DROP||0);
+      var rd=riskN-prevRisk;
+      chipHtml=' <span class="text-[10px] font-bold '+dCls_(rd)+'">'+mdFromISO_(w.prevBaseYmd)+' 대비 '+dTxt_(rd)+(rd?'명':'')+'</span>';
+      var partDefs=[['30일 미결제','NO_PAY_30D'],['같은서버 급감','SPEND_DROP'],['서버이동+급감','MOVED_AND_DROP']];
+      subLines.push(partDefs.map(function(p){
+        var cv=curC[p[1]]||0, dv=cv-(prevC[p[1]]||0);
+        return p[0]+' '+cv+' <span class="font-bold '+dCls_(dv)+'">('+dTxt_(dv)+')</span>';
+      }).join(' · '));
+    } else {
+      subLines.push('전주 대비: 이력이 쌓이면(다음 주 갱신부터) 표시됩니다');
+    }
+    var hist=(w.history||[]).slice(-5);
+    var histSpark='';
+    if(hist.length>=2){
+      histSpark=miniSparklineInline_(hist.map(function(h){return h.risk;}),'#ef4444');
+      subLines.push('주별 위험군 '+hist.map(function(h){return mdFromISO_(h.ymd)+' <b>'+h.risk+'</b>';}).join(' → '));
+    }
+    var amtL=0,amtP=0; w.rows.forEach(function(r){ amtL+=(r.amtLast30||0); amtP+=(r.amtPrev30||0); });
+    if(amtP>0){
+      var ap=(amtL-amtP)/amtP*100;
+      subLines.push('최근 30일 결제 총액 '+fmtNum(amtL)+' <span class="font-bold '+(ap>0?'text-red-500':ap<0?'text-blue-600':'text-gray-400')+'">(직전 30일 대비 '+(ap>0?'▲':ap<0?'▼':'')+Math.abs(ap).toFixed(1)+'%)</span>');
+    }
+    if(w.transitions){
+      var tr=w.transitions;
+      subLines.push(mdFromISO_(tr.baseYmd)+' 대비 신규 진입 <span class="font-bold text-red-500">'+tr.entered+'명</span> · 회복 <span class="font-bold text-blue-600">'+tr.recovered+'명</span> · 유지 '+tr.stillRisk+'명');
+    }
+    rowsHtml+=row('ti-alert-triangle',clr,'상위고래유저경보 위험군', riskN.toLocaleString('ko-KR')+'명 <span class="text-[10px] font-bold text-'+clr+'-600">('+pct.toFixed(0)+'%)</span>'+chipHtml, subLines.join('<br>'), 'whale', histSpark);
   }
   el.innerHTML='<div class="card"><div class="card-header"><span class="card-title text-sm"><i class="ti ti-users-group text-indigo-500"></i> 유저 분포 요약</span><button class="btn btn-sm" onclick="nav(\'user-dist\')">상세 <i class="ti ti-chevron-right text-[10px]"></i></button></div>'+rowsHtml+'</div>';
 }
 
+// 주별 흐름 — 이력(history)에 쌓인 주마다 위험군 인원과 30일 결제 총액을 한 줄씩 보여준다.
+// 전주비 증감은 바로 앞 주 대비. 이력이 1주뿐이면 아무것도 그리지 않는다.
+function whaleFlowHtml_(d){
+  var h=(d.history||[]).slice(-8);
+  if(h.length<2) return'';
+  var rows=h.map(function(x,i){
+    var p=i>0?h[i-1]:null;
+    var rd=p?x.risk-p.risk:null;
+    var rdHtml=p?'<span class="font-bold '+(rd>0?'text-red-500':rd<0?'text-blue-600':'text-gray-400')+'">'+(rd>0?'▲'+rd:rd<0?'▼'+Math.abs(rd):'-')+'</span>':'<span class="text-gray-300">-</span>';
+    var pctRisk=x.total?(x.risk/x.total*100):0;
+    var ap=(p&&p.amtLast30&&x.amtLast30!=null)?((x.amtLast30-p.amtLast30)/p.amtLast30*100):null;
+    var apHtml=ap==null?'<span class="text-gray-300">-</span>':'<span class="font-bold '+(ap>0?'text-red-500':ap<0?'text-blue-600':'text-gray-400')+'">'+(ap>0?'▲':ap<0?'▼':'')+Math.abs(ap).toFixed(1)+'%</span>';
+    var c=x.counts||{};
+    return'<tr><td class="p-2 border-r font-bold text-gray-700 whitespace-nowrap">'+esc(x.ymd)+(x.source&&x.source.indexOf('백필')!==-1?' <span class="text-[9px] font-normal text-gray-400">(기록)</span>':'')+'</td>'
+      +'<td class="p-2 border-r text-right font-bold">'+x.risk+'명 <span class="text-[10px] font-normal text-gray-400">('+pctRisk.toFixed(0)+'%)</span></td>'
+      +'<td class="p-2 border-r text-right">'+rdHtml+'</td>'
+      +'<td class="p-2 border-r text-right">'+(c.NO_PAY_30D||0)+'</td>'
+      +'<td class="p-2 border-r text-right">'+(c.SPEND_DROP||0)+'</td>'
+      +'<td class="p-2 border-r text-right">'+(c.MOVED_AND_DROP||0)+'</td>'
+      +'<td class="p-2 text-right">'+(x.amtLast30!=null?fmtNum(x.amtLast30):'-')+' '+apHtml+'</td></tr>';
+  }).join('');
+  var tr=d.transitions;
+  var trHtml=tr?'<div class="text-[11px] text-gray-600 mt-1.5">'+esc(tr.baseYmd)+' 대비 계정 이동: 신규 진입 <b class="text-red-500">'+tr.entered+'명</b> · 회복 <b class="text-blue-600">'+tr.recovered+'명</b> · 위험 유지 '+tr.stillRisk+'명'+((tr.newInList||tr.leftList)?' <span class="text-gray-400">(상위 200 목록 신규 '+tr.newInList+' · 이탈 '+tr.leftList+')</span>':'')+'</div>':'';
+  return'<div class="mb-4"><div class="text-[11px] font-bold text-gray-700 mb-1.5">주별 흐름 <span class="font-normal text-gray-400">(위험군 = 30일 미결제 + 결제 급감 · 전체 기준 · 결제 총액은 최근 30일)</span></div>'
+    +'<div class="overflow-x-auto border rounded-xl"><table class="w-full text-left border-collapse text-xs"><thead class="bg-gray-100"><tr>'
+    +'<th class="p-2 font-bold text-gray-700 border-b border-r">기준일</th><th class="p-2 font-bold text-gray-700 border-b border-r text-right">위험군</th><th class="p-2 font-bold text-gray-700 border-b border-r text-right">전주비</th>'
+    +'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">30일 미결제</th><th class="p-2 font-bold text-gray-700 border-b border-r text-right">같은서버 급감</th><th class="p-2 font-bold text-gray-700 border-b border-r text-right">서버이동+급감</th>'
+    +'<th class="p-2 font-bold text-gray-700 border-b text-right">결제 총액(전주비)</th></tr></thead><tbody class="divide-y">'+rows+'</tbody></table></div>'+trHtml+'</div>';
+}
 function renderWhaleAlert(){
   var wrap=document.getElementById('whale-wrap');
   if(!wrap)return;
@@ -3206,7 +3273,7 @@ function renderWhaleAlert(){
     return'<div class="kpi-card" style="padding:14px 16px">'
       +'<div class="kpi-label" style="display:flex;align-items:center;gap:5px"><i class="ti '+(STATUS_ICON[s.status]||'ti-tag')+' text-'+s.color+'-500"></i>'+esc(s.label)+'</div>'
       +'<div class="kpi-value text-'+s.color+'-700" style="font-size:26px">'+s.count.toLocaleString('ko-KR')+'<span style="font-size:12px;color:#9ca3af;font-weight:600"> 명</span>'+prevChip+'</div>'
-      +(s.desc?'<div class="text-[10px] text-gray-400 mt-1 leading-snug">'+esc(s.desc)+(!curRegion&&d.prevSummary?' · 전월비':'')+'</div>':'')+'</div>';
+      +(s.desc?'<div class="text-[10px] text-gray-400 mt-1 leading-snug">'+esc(s.desc)+(!curRegion&&d.prevSummary?' · 전주비':'')+'</div>':'')+'</div>';
   }).join('');
 
   function badge(status){
@@ -3237,6 +3304,14 @@ function renderWhaleAlert(){
   var svrList=Object.keys(svrMap).map(function(k){return svrMap[k];}).sort(function(a,b){return b.amt-a.amt;});
   // 지난주 대비 권역별 증감 — prevRows(전주 계정별 원본)를 같은 방식으로 다시 묶어서 비교한다.
   var prevSvrMap={};
+  if(!(d.prevRows&&d.prevRows.length)&&d.prevByRegion){
+    Object.keys(d.prevByRegion).forEach(function(rc){
+      if(curRegion&&rc!==curRegion) return;
+      var g=regionGroupOf(rc), pr=d.prevByRegion[rc];
+      if(!prevSvrMap[g]) prevSvrMap[g]={cnt:0,amt:0,riskCnt:0};
+      prevSvrMap[g].cnt+=pr.n||0; prevSvrMap[g].amt+=pr.amt||0; prevSvrMap[g].riskCnt+=pr.risk||0;
+    });
+  }
   if(d.prevRows&&d.prevRows.length){
     var filteredPrevRows=curRegion?d.prevRows.filter(function(r){return r.region===curRegion;}):d.prevRows;
     filteredPrevRows.forEach(function(r){
@@ -3287,7 +3362,7 @@ function renderWhaleAlert(){
       +'<td class="p-2 text-center">'+badge(r.status)+'</td></tr>';
   }).join('');
 
-  wrap.innerHTML=regionTabs+insightHtml+'<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">'+cards+'</div>'+svrTableHtml
+  wrap.innerHTML=regionTabs+insightHtml+whaleFlowHtml_(d)+'<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">'+cards+'</div>'+svrTableHtml
     +'<div class="text-[10px] text-gray-400 mb-2">기준일 '+esc(d.baseYmd)+' · '+(curRegion?esc(curRegion)+' ':'전체 ')+filteredRows.length.toLocaleString('ko-KR')+'명 · 매주 월요일 오전 갱신 · 심각도 높은 순 정렬</div>'
     +'<div class="overflow-x-auto border rounded-xl" style="max-height:520px;overflow-y:auto">'
     +'<table class="w-full text-left border-collapse text-xs">'
