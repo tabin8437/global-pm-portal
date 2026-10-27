@@ -296,6 +296,9 @@ var REGION_LABEL={global:'🌐 글로벌',tw:'🇹🇼 대만',jp:'🇯🇵 일�
 // 배포 준비할 때마다 맨 위에 새 버전을 추가한다(최신이 위) — 버전이 바뀌면
 // 로그인 직후 자동으로 패치노트 팝업이 한 번 뜬다.
 var PATCH_NOTES=[
+  {version:'2026.10.27', date:'2026-10-27', items:[
+    '유저 분포에 "OS별"(Android·iOS·Windows) · "국가별 Top10" 탭 추가 — DAU(일평균)·매출(합계)·PU(일평균), 직전 기간 대비 증감, 주간 추이, 국가는 매출/DAU/PU순 선택 (통합 시트에 \'OS로우\'·\'국가로우\' 탭과 kpi-api.gs 재배포가 있어야 데이터가 표시됨)'
+  ]},
   {version:'2026.10.14', date:'2026-10-14', items:[
     '대시보드 유저 분포 요약 > 상위고래유저경보 위험군: 전주 대비 인원 증감, 항목별(30일 미결제·같은서버 급감·서버이동+급감) 증감, 주별 위험군 흐름(미니 그래프), 최근 30일 vs 직전 30일 결제 총액 변동, 계정 단위 신규 진입/회복 표시 (kpi-api.gs 재배포 필요 — 이력은 재배포 후 주마다 쌓임)',
     '상위고래유저경보 상세: "주별 흐름" 표 추가, 권역별 표의 전주비를 이력으로도 계산, 카드 문구 "전월비"→"전주비" 정정'
@@ -2784,8 +2787,9 @@ function renderKpiPage(){
    ═══════════════════════════════════════════ */
 var UD_TABS=[{key:'pu',icon:'ti-coin',clr:'violet'},{key:'power',icon:'ti-swords',clr:'red'},{key:'level',icon:'ti-chart-bar',clr:'blue'},
   {key:'chapter',icon:'ti-bookmark',clr:'emerald'},{key:'segment',icon:'ti-users-group',clr:'orange'},
-  {key:'whale',icon:'ti-alert-triangle',clr:'rose'}];
-var UD_METRIC_HEX={pu:'#7c3aed',power:'#dc2626',level:'#2563eb',chapter:'#059669',segment:'#ea580c',whale:'#e11d48'};
+  {key:'whale',icon:'ti-alert-triangle',clr:'rose'},
+  {key:'os',icon:'ti-device-mobile',clr:'sky'},{key:'country',icon:'ti-world',clr:'teal'}];
+var UD_METRIC_HEX={pu:'#7c3aed',power:'#dc2626',level:'#2563eb',chapter:'#059669',segment:'#ea580c',whale:'#e11d48',os:'#0ea5e9',country:'#14b8a6'};
 
 // CP&PAY 라벨 정리:
 //  · "둘다_*"는 무엇의 교집합인지 알기 어려워 조건을 풀어쓴다
@@ -2866,10 +2870,11 @@ function renderUserDist(){
   }
   // 'whale'(상위고래유저경보)는 분포 차트가 아니라 계정 단위 경보 목록이라 sets에 없다 —
   // 항상 선택 가능한 탭으로 취급하고, 아래에서 완전히 별도 화면으로 그린다.
-  window._udMetric=window._udMetric&&(window._udMetric==='whale'||d.sets[window._udMetric])?window._udMetric:(UD_TABS.filter(function(o){return o.key==='whale'||d.sets[o.key];})[0]||{}).key;
+  var UD_STANDALONE_={whale:1,os:1,country:1};
+  window._udMetric=window._udMetric&&(UD_STANDALONE_[window._udMetric]||d.sets[window._udMetric])?window._udMetric:(UD_TABS.filter(function(o){return UD_STANDALONE_[o.key]||d.sets[o.key];})[0]||{}).key;
 
-  var tabs=UD_TABS.filter(function(o){return o.key==='whale'||d.sets[o.key];}).map(function(o){
-    var label=o.key==='whale'?'상위고래유저경보':d.sets[o.key].label;
+  var tabs=UD_TABS.filter(function(o){return UD_STANDALONE_[o.key]||d.sets[o.key];}).map(function(o){
+    var label=o.key==='whale'?'상위고래유저경보':o.key==='os'?'OS별':o.key==='country'?'국가별 Top10':d.sets[o.key].label;
     var active=window._udMetric===o.key;
     return'<button class="btn btn-sm'+(active?' btn-primary':'')+'" onclick="udSetMetric(\''+o.key+'\')"><i class="ti '+o.icon+'"></i> '+esc(label)+'</button>';
   }).join('');
@@ -2880,6 +2885,13 @@ function renderUserDist(){
     +'<button class="btn btn-sm" onclick="udRefresh()" title="새로고침"><i class="ti ti-refresh"></i></button></span></div>'
       +'<div class="card"><div class="flex gap-1.5 flex-wrap mb-3">'+tabs+'</div><div id="whale-wrap"></div></div>';
     renderWhaleAlert();
+    return;
+  }
+  if(window._udMetric==='os'||window._udMetric==='country'){
+    c.innerHTML='<div class="card-header" style="padding:0;margin-bottom:12px"><span class="card-title"><i class="ti ti-users-group text-indigo-500"></i> 유저 분포</span>'
+      +'<span class="flex items-center gap-1.5"><button class="btn btn-sm" onclick="ocRefresh()" title="새로고침"><i class="ti ti-refresh"></i></button></span></div>'
+      +'<div class="card"><div class="flex gap-1.5 flex-wrap mb-3">'+tabs+'</div><div id="oc-wrap"></div></div>';
+    renderOsCountry();
     return;
   }
 
@@ -2970,7 +2982,7 @@ function udFetch(){
       if(currentPage==='dashboard') renderUserDistSummary();
     });
 }
-function udRefresh(){ try{localStorage.removeItem('ud_cache');}catch(e){} window._userDistCache=null; window._whaleCache=null; renderUserDist(); }
+function udRefresh(){ try{localStorage.removeItem('ud_cache');}catch(e){} window._userDistCache=null; window._whaleCache=null; window._ocCache=null; try{localStorage.removeItem('oc_cache');}catch(e){} renderUserDist(); }
 
 // ── 상위 고래 유저 경보 — 분포 차트가 아니라 계정 단위 경보 목록이라 별도 화면으로 그린다 ──
 function whaleFetch(){
@@ -2998,6 +3010,190 @@ function whaleFetch(){
 }
 function whaleRefresh(){ try{localStorage.removeItem('whale_cache');}catch(e){} window._whaleCache=null; renderWhaleAlert(); }
 function whaleSetRegion(r){ window._whaleRegion=r; renderWhaleAlert(); }
+
+// ── OS별 · 국가별 (유저 분포 탭) — 통합 시트의 'OS로우'/'국가로우' 탭을 백엔드(os_country)가 집계해 준다 ──
+var OC_COLORS={'Android':'#16a34a','iOS':'#475569','Windows':'#2563eb'};
+var OC_PALETTE=['#0ea5e9','#f59e0b','#8b5cf6','#ef4444','#14b8a6','#ec4899'];
+var OC_ICON={'Android':'ti-brand-android','iOS':'ti-brand-apple','Windows':'ti-brand-windows'};
+function ocIsPage_(){ return currentPage==='user-dist'&&(window._udMetric==='os'||window._udMetric==='country'); }
+function ocFetch(){
+  if(window._ocFetching)return;
+  var cacheKey='oc_cache',ttlMs=30*60*1000;
+  try{
+    var cached=JSON.parse(localStorage.getItem(cacheKey)||'null');
+    if(cached&&cached.ts&&(Date.now()-cached.ts)<ttlMs){ window._ocCache=cached.data; if(ocIsPage_()) renderOsCountry(); return; }
+  }catch(e){}
+  window._ocFetching=true;
+  fetchWithRetry_(KPI_API_URL+'?action=os_country',1,2,
+    function(tryNo,maxTry){ window._ocAttempt=[tryNo,maxTry]; if(ocIsPage_()) renderOsCountry(); },
+    function(d,err){
+      window._ocFetching=false; window._ocAttempt=null;
+      if(d){
+        window._ocCache=d;
+        // 탭이 아직 없거나 형식이 안 맞는 상태(problems)는 캐시하지 않는다 — 탭을 만들면 바로 보이게
+        if(d.ok&&!(d.problems&&d.problems.length)){ try{localStorage.setItem(cacheKey,JSON.stringify({ts:Date.now(),data:d}));}catch(e){} }
+      } else { window._ocCache={ok:false,error:err.message}; }
+      if(ocIsPage_()) renderOsCountry();
+    });
+}
+function ocRefresh(){ try{localStorage.removeItem('oc_cache');}catch(e){} window._ocCache=null; renderOsCountry(); }
+function ocSetPeriod(p){ window._ocPeriod=p; renderOsCountry(); }
+function ocSetRank(r){ window._ocRank=r; renderOsCountry(); }
+
+function ocChip_(cur,prev){
+  if(cur==null||prev==null||!isFinite(prev)||prev===0) return'';
+  var p=(cur-prev)/prev*100;
+  if(Math.abs(p)<0.05) return'<span class="text-[10px] font-bold text-gray-400">-</span>';
+  return'<span class="text-[10px] font-bold '+(p>0?'text-red-500':'text-blue-600')+'">'+(p>0?'▲':'▼')+Math.abs(p).toFixed(1)+'%</span>';
+}
+function ocInt_(v){ return Math.round(v||0).toLocaleString('ko-KR'); }
+function ocMd_(ymd){ var p=String(ymd||'').split('-'); return p.length===3?(+p[1])+'/'+(+p[2]):String(ymd||''); }
+// 일별(최근 56일) → 7일 단위 주간 값(DAU·PU=평균, 매출=합계). 마지막 주가 가장 최신.
+function ocWeekly_(row,idx,mode){
+  var d=row.daily||[], out=[];
+  for(var e=d.length;e-7>=0;e-=7){
+    var s=0; for(var i=e-7;i<e;i++) s+=(d[i][idx]||0);
+    out.unshift(mode==='sum'?s:s/7);
+  }
+  return out;
+}
+function ocWeekLabels_(data){
+  var ds=data.dates||[], out=[];
+  for(var e=ds.length;e-7>=0;e-=7) out.unshift(ocMd_(ds[e-1]));
+  return out;
+}
+// 여러 구분을 한 차트에 겹쳐 그리는 주간 라인차트 — 0부터 시작하는 공유 축. 값은 범례에 최신 주 값으로 표기.
+function ocLineChart_(title,series,labels,fmt){
+  var all=[]; series.forEach(function(s){ s.vals.forEach(function(v){ if(v!=null&&isFinite(v)) all.push(v); }); });
+  if(!all.length) return'';
+  var hi=Math.max.apply(null,all)*1.1||1;
+  var W=280,H=100,PADX=UD_PW_PADX_,PADY=8,n=Math.max.apply(null,series.map(function(s){return s.vals.length;}));
+  function X(i){return PADX+(W-2*PADX)*(n>1?i/(n-1):0.5);}
+  function Y(v){return H-PADY-(H-2*PADY)*(v/hi);}
+  var paths=series.map(function(s){
+    var d=s.vals.map(function(v,i){return(i===0?'M':'L')+X(i).toFixed(1)+','+Y(v).toFixed(1);}).join('');
+    var dots=s.vals.map(function(v,i){return'<path d="M'+X(i).toFixed(1)+','+Y(v).toFixed(1)+'l0.01,0" stroke="'+s.color+'" stroke-width="4.5" stroke-linecap="round" vector-effect="non-scaling-stroke" fill="none"/>';}).join('');
+    return'<path d="'+d+'" fill="none" stroke="'+s.color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>'+dots;
+  }).join('');
+  var legend=series.map(function(s){
+    var last=s.vals.length?s.vals[s.vals.length-1]:null;
+    return'<span class="inline-flex items-center gap-1"><span style="display:inline-block;width:10px;height:2px;background:'+s.color+'"></span>'+esc(s.name)+' <b class="text-gray-700">'+(last==null?'-':fmt(last))+'</b></span>';
+  }).join('');
+  return'<div class="border rounded-xl p-3"><div class="text-xs font-bold text-gray-700 mb-2">'+esc(title)+'</div>'
+    +'<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="width:100%;height:100px;display:block"><line x1="0" y1="'+(H-PADY)+'" x2="'+W+'" y2="'+(H-PADY)+'" stroke="#e5e7eb" stroke-width="1" vector-effect="non-scaling-stroke"/>'+paths+'</svg>'
+    +udPowerAxisSvg_(labels)
+    +'<div class="flex items-center gap-x-3 gap-y-0.5 flex-wrap mt-1.5 text-[10px] text-gray-500">'+legend+'</div></div>';
+}
+
+function renderOsCountry(){
+  var wrap=document.getElementById('oc-wrap');
+  if(!wrap) return;
+  var kind=window._udMetric==='country'?'country':'os';
+  if(!window._ocCache){
+    var at=window._ocAttempt?' (재시도 '+window._ocAttempt[0]+'/'+window._ocAttempt[1]+')':'';
+    wrap.innerHTML='<p class="text-xs text-gray-400 text-center py-10"><i class="ti ti-loader-2 animate-spin"></i> '+(kind==='os'?'OS별':'국가별')+' 데이터 불러오는 중'+at+'...</p>';
+    ocFetch(); return;
+  }
+  var d=window._ocCache;
+  if(!d.ok){
+    wrap.innerHTML='<div class="text-center py-10"><i class="ti ti-alert-triangle text-amber-500" style="font-size:28px"></i>'
+      +'<p class="text-xs text-gray-500 mt-2">불러오지 못했습니다'+(d.error?' ('+esc(d.error)+')':'')+'</p>'
+      +'<button class="btn btn-sm btn-primary mt-3" onclick="ocRefresh()"><i class="ti ti-refresh"></i> 다시 시도</button></div>';
+    return;
+  }
+  var data=d[kind];
+  var tabName=kind==='os'?'OS로우':'국가로우';
+  if(!data){
+    var pb=(d.problems||[]).filter(function(p){return p.tab===tabName;})[0];
+    var why=!pb?'':pb.status==='missing'?'통합 시트에 \''+tabName+'\' 탭이 아직 없습니다.'
+      :pb.status==='empty'?'\''+tabName+'\' 탭에 데이터 행이 없습니다.'
+      :'\''+tabName+'\' 탭에서 '+esc((pb.lacking||[]).map(function(k){return{dau:'DAU',revenue:'매출금액',pu:'PU'}[k]||k;}).join('·'))+' 열을 찾지 못했습니다'+(pb.headers?' (현재 헤더: '+esc(pb.headers.join(' | '))+')':'')+'.';
+    wrap.innerHTML='<div class="text-center py-10"><i class="ti ti-database-off text-gray-300" style="font-size:30px"></i>'
+      +'<p class="text-sm font-bold text-gray-700 mt-2">'+(kind==='os'?'OS별':'국가별')+' 데이터가 아직 연결되지 않았습니다</p>'
+      +'<p class="text-xs text-gray-500 mt-1">'+why+'</p>'
+      +'<p class="text-[11px] text-gray-400 mt-3 leading-relaxed">통합 시트(글로벌로우가 있는 시트)에 <b>\''+tabName+'\'</b> 탭을 만들고 세로 형식으로 채워 주세요.<br>열: <b>일 | '+(kind==='os'?'OS(Android·iOS·Windows)':'국가')+' | DAU | 매출금액 | PU</b> (하루·구분 1행, 열 순서 무관)</p>'
+      +'<button class="btn btn-sm mt-3" onclick="ocRefresh()"><i class="ti ti-refresh"></i> 다시 확인</button></div>';
+    return;
+  }
+
+  var per=window._ocPeriod==='30'?'30':'7';
+  var rk=window._ocRank||'rev';
+  var w='w'+per, pw='p'+per;
+  var rg=data.ranges||{};
+  function rangeTxt(k){ var r=rg[k]; return r?ocMd_(r[0])+'~'+ocMd_(r[1]):''; }
+  function segBtns(group,opts,cur){
+    return'<div class="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">'+opts.map(function(o){
+      var a=cur===o.v;
+      return'<button class="btn btn-sm" style="border:none;'+(a?'background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:700':'background:transparent;color:#9ca3af')+'" onclick="'+group+'(\''+o.v+'\')">'+o.l+'</button>';
+    }).join('')+'</div>';
+  }
+  var controls='<div class="flex items-center justify-between flex-wrap gap-2 mb-3">'
+    +'<div class="text-[11px] text-gray-500">기준일 <b class="text-gray-700">'+esc(data.latest)+'</b> · 최근 '+per+'일('+esc(rangeTxt(w))+') vs 직전 '+per+'일'+(rg[pw]?'('+esc(rangeTxt(pw))+')':'')
+    +' <span class="text-gray-400">· DAU·PU 일평균, 매출 합계(증감은 일평균 기준)</span></div>'
+    +'<div class="flex items-center gap-2 flex-wrap">'
+    +(kind==='country'?segBtns('ocSetRank',[{v:'rev',l:'매출순'},{v:'dau',l:'DAU순'},{v:'pu',l:'PU순'}],rk):'')
+    +segBtns('ocSetPeriod',[{v:'7',l:'7일'},{v:'30',l:'30일'}],per)+'</div></div>';
+
+  var tot=(data.total||{})[w]||{dau:0,rev:0,pu:0}, totPrev=(data.total||{})[pw]||null;
+  var partial=false;
+  (data.rows||[]).forEach(function(r){ var p=r[pw]; if(!p||p.days<(per==='7'?7:30)) partial=true; });
+  var partialNote=partial?'<div class="text-[10px] text-amber-600 font-bold mb-2">※ 직전 기간 데이터가 '+per+'일보다 적어 증감이 일부 기간만 비교됩니다(일평균 기준)</div>':'';
+
+  if(kind==='os'){
+    var cards=data.rows.map(function(r,i){
+      var c=r[w]||{dau:0,rev:0,revAvg:0,pu:0}, p=r[pw]||null;
+      var clr=OC_COLORS[r.key]||OC_PALETTE[i%OC_PALETTE.length];
+      function line(label,val,chip,share){
+        return'<div class="flex items-center justify-between py-1 border-t border-gray-50 first:border-t-0 first:pt-0">'
+          +'<span class="text-[10px] text-gray-500">'+label+'</span>'
+          +'<span class="flex items-center gap-1.5"><span class="font-bold text-sm text-gray-900">'+val+'</span>'+chip+(share!=null?'<span class="text-[9px] text-gray-400">비중 '+share.toFixed(0)+'%</span>':'')+'</span></div>';
+      }
+      return'<div class="kpi-card" style="padding:14px 16px;border-top:3px solid '+clr+'">'
+        +'<div class="kpi-label mb-1" style="display:flex;align-items:center;gap:5px"><i class="ti '+(OC_ICON[r.key]||'ti-device-desktop')+'" style="color:'+clr+'"></i>'+esc(r.key)+'</div>'
+        +line('DAU 일평균',ocInt_(c.dau),ocChip_(c.dau,p&&p.dau),tot.dau?c.dau/tot.dau*100:null)
+        +line('매출 합계',fmtNum(c.rev),ocChip_(c.revAvg,p&&p.revAvg),tot.rev?c.rev/tot.rev*100:null)
+        +line('PU 일평균',ocInt_(c.pu),ocChip_(c.pu,p&&p.pu),tot.pu?c.pu/tot.pu*100:null)
+        +'</div>';
+    }).join('');
+    var totCard='<div class="text-[11px] text-gray-500 mt-2">전체(합계) DAU '+ocInt_(tot.dau)+' '+ocChip_(tot.dau,totPrev&&totPrev.dau)+' · 매출 '+fmtNum(tot.rev)+' '+ocChip_(tot.revAvg,totPrev&&totPrev.revAvg)+' · PU '+ocInt_(tot.pu)+' '+ocChip_(tot.pu,totPrev&&totPrev.pu)+'</div>';
+    var labels=ocWeekLabels_(data);
+    function ser(idx,mode){ return data.rows.map(function(r,i){ return{name:r.key,color:OC_COLORS[r.key]||OC_PALETTE[i%OC_PALETTE.length],vals:ocWeekly_(r,idx,mode)}; }); }
+    var charts='<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">'
+      +ocLineChart_('DAU (주간 일평균)',ser(0,'avg'),labels,ocInt_)
+      +ocLineChart_('매출 (주간 합계)',ser(1,'sum'),labels,fmtNum)
+      +ocLineChart_('PU (주간 일평균)',ser(2,'avg'),labels,ocInt_)+'</div>';
+    wrap.innerHTML=controls+partialNote+'<div class="grid grid-cols-1 md:grid-cols-'+Math.min(3,Math.max(1,data.rows.length))+' gap-3">'+cards+'</div>'+totCard+charts;
+    return;
+  }
+
+  // 국가별 Top10 — 선택한 지표·기간 기준 상위 10개국
+  var rows=data.rows.slice().sort(function(a,b){ return((b[w]||{})[rk]||0)-((a[w]||{})[rk]||0); }).slice(0,10);
+  var rankLabel={rev:'매출',dau:'DAU',pu:'PU'}[rk];
+  var sum={dau:0,rev:0,pu:0};
+  var body=rows.map(function(r,i){
+    var c=r[w]||{dau:0,rev:0,revAvg:0,pu:0}, p=r[pw]||null;
+    sum.dau+=c.dau; sum.rev+=c.rev; sum.pu+=c.pu;
+    var revShare=tot.rev?c.rev/tot.rev*100:0;
+    var spark=miniSparklineInline_(ocWeekly_(r,1,'sum'),'#14b8a6',64,18);
+    return'<tr><td class="p-2 border-r text-center text-gray-400 font-bold">'+(i+1)+'</td>'
+      +'<td class="p-2 border-r font-bold text-gray-700 whitespace-nowrap">'+esc(r.key)+'</td>'
+      +'<td class="p-2 border-r text-right">'+ocInt_(c.dau)+' '+ocChip_(c.dau,p&&p.dau)+'</td>'
+      +'<td class="p-2 border-r text-right font-bold">'+fmtNum(c.rev)+' '+ocChip_(c.revAvg,p&&p.revAvg)+'</td>'
+      +'<td class="p-2 border-r text-right">'+ocInt_(c.pu)+' '+ocChip_(c.pu,p&&p.pu)+'</td>'
+      +'<td class="p-2 border-r text-right whitespace-nowrap"><span class="inline-block align-middle rounded" style="height:6px;width:'+Math.max(2,Math.min(60,revShare*2.5)).toFixed(0)+'px;background:#14b8a6;margin-right:6px"></span>'+revShare.toFixed(1)+'%</td>'
+      +'<td class="p-2 text-center">'+spark+'</td></tr>';
+  }).join('');
+  function cov(k){ return tot[k]?(sum[k]/tot[k]*100).toFixed(0)+'%':'-'; }
+  var head='<tr><th class="p-2 font-bold text-gray-700 border-b border-r text-center">#</th><th class="p-2 font-bold text-gray-700 border-b border-r">국가</th>'
+    +'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">DAU(일평균)</th><th class="p-2 font-bold text-gray-700 border-b border-r text-right">매출(합계)</th>'
+    +'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">PU(일평균)</th><th class="p-2 font-bold text-gray-700 border-b border-r text-right">매출 비중</th>'
+    +'<th class="p-2 font-bold text-gray-700 border-b text-center">매출 8주 추이</th></tr>';
+  wrap.innerHTML=controls+partialNote
+    +'<div class="text-[11px] font-bold text-gray-700 mb-1.5">'+rankLabel+' 상위 10개국 <span class="font-normal text-gray-400">(전체 '+(data.keyCount||0)+'개국 중 · 최근 '+per+'일 기준)</span></div>'
+    +'<div class="overflow-x-auto border rounded-xl"><table class="w-full text-left border-collapse text-xs"><thead class="bg-gray-100">'+head+'</thead><tbody class="divide-y">'+body+'</tbody></table></div>'
+    +'<div class="text-[11px] text-gray-500 mt-2">상위 10개국이 전체에서 차지하는 비중 — DAU '+cov('dau')+' · 매출 '+cov('rev')+' · PU '+cov('pu')+'</div>';
+}
+
 
 // 대시보드용 유저 분포 요약 — 상세 화면(renderUserDist)은 그대로 두고, PU·전투력·CP&PAY·
 // 상위고래유저경보 핵심 수치 한 줄씩만 뽑아 보여준다. 클릭하면 해당 탭으로 바로 이동.
