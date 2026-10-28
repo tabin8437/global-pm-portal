@@ -296,6 +296,9 @@ var REGION_LABEL={global:'🌐 글로벌',tw:'🇹🇼 대만',jp:'🇯🇵 일�
 // 배포 준비할 때마다 맨 위에 새 버전을 추가한다(최신이 위) — 버전이 바뀌면
 // 로그인 직후 자동으로 패치노트 팝업이 한 번 뜬다.
 var PATCH_NOTES=[
+  {version:'2026.10.28', date:'2026-10-28', items:[
+    'OS별: 웹상점(gameweb)처럼 접속(DAU)이 없는 구분은 DAU를 "-"로 표시하고 DAU 차트에서 제외'
+  ]},
   {version:'2026.10.27', date:'2026-10-27', items:[
     '유저 분포에 "OS별"(Android·iOS·Windows) · "국가별 Top10" 탭 추가 — DAU(일평균)·매출(합계)·PU(일평균), 직전 기간 대비 증감, 주간 추이, 국가는 매출/DAU/PU순 선택 (통합 시트에 \'OS로우\'·\'국가로우\' 탭과 kpi-api.gs 재배포가 있어야 데이터가 표시됨)'
   ]},
@@ -3012,9 +3015,9 @@ function whaleRefresh(){ try{localStorage.removeItem('whale_cache');}catch(e){} 
 function whaleSetRegion(r){ window._whaleRegion=r; renderWhaleAlert(); }
 
 // ── OS별 · 국가별 (유저 분포 탭) — 통합 시트의 'OS로우'/'국가로우' 탭을 백엔드(os_country)가 집계해 준다 ──
-var OC_COLORS={'Android':'#16a34a','iOS':'#475569','Windows':'#2563eb'};
+var OC_COLORS={'Android':'#16a34a','iOS':'#475569','Windows':'#2563eb','웹상점(gameweb)':'#d97706'};
 var OC_PALETTE=['#0ea5e9','#f59e0b','#8b5cf6','#ef4444','#14b8a6','#ec4899'];
-var OC_ICON={'Android':'ti-brand-android','iOS':'ti-brand-apple','Windows':'ti-brand-windows'};
+var OC_ICON={'Android':'ti-brand-android','iOS':'ti-brand-apple','Windows':'ti-brand-windows','웹상점(gameweb)':'ti-shopping-cart'};
 function ocIsPage_(){ return currentPage==='user-dist'&&(window._udMetric==='os'||window._udMetric==='country'); }
 function ocFetch(){
   if(window._ocFetching)return;
@@ -3150,7 +3153,8 @@ function renderOsCountry(){
       }
       return'<div class="kpi-card" style="padding:14px 16px;border-top:3px solid '+clr+'">'
         +'<div class="kpi-label mb-1" style="display:flex;align-items:center;gap:5px"><i class="ti '+(OC_ICON[r.key]||'ti-device-desktop')+'" style="color:'+clr+'"></i>'+esc(r.key)+'</div>'
-        +line('DAU 일평균',ocInt_(c.dau),ocChip_(c.dau,p&&p.dau),tot.dau?c.dau/tot.dau*100:null)
+        // 웹상점처럼 접속(DAU)이 없는 구분은 0 대신 "-"로 표시한다
+        +(c.dau>0?line('DAU 일평균',ocInt_(c.dau),ocChip_(c.dau,p&&p.dau),tot.dau?c.dau/tot.dau*100:null):line('DAU 일평균','-','',null))
         +line('매출 합계',fmtNum(c.rev),ocChip_(c.revAvg,p&&p.revAvg),tot.rev?c.rev/tot.rev*100:null)
         +line('PU 일평균',ocInt_(c.pu),ocChip_(c.pu,p&&p.pu),tot.pu?c.pu/tot.pu*100:null)
         +'</div>';
@@ -3159,7 +3163,7 @@ function renderOsCountry(){
     var labels=ocWeekLabels_(data);
     function ser(idx,mode){ return data.rows.map(function(r,i){ return{name:r.key,color:OC_COLORS[r.key]||OC_PALETTE[i%OC_PALETTE.length],vals:ocWeekly_(r,idx,mode)}; }); }
     var charts='<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">'
-      +ocLineChart_('DAU (주간 일평균)',ser(0,'avg'),labels,ocInt_)
+      +ocLineChart_('DAU (주간 일평균)',ser(0,'avg').filter(function(s){return s.vals.some(function(v){return v>0;});}),labels,ocInt_)
       +ocLineChart_('매출 (주간 합계)',ser(1,'sum'),labels,fmtNum)
       +ocLineChart_('PU (주간 일평균)',ser(2,'avg'),labels,ocInt_)+'</div>';
     wrap.innerHTML=controls+partialNote+'<div class="grid grid-cols-1 md:grid-cols-'+Math.min(3,Math.max(1,data.rows.length))+' gap-3">'+cards+'</div>'+totCard+charts;
