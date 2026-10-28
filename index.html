@@ -296,6 +296,9 @@ var REGION_LABEL={global:'🌐 글로벌',tw:'🇹🇼 대만',jp:'🇯🇵 일�
 // 배포 준비할 때마다 맨 위에 새 버전을 추가한다(최신이 위) — 버전이 바뀌면
 // 로그인 직후 자동으로 패치노트 팝업이 한 번 뜬다.
 var PATCH_NOTES=[
+  {version:'2026.10.28.6', date:'2026-10-28', items:[
+    '상세지표 > 국가별 TOP10: 매출 추이·DAU 추이를 일별 스파크라인으로 표시(마우스를 올리면 시작→최근 값), 열 순서는 매출·매출 비중·매출 추이·DAU·DAU 비중·DAU 추이. 데이터가 2일 미만이면 "쌓이는 중"'
+  ]},
   {version:'2026.10.28.5', date:'2026-10-28', items:[
     '상세지표 > 국가별 TOP10: 국가별 DAU 열(dau)이 들어오면 DAU·DAU 비중을 함께 표시하고 DAU순 정렬 지원, 표 맨 아래에 합계 행 추가(열 순서: 매출·매출 비중·DAU·DAU 비중). CSV에 합계 행이 있어도 이중 집계하지 않음 (kpi-api.gs 재배포 필요)'
   ]},
@@ -3231,26 +3234,36 @@ function renderOsCountry(){
   function shareBar(share,color){
     return'<span class="inline-block align-middle rounded" style="height:6px;width:'+Math.max(2,Math.min(60,share*2.5)).toFixed(0)+'px;background:'+color+';margin-right:6px"></span>'+share.toFixed(1)+'%';
   }
+  // 일별 스파크라인(데이터가 있는 최근 최대 56일). 2일 미만이면 선을 그릴 수 없어 "쌓이는 중"으로 둔다.
+  function sparkCell(vals,color,label){
+    var v=(vals||[]).map(function(x){return x||0;});
+    var svg=miniSparklineInline_(v,color,72,20);
+    if(!svg) return'<span class="text-[10px] text-gray-300">쌓이는 중</span>';
+    return'<span title="최근 '+v.length+'일 일별 '+label+' (시작 '+ocInt_(v[0])+' → 최근 '+ocInt_(v[v.length-1])+')">'+svg+'</span>';
+  }
   function rowHtml(r,rankNo){
     var c=r[w]||{dau:0,rev:0,revAvg:0,pu:0}, p=r[pw]||null;
     var revShare=tot.rev?c.rev/tot.rev*100:0, dauShare=tot.dau?c.dau/tot.dau*100:0;
-    var spark=miniSparklineInline_(ocWeekly_(r,1,'sum'),r.isEtc?'#9ca3af':'#14b8a6',64,18);
+    var revSpark=sparkCell((r.daily||[]).map(function(d){return d[1];}),r.isEtc?'#9ca3af':'#14b8a6','매출');
+    var dauSpark=hasDau?sparkCell((r.daily||[]).map(function(d){return d[0];}),r.isEtc?'#9ca3af':'#6366f1','DAU'):'';
     return'<tr'+(r.isEtc?' class="bg-gray-50"':'')+'><td class="p-2 border-r text-center text-gray-400 font-bold">'+(rankNo||'-')+'</td>'
       +'<td class="p-2 border-r font-bold text-gray-700 whitespace-nowrap">'+esc(r.key)+'</td>'
       +'<td class="p-2 border-r text-right font-bold">'+fmtNum(c.rev)+' '+ocChip_(c.revAvg,p&&p.revAvg)+'</td>'
       +'<td class="p-2 border-r text-right whitespace-nowrap">'+shareBar(revShare,r.isEtc?'#9ca3af':'#14b8a6')+'</td>'
+      +'<td class="p-2 border-r text-center">'+revSpark+'</td>'
       +(hasDau?'<td class="p-2 border-r text-right">'+ocInt_(c.dau)+' '+ocChip_(c.dau,p&&p.dau)+'</td>'
-              +'<td class="p-2 border-r text-right whitespace-nowrap">'+shareBar(dauShare,r.isEtc?'#9ca3af':'#6366f1')+'</td>':'')
-      +(hasPu?'<td class="p-2 border-r text-right">'+ocInt_(c.pu)+' '+ocChip_(c.pu,p&&p.pu)+'</td>':'')
-      +'<td class="p-2 text-center">'+spark+'</td></tr>';
+              +'<td class="p-2 border-r text-right whitespace-nowrap">'+shareBar(dauShare,r.isEtc?'#9ca3af':'#6366f1')+'</td>'
+              +'<td class="p-2 border-r text-center">'+dauSpark+'</td>':'')
+      +(hasPu?'<td class="p-2 text-right">'+ocInt_(c.pu)+' '+ocChip_(c.pu,p&&p.pu)+'</td>':'')
+      +'</tr>';
   }
-  // 합계(전체) 행 — 기타 포함 전체 합. 비중은 100%
+  // 합계(전체) 행 — 기타 포함 전체 합. 비중은 100%, 추이는 비워 둔다
   function totalRowHtml(){
     return'<tr class="bg-gray-100 font-bold"><td class="p-2 border-r text-center">-</td><td class="p-2 border-r">합계</td>'
-      +'<td class="p-2 border-r text-right">'+fmtNum(tot.rev)+' '+ocChip_(tot.revAvg,totPrev&&totPrev.revAvg)+'</td><td class="p-2 border-r text-right">100%</td>'
-      +(hasDau?'<td class="p-2 border-r text-right">'+ocInt_(tot.dau)+' '+ocChip_(tot.dau,totPrev&&totPrev.dau)+'</td><td class="p-2 border-r text-right">100%</td>':'')
-      +(hasPu?'<td class="p-2 border-r text-right">'+ocInt_(tot.pu)+' '+ocChip_(tot.pu,totPrev&&totPrev.pu)+'</td>':'')
-      +'<td class="p-2"></td></tr>';
+      +'<td class="p-2 border-r text-right">'+fmtNum(tot.rev)+' '+ocChip_(tot.revAvg,totPrev&&totPrev.revAvg)+'</td><td class="p-2 border-r text-right">100%</td><td class="p-2 border-r"></td>'
+      +(hasDau?'<td class="p-2 border-r text-right">'+ocInt_(tot.dau)+' '+ocChip_(tot.dau,totPrev&&totPrev.dau)+'</td><td class="p-2 border-r text-right">100%</td><td class="p-2 border-r"></td>':'')
+      +(hasPu?'<td class="p-2 text-right">'+ocInt_(tot.pu)+' '+ocChip_(tot.pu,totPrev&&totPrev.pu)+'</td>':'')
+      +'</tr>';
   }
   var body=ranked.map(function(r,i){
     var c=r[w]||{dau:0,rev:0,pu:0}; sum.dau+=c.dau; sum.rev+=c.rev; sum.pu+=c.pu;
@@ -3260,9 +3273,9 @@ function renderOsCountry(){
   var covTxt='매출 '+cov('rev')+(hasDau?' · DAU '+cov('dau'):'')+(hasPu?' · PU '+cov('pu'):'');
   var th=function(t,cls){ return'<th class="p-2 font-bold text-gray-700 border-b '+cls+'">'+t+'</th>'; };
   var head='<tr>'+th('#','border-r text-center')+th('국가','border-r')
-    +th('매출(합계)','border-r text-right')+th('매출 비중','border-r text-right')
-    +(hasDau?th('DAU(일평균)','border-r text-right')+th('DAU 비중','border-r text-right'):'')
-    +(hasPu?th('PU(일평균)','border-r text-right'):'')+th('매출 8주 추이','text-center')+'</tr>';
+    +th('매출(합계)','border-r text-right')+th('매출 비중','border-r text-right')+th('매출 추이','border-r text-center')
+    +(hasDau?th('DAU(일평균)','border-r text-right')+th('DAU 비중','border-r text-right')+th('DAU 추이','border-r text-center'):'')
+    +(hasPu?th('PU(일평균)','text-right'):'')+'</tr>';
   var dauPuNote=(hasDau&&hasPu)?'':'<div class="text-[10px] text-gray-400 mt-2">※ 국가별 '+(!hasDau&&!hasPu?'DAU·PU는':!hasDau?'DAU는':'PU는')+' 현재 데이터(쿼리)에 없어 표시하지 않습니다 — 열(dau, pu)이 추가되면 자동으로 나타납니다</div>';
   wrap.innerHTML=controls+notes
     +'<div class="text-[11px] font-bold text-gray-700 mb-1.5">'+rankLabel+' 상위 '+ranked.length+'개국 <span class="font-normal text-gray-400">(집계 대상 '+(data.keyCount||0)+'개국'+(etcRow?' + 기타':'')+' · 최근 '+per+'일 기준)</span></div>'
