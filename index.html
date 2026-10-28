@@ -296,6 +296,10 @@ var REGION_LABEL={global:'🌐 글로벌',tw:'🇹🇼 대만',jp:'🇯🇵 일�
 // 배포 준비할 때마다 맨 위에 새 버전을 추가한다(최신이 위) — 버전이 바뀌면
 // 로그인 직후 자동으로 패치노트 팝업이 한 번 뜬다.
 var PATCH_NOTES=[
+  {version:'2026.10.28.2', date:'2026-10-28', items:[
+    '사이드바 메뉴 "유저 분포 (PU/전투력/레벨)" → "상세지표"로 이름 변경(페이지 제목·검색 포함)',
+    '상세지표 > OS별 / 국가별 TOP10: 매일 올라오는 CSV 형식(OS별 가로형, 국가별 base_ymd·nat·sale_amt)을 그대로 읽도록 변경 — OS별은 DAU·매출(PU 없음), 국가별은 매출·비중(+기타 행), 데이터가 며칠 안 쌓였을 땐 쌓인 일수 기준임을 표시 (kpi-api.gs 재배포 필요)'
+  ]},
   {version:'2026.10.28', date:'2026-10-28', items:[
     'OS별: 웹상점(gameweb)처럼 접속(DAU)이 없는 구분은 DAU를 "-"로 표시하고 DAU 차트에서 제외'
   ]},
@@ -374,7 +378,7 @@ var SIDEBAR_MENU = [
   {id:'dashboard',icon:'ti-layout-dashboard',label:'종합 대시보드'},
   {section:'KPI 및 분석'},
   {id:'kpi',icon:'ti-trending-up',label:'전권역 매출 추이'},
-  {id:'user-dist',icon:'ti-users-group',label:'유저 분포 (PU/전투력/레벨)'},
+  {id:'user-dist',icon:'ti-users-group',label:'상세지표'},
   {id:'competitor',icon:'ti-radar',label:'경쟁사 모니터링'},
   {section:'일정 · 마일스톤'},
   {id:'milestone',icon:'ti-clock',label:'통합 마일스톤',type:'doc'},
@@ -865,7 +869,7 @@ function toggleMobileGroup(gid){
 /* ═══════════════════════════════════════════
    PAGE NAMES & NAV
    ═══════════════════════════════════════════ */
-var pageNames={dashboard:'종합 대시보드',milestone:'통합 마일스톤','live-schedule':'월던/컨텐츠 오픈시점',settlement:'정산 및 빌링 설계',event:'이벤트 & 보상안',product:'상품안',kpi:'전권역 매출 추이 ','user-dist':'유저 분포','server-migration':'서버이전/통합',platform:'iOS 관리',weekly:'주간회의 기록',report:'보고/분석',internal:'내부 회의',devmeeting:'개발사 미팅',localization:'현지화','metrics-analysis':'지표분석','shared-drive':'공유 드라이브','screenshot-spec':'마켓 스샷 규격',ai:'AI 도움말','admin-settings':'포탈 설정','live-ops-hub':'라이브 운영 문서함','archive-hub':'회의 기록 아카이브','refdocs-hub':'참고 문서함','tools-hub':'업무 도구'};
+var pageNames={dashboard:'종합 대시보드',milestone:'통합 마일스톤','live-schedule':'월던/컨텐츠 오픈시점',settlement:'정산 및 빌링 설계',event:'이벤트 & 보상안',product:'상품안',kpi:'전권역 매출 추이 ','user-dist':'상세지표','server-migration':'서버이전/통합',platform:'iOS 관리',weekly:'주간회의 기록',report:'보고/분석',internal:'내부 회의',devmeeting:'개발사 미팅',localization:'현지화','metrics-analysis':'지표분석','shared-drive':'공유 드라이브','screenshot-spec':'마켓 스샷 규격',ai:'AI 도움말','admin-settings':'포탈 설정','live-ops-hub':'라이브 운영 문서함','archive-hub':'회의 기록 아카이브','refdocs-hub':'참고 문서함','tools-hub':'업무 도구'};
 
 // 대시보드의 주간/월간 지표(글로벌) 헤더를 누르면 "전권역 매출 추이"의 "글로벌 일별 추이"
 // 섹션으로 바로 이동한다. renderPage가 동기적으로 DOM을 다시 그리므로 이동 직후 바로
@@ -1046,7 +1050,7 @@ function buildSearchIndex_(){
 
   addPage('종합 대시보드','ti-layout-dashboard',function(){ nav('dashboard'); });
   addPage('전권역 매출 추이','ti-trending-up',function(){ nav('kpi'); });
-  addPage('유저 분포 (PU/전투력/레벨)','ti-users-group',function(){ nav('user-dist'); });
+  addPage('상세지표','ti-users-group',function(){ nav('user-dist'); });
   addPage('경쟁사 모니터링','ti-radar',function(){ nav('competitor'); });
   addPage('iOS 관리','ti-brand-apple',function(){ nav('platform'); });
   addPage('통합 마일스톤','ti-clock',function(){ nav('milestone'); });
@@ -2859,7 +2863,7 @@ function renderUserDist(){
   var c=document.getElementById('content-area');
   if(!window._userDistCache){
     var udAtt=window._udAttempt?' (재시도 '+window._udAttempt[0]+'/'+window._udAttempt[1]+')':'';
-    c.innerHTML='<div class="card"><p class="text-xs text-gray-400 text-center py-10"><i class="ti ti-loader-2 animate-spin"></i> 유저 분포 데이터 불러오는 중'+udAtt+'...</p></div>';
+    c.innerHTML='<div class="card"><p class="text-xs text-gray-400 text-center py-10"><i class="ti ti-loader-2 animate-spin"></i> 상세지표 데이터 불러오는 중'+udAtt+'...</p></div>';
     udFetch();
     return;
   }
@@ -2877,13 +2881,13 @@ function renderUserDist(){
   window._udMetric=window._udMetric&&(UD_STANDALONE_[window._udMetric]||d.sets[window._udMetric])?window._udMetric:(UD_TABS.filter(function(o){return UD_STANDALONE_[o.key]||d.sets[o.key];})[0]||{}).key;
 
   var tabs=UD_TABS.filter(function(o){return UD_STANDALONE_[o.key]||d.sets[o.key];}).map(function(o){
-    var label=o.key==='whale'?'상위고래유저경보':o.key==='os'?'OS별':o.key==='country'?'국가별 Top10':d.sets[o.key].label;
+    var label=o.key==='whale'?'상위고래유저경보':o.key==='os'?'OS별':o.key==='country'?'국가별 TOP10':d.sets[o.key].label;
     var active=window._udMetric===o.key;
     return'<button class="btn btn-sm'+(active?' btn-primary':'')+'" onclick="udSetMetric(\''+o.key+'\')"><i class="ti '+o.icon+'"></i> '+esc(label)+'</button>';
   }).join('');
 
   if(window._udMetric==='whale'){
-    c.innerHTML='<div class="card-header" style="padding:0;margin-bottom:12px"><span class="card-title"><i class="ti ti-users-group text-indigo-500"></i> 유저 분포</span>'
+    c.innerHTML='<div class="card-header" style="padding:0;margin-bottom:12px"><span class="card-title"><i class="ti ti-users-group text-indigo-500"></i> 상세지표</span>'
       +'<span class="flex items-center gap-1.5"><a class="btn btn-sm" href="https://docs.google.com/spreadsheets/d/1Ekqdj6ynfmPNpdRQYHo47APiIwPd60lmx1ONAujfewk/edit?gid=246652220" target="_blank" rel="noopener" title="원본 시트 바로가기"><i class="ti ti-external-link"></i> 원본 시트</a>'
     +'<button class="btn btn-sm" onclick="udRefresh()" title="새로고침"><i class="ti ti-refresh"></i></button></span></div>'
       +'<div class="card"><div class="flex gap-1.5 flex-wrap mb-3">'+tabs+'</div><div id="whale-wrap"></div></div>';
@@ -2891,7 +2895,7 @@ function renderUserDist(){
     return;
   }
   if(window._udMetric==='os'||window._udMetric==='country'){
-    c.innerHTML='<div class="card-header" style="padding:0;margin-bottom:12px"><span class="card-title"><i class="ti ti-users-group text-indigo-500"></i> 유저 분포</span>'
+    c.innerHTML='<div class="card-header" style="padding:0;margin-bottom:12px"><span class="card-title"><i class="ti ti-users-group text-indigo-500"></i> 상세지표</span>'
       +'<span class="flex items-center gap-1.5"><button class="btn btn-sm" onclick="ocRefresh()" title="새로고침"><i class="ti ti-refresh"></i></button></span></div>'
       +'<div class="card"><div class="flex gap-1.5 flex-wrap mb-3">'+tabs+'</div><div id="oc-wrap"></div></div>';
     renderOsCountry();
@@ -2923,7 +2927,7 @@ function renderUserDist(){
   // select에 현재 선택값 반영 (렌더 직후 DOM에서 세팅)
   window._udPickerSync=true;
 
-  c.innerHTML='<div class="card-header" style="padding:0;margin-bottom:12px"><span class="card-title"><i class="ti ti-users-group text-indigo-500"></i> 유저 분포</span>'
+  c.innerHTML='<div class="card-header" style="padding:0;margin-bottom:12px"><span class="card-title"><i class="ti ti-users-group text-indigo-500"></i> 상세지표</span>'
     +'<span class="flex items-center gap-1.5"><a class="btn btn-sm" href="https://docs.google.com/spreadsheets/d/1Ekqdj6ynfmPNpdRQYHo47APiIwPd60lmx1ONAujfewk/edit?gid=246652220" target="_blank" rel="noopener" title="원본 시트 바로가기"><i class="ti ti-external-link"></i> 원본 시트</a>'
     +'<button class="btn btn-sm" onclick="udRefresh()" title="새로고침"><i class="ti ti-refresh"></i></button></span></div>'
     +'<div class="card"><div class="flex items-center justify-between flex-wrap gap-2 mb-2"><div class="flex gap-1.5 flex-wrap">'+tabs+'</div>'
@@ -3092,9 +3096,10 @@ function renderOsCountry(){
   var wrap=document.getElementById('oc-wrap');
   if(!wrap) return;
   var kind=window._udMetric==='country'?'country':'os';
+  var kindName=kind==='os'?'OS별':'국가별 TOP10';
   if(!window._ocCache){
     var at=window._ocAttempt?' (재시도 '+window._ocAttempt[0]+'/'+window._ocAttempt[1]+')':'';
-    wrap.innerHTML='<p class="text-xs text-gray-400 text-center py-10"><i class="ti ti-loader-2 animate-spin"></i> '+(kind==='os'?'OS별':'국가별')+' 데이터 불러오는 중'+at+'...</p>';
+    wrap.innerHTML='<p class="text-xs text-gray-400 text-center py-10"><i class="ti ti-loader-2 animate-spin"></i> '+kindName+' 데이터 불러오는 중'+at+'...</p>';
     ocFetch(); return;
   }
   var d=window._ocCache;
@@ -3105,23 +3110,26 @@ function renderOsCountry(){
     return;
   }
   var data=d[kind];
-  var tabName=kind==='os'?'OS로우':'국가로우';
+  var tabName=kind==='os'?'OS별':'국가별';
   if(!data){
     var pb=(d.problems||[]).filter(function(p){return p.tab===tabName;})[0];
-    var why=!pb?'':pb.status==='missing'?'통합 시트에 \''+tabName+'\' 탭이 아직 없습니다.'
-      :pb.status==='empty'?'\''+tabName+'\' 탭에 데이터 행이 없습니다.'
-      :'\''+tabName+'\' 탭에서 '+esc((pb.lacking||[]).map(function(k){return{dau:'DAU',revenue:'매출금액',pu:'PU'}[k]||k;}).join('·'))+' 열을 찾지 못했습니다'+(pb.headers?' (현재 헤더: '+esc(pb.headers.join(' | '))+')':'')+'.';
+    var why=!pb?'':pb.status==='missing'?'미러 시트에 \''+tabName+'\' 탭이 아직 없습니다.'
+      :pb.status==='empty'?'\''+tabName+'\' 탭에 아직 데이터 행이 없습니다.'
+      :'\''+tabName+'\' 탭에서 매출 열을 찾지 못했습니다'+(pb.headers?' (현재 헤더: '+esc(pb.headers.join(' | '))+')':'')+'.';
+    var cols=kind==='os'?'base_ymd, sale_android, sale_ios, sale_pc, sale_pc_web, dau_android, dau_ios, dau_pc':'base_ymd, nat, sale_amt (+ 있으면 dau, pu)';
     wrap.innerHTML='<div class="text-center py-10"><i class="ti ti-database-off text-gray-300" style="font-size:30px"></i>'
-      +'<p class="text-sm font-bold text-gray-700 mt-2">'+(kind==='os'?'OS별':'국가별')+' 데이터가 아직 연결되지 않았습니다</p>'
+      +'<p class="text-sm font-bold text-gray-700 mt-2">'+kindName+' 데이터가 아직 쌓이지 않았습니다</p>'
       +'<p class="text-xs text-gray-500 mt-1">'+why+'</p>'
-      +'<p class="text-[11px] text-gray-400 mt-3 leading-relaxed">통합 시트(글로벌로우가 있는 시트)에 <b>\''+tabName+'\'</b> 탭을 만들고 세로 형식으로 채워 주세요.<br>열: <b>일 | '+(kind==='os'?'OS(Android·iOS·Windows)':'국가')+' | DAU | 매출금액 | PU</b> (하루·구분 1행, 열 순서 무관)</p>'
+      +'<p class="text-[11px] text-gray-400 mt-3 leading-relaxed">매일 오전 쿼리 결과 CSV가 원본 시트로 올라가고, 미러 시트(유저분포_미러_포탈용)의 <b>\''+tabName+'\'</b> 탭에 복사되면 표시됩니다.<br>필요한 열: <b>'+cols+'</b></p>'
       +'<button class="btn btn-sm mt-3" onclick="ocRefresh()"><i class="ti ti-refresh"></i> 다시 확인</button></div>';
     return;
   }
 
+  var hasDau=data.hasDau!==false, hasPu=!!data.hasPu;
   var per=window._ocPeriod==='30'?'30':'7';
   var rk=window._ocRank||'rev';
-  var w='w'+per, pw='p'+per;
+  if((rk==='dau'&&!hasDau)||(rk==='pu'&&!hasPu)) rk='rev';
+  var w='w'+per, pw='p'+per, need=per==='7'?7:30;
   var rg=data.ranges||{};
   function rangeTxt(k){ var r=rg[k]; return r?ocMd_(r[0])+'~'+ocMd_(r[1]):''; }
   function segBtns(group,opts,cur){
@@ -3130,17 +3138,26 @@ function renderOsCountry(){
       return'<button class="btn btn-sm" style="border:none;'+(a?'background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:700':'background:transparent;color:#9ca3af')+'" onclick="'+group+'(\''+o.v+'\')">'+o.l+'</button>';
     }).join('')+'</div>';
   }
+  var rankOpts=[{v:'rev',l:'매출순'}];
+  if(hasDau) rankOpts.push({v:'dau',l:'DAU순'});
+  if(hasPu) rankOpts.push({v:'pu',l:'PU순'});
+  var unitTxt=(hasDau?'DAU':'')+(hasDau&&hasPu?'·':'')+(hasPu?'PU':'');
   var controls='<div class="flex items-center justify-between flex-wrap gap-2 mb-3">'
     +'<div class="text-[11px] text-gray-500">기준일 <b class="text-gray-700">'+esc(data.latest)+'</b> · 최근 '+per+'일('+esc(rangeTxt(w))+') vs 직전 '+per+'일'+(rg[pw]?'('+esc(rangeTxt(pw))+')':'')
-    +' <span class="text-gray-400">· DAU·PU 일평균, 매출 합계(증감은 일평균 기준)</span></div>'
+    +' <span class="text-gray-400">· '+(unitTxt?unitTxt+' 일평균, ':'')+'매출 합계(증감은 일평균 기준)</span></div>'
     +'<div class="flex items-center gap-2 flex-wrap">'
-    +(kind==='country'?segBtns('ocSetRank',[{v:'rev',l:'매출순'},{v:'dau',l:'DAU순'},{v:'pu',l:'PU순'}],rk):'')
+    +(kind==='country'&&rankOpts.length>1?segBtns('ocSetRank',rankOpts,rk):'')
     +segBtns('ocSetPeriod',[{v:'7',l:'7일'},{v:'30',l:'30일'}],per)+'</div></div>';
 
   var tot=(data.total||{})[w]||{dau:0,rev:0,pu:0}, totPrev=(data.total||{})[pw]||null;
+  var haveDays=tot.days||0;
+  var notes='';
+  if(haveDays&&haveDays<need) notes+='<div class="text-[10px] text-amber-600 font-bold mb-1">※ 데이터가 아직 '+haveDays+'일치만 쌓여 있어, 최근 '+per+'일이 아니라 쌓인 '+haveDays+'일 기준입니다(매출은 그 기간 합계)</div>';
   var partial=false;
-  (data.rows||[]).forEach(function(r){ var p=r[pw]; if(!p||p.days<(per==='7'?7:30)) partial=true; });
-  var partialNote=partial?'<div class="text-[10px] text-amber-600 font-bold mb-2">※ 직전 기간 데이터가 '+per+'일보다 적어 증감이 일부 기간만 비교됩니다(일평균 기준)</div>':'';
+  (data.rows||[]).forEach(function(r){ var p=r[pw]; if(p&&p.days<need) partial=true; });
+  if(haveDays>=need&&partial) notes+='<div class="text-[10px] text-amber-600 font-bold mb-1">※ 직전 기간 데이터가 '+per+'일보다 적어 증감이 일부 기간만 비교됩니다(일평균 기준)</div>';
+  if(haveDays>=need&&!(totPrev&&totPrev.days)) notes+='<div class="text-[10px] text-gray-400 mb-1">직전 기간 데이터가 아직 없어 증감은 표시되지 않습니다</div>';
+  if(notes) notes+='<div class="mb-2"></div>';
 
   if(kind==='os'){
     var cards=data.rows.map(function(r,i){
@@ -3154,50 +3171,61 @@ function renderOsCountry(){
       return'<div class="kpi-card" style="padding:14px 16px;border-top:3px solid '+clr+'">'
         +'<div class="kpi-label mb-1" style="display:flex;align-items:center;gap:5px"><i class="ti '+(OC_ICON[r.key]||'ti-device-desktop')+'" style="color:'+clr+'"></i>'+esc(r.key)+'</div>'
         // 웹상점처럼 접속(DAU)이 없는 구분은 0 대신 "-"로 표시한다
-        +(c.dau>0?line('DAU 일평균',ocInt_(c.dau),ocChip_(c.dau,p&&p.dau),tot.dau?c.dau/tot.dau*100:null):line('DAU 일평균','-','',null))
+        +(!hasDau?'':c.dau>0?line('DAU 일평균',ocInt_(c.dau),ocChip_(c.dau,p&&p.dau),tot.dau?c.dau/tot.dau*100:null):line('DAU 일평균','-','',null))
         +line('매출 합계',fmtNum(c.rev),ocChip_(c.revAvg,p&&p.revAvg),tot.rev?c.rev/tot.rev*100:null)
-        +line('PU 일평균',ocInt_(c.pu),ocChip_(c.pu,p&&p.pu),tot.pu?c.pu/tot.pu*100:null)
+        +(hasPu?line('PU 일평균',ocInt_(c.pu),ocChip_(c.pu,p&&p.pu),tot.pu?c.pu/tot.pu*100:null):'')
         +'</div>';
     }).join('');
-    var totCard='<div class="text-[11px] text-gray-500 mt-2">전체(합계) DAU '+ocInt_(tot.dau)+' '+ocChip_(tot.dau,totPrev&&totPrev.dau)+' · 매출 '+fmtNum(tot.rev)+' '+ocChip_(tot.revAvg,totPrev&&totPrev.revAvg)+' · PU '+ocInt_(tot.pu)+' '+ocChip_(tot.pu,totPrev&&totPrev.pu)+'</div>';
+    var totCard='<div class="text-[11px] text-gray-500 mt-2">전체(합계) '
+      +(hasDau?'DAU '+ocInt_(tot.dau)+' '+ocChip_(tot.dau,totPrev&&totPrev.dau)+' · ':'')
+      +'매출 '+fmtNum(tot.rev)+' '+ocChip_(tot.revAvg,totPrev&&totPrev.revAvg)
+      +(hasPu?' · PU '+ocInt_(tot.pu)+' '+ocChip_(tot.pu,totPrev&&totPrev.pu):'')+'</div>';
     var labels=ocWeekLabels_(data);
     function ser(idx,mode){ return data.rows.map(function(r,i){ return{name:r.key,color:OC_COLORS[r.key]||OC_PALETTE[i%OC_PALETTE.length],vals:ocWeekly_(r,idx,mode)}; }); }
-    var charts='<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">'
-      +ocLineChart_('DAU (주간 일평균)',ser(0,'avg').filter(function(s){return s.vals.some(function(v){return v>0;});}),labels,ocInt_)
-      +ocLineChart_('매출 (주간 합계)',ser(1,'sum'),labels,fmtNum)
-      +ocLineChart_('PU (주간 일평균)',ser(2,'avg'),labels,ocInt_)+'</div>';
-    wrap.innerHTML=controls+partialNote+'<div class="grid grid-cols-1 md:grid-cols-'+Math.min(3,Math.max(1,data.rows.length))+' gap-3">'+cards+'</div>'+totCard+charts;
+    var chartList=[];
+    if(hasDau) chartList.push(ocLineChart_('DAU (주간 일평균)',ser(0,'avg').filter(function(s){return s.vals.some(function(v){return v>0;});}),labels,ocInt_));
+    chartList.push(ocLineChart_('매출 (주간 합계)',ser(1,'sum'),labels,fmtNum));
+    if(hasPu) chartList.push(ocLineChart_('PU (주간 일평균)',ser(2,'avg'),labels,ocInt_));
+    chartList=chartList.filter(function(h){return h;});
+    var charts=chartList.length?'<div class="grid grid-cols-1 md:grid-cols-'+Math.min(3,chartList.length)+' gap-3 mt-4">'+chartList.join('')+'</div>':'';
+    var puNote=hasPu?'':'<div class="text-[10px] text-gray-400 mt-2">※ OS별 PU는 현재 데이터(쿼리)에 없어 표시하지 않습니다</div>';
+    wrap.innerHTML=controls+notes+'<div class="grid grid-cols-1 md:grid-cols-'+Math.min(4,Math.max(1,data.rows.length))+' gap-3">'+cards+'</div>'+totCard+charts+puNote;
     return;
   }
 
-  // 국가별 Top10 — 선택한 지표·기간 기준 상위 10개국
-  var rows=data.rows.slice().sort(function(a,b){ return((b[w]||{})[rk]||0)-((a[w]||{})[rk]||0); }).slice(0,10);
+  // 국가별 TOP10 — 선택한 지표·기간 기준 상위 10개국, '기타'는 순위 밖으로 맨 아래에 따로
+  var ranked=data.rows.filter(function(r){return !r.isEtc;}).sort(function(a,b){ return((b[w]||{})[rk]||0)-((a[w]||{})[rk]||0); }).slice(0,10);
+  var etcRow=data.rows.filter(function(r){return r.isEtc;})[0]||null;
   var rankLabel={rev:'매출',dau:'DAU',pu:'PU'}[rk];
   var sum={dau:0,rev:0,pu:0};
-  var body=rows.map(function(r,i){
+  function rowHtml(r,rankNo){
     var c=r[w]||{dau:0,rev:0,revAvg:0,pu:0}, p=r[pw]||null;
-    sum.dau+=c.dau; sum.rev+=c.rev; sum.pu+=c.pu;
     var revShare=tot.rev?c.rev/tot.rev*100:0;
-    var spark=miniSparklineInline_(ocWeekly_(r,1,'sum'),'#14b8a6',64,18);
-    return'<tr><td class="p-2 border-r text-center text-gray-400 font-bold">'+(i+1)+'</td>'
+    var spark=miniSparklineInline_(ocWeekly_(r,1,'sum'),r.isEtc?'#9ca3af':'#14b8a6',64,18);
+    return'<tr'+(r.isEtc?' class="bg-gray-50"':'')+'><td class="p-2 border-r text-center text-gray-400 font-bold">'+(rankNo||'-')+'</td>'
       +'<td class="p-2 border-r font-bold text-gray-700 whitespace-nowrap">'+esc(r.key)+'</td>'
-      +'<td class="p-2 border-r text-right">'+ocInt_(c.dau)+' '+ocChip_(c.dau,p&&p.dau)+'</td>'
+      +(hasDau?'<td class="p-2 border-r text-right">'+ocInt_(c.dau)+' '+ocChip_(c.dau,p&&p.dau)+'</td>':'')
       +'<td class="p-2 border-r text-right font-bold">'+fmtNum(c.rev)+' '+ocChip_(c.revAvg,p&&p.revAvg)+'</td>'
-      +'<td class="p-2 border-r text-right">'+ocInt_(c.pu)+' '+ocChip_(c.pu,p&&p.pu)+'</td>'
-      +'<td class="p-2 border-r text-right whitespace-nowrap"><span class="inline-block align-middle rounded" style="height:6px;width:'+Math.max(2,Math.min(60,revShare*2.5)).toFixed(0)+'px;background:#14b8a6;margin-right:6px"></span>'+revShare.toFixed(1)+'%</td>'
+      +(hasPu?'<td class="p-2 border-r text-right">'+ocInt_(c.pu)+' '+ocChip_(c.pu,p&&p.pu)+'</td>':'')
+      +'<td class="p-2 border-r text-right whitespace-nowrap"><span class="inline-block align-middle rounded" style="height:6px;width:'+Math.max(2,Math.min(60,revShare*2.5)).toFixed(0)+'px;background:'+(r.isEtc?'#9ca3af':'#14b8a6')+';margin-right:6px"></span>'+revShare.toFixed(1)+'%</td>'
       +'<td class="p-2 text-center">'+spark+'</td></tr>';
-  }).join('');
+  }
+  var body=ranked.map(function(r,i){
+    var c=r[w]||{dau:0,rev:0,pu:0}; sum.dau+=c.dau; sum.rev+=c.rev; sum.pu+=c.pu;
+    return rowHtml(r,i+1);
+  }).join('')+(etcRow?rowHtml(etcRow,null):'');
   function cov(k){ return tot[k]?(sum[k]/tot[k]*100).toFixed(0)+'%':'-'; }
-  var head='<tr><th class="p-2 font-bold text-gray-700 border-b border-r text-center">#</th><th class="p-2 font-bold text-gray-700 border-b border-r">국가</th>'
-    +'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">DAU(일평균)</th><th class="p-2 font-bold text-gray-700 border-b border-r text-right">매출(합계)</th>'
-    +'<th class="p-2 font-bold text-gray-700 border-b border-r text-right">PU(일평균)</th><th class="p-2 font-bold text-gray-700 border-b border-r text-right">매출 비중</th>'
-    +'<th class="p-2 font-bold text-gray-700 border-b text-center">매출 8주 추이</th></tr>';
-  wrap.innerHTML=controls+partialNote
-    +'<div class="text-[11px] font-bold text-gray-700 mb-1.5">'+rankLabel+' 상위 10개국 <span class="font-normal text-gray-400">(전체 '+(data.keyCount||0)+'개국 중 · 최근 '+per+'일 기준)</span></div>'
+  var covTxt='매출 '+cov('rev')+(hasDau?' · DAU '+cov('dau'):'')+(hasPu?' · PU '+cov('pu'):'');
+  var th=function(t,cls){ return'<th class="p-2 font-bold text-gray-700 border-b '+cls+'">'+t+'</th>'; };
+  var head='<tr>'+th('#','border-r text-center')+th('국가','border-r')
+    +(hasDau?th('DAU(일평균)','border-r text-right'):'')+th('매출(합계)','border-r text-right')
+    +(hasPu?th('PU(일평균)','border-r text-right'):'')+th('매출 비중','border-r text-right')+th('매출 8주 추이','text-center')+'</tr>';
+  var dauPuNote=(hasDau&&hasPu)?'':'<div class="text-[10px] text-gray-400 mt-2">※ 국가별 '+(!hasDau&&!hasPu?'DAU·PU는':!hasDau?'DAU는':'PU는')+' 현재 데이터(쿼리)에 없어 표시하지 않습니다 — 열(dau, pu)이 추가되면 자동으로 나타납니다</div>';
+  wrap.innerHTML=controls+notes
+    +'<div class="text-[11px] font-bold text-gray-700 mb-1.5">'+rankLabel+' 상위 '+ranked.length+'개국 <span class="font-normal text-gray-400">(집계 대상 '+(data.keyCount||0)+'개국'+(etcRow?' + 기타':'')+' · 최근 '+per+'일 기준)</span></div>'
     +'<div class="overflow-x-auto border rounded-xl"><table class="w-full text-left border-collapse text-xs"><thead class="bg-gray-100">'+head+'</thead><tbody class="divide-y">'+body+'</tbody></table></div>'
-    +'<div class="text-[11px] text-gray-500 mt-2">상위 10개국이 전체에서 차지하는 비중 — DAU '+cov('dau')+' · 매출 '+cov('rev')+' · PU '+cov('pu')+'</div>';
+    +'<div class="text-[11px] text-gray-500 mt-2">상위 '+ranked.length+'개국이 전체에서 차지하는 비중 — '+covTxt+'</div>'+dauPuNote;
 }
-
 
 // 대시보드용 유저 분포 요약 — 상세 화면(renderUserDist)은 그대로 두고, PU·전투력·CP&PAY·
 // 상위고래유저경보 핵심 수치 한 줄씩만 뽑아 보여준다. 클릭하면 해당 탭으로 바로 이동.
