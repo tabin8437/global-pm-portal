@@ -296,6 +296,9 @@ var REGION_LABEL={global:'🌐 글로벌',tw:'🇹🇼 대만',jp:'🇯🇵 일�
 // 배포 준비할 때마다 맨 위에 새 버전을 추가한다(최신이 위) — 버전이 바뀌면
 // 로그인 직후 자동으로 패치노트 팝업이 한 번 뜬다.
 var PATCH_NOTES=[
+  {version:'2026.10.28.4', date:'2026-10-28', items:[
+    '상세지표 > OS별: Windows 카드에 웹상점을 합침 — 매출은 합산(비중 포함)과 구글PC·웹상점 각각(비중 포함)으로 표시, 매출 추이 차트는 구글PC·웹상점을 각각의 선으로 표시'
+  ]},
   {version:'2026.10.28.3', date:'2026-10-28', items:[
     '상세지표 > 전투력별 DAU: 8만 이상 그룹을 추가하고 5만 이상을 7만~8만 · 6만~7만 · 5만~6만으로 분리 (총 7개 그룹)'
   ]},
@@ -3163,20 +3166,41 @@ function renderOsCountry(){
   if(notes) notes+='<div class="mb-2"></div>';
 
   if(kind==='os'){
-    var cards=data.rows.map(function(r,i){
-      var c=r[w]||{dau:0,rev:0,revAvg:0,pu:0}, p=r[pw]||null;
+    // Windows는 매출이 두 갈래(구글PC / 웹상점)라서 카드 하나로 합치고, 매출만 합산 + 각각으로 보여준다.
+    // DAU(접속)는 웹상점에 없으므로 Windows(구글PC) 값 그대로.
+    var WEB_KEY='웹상점(gameweb)';
+    var winRow=data.rows.filter(function(r){return r.key==='Windows';})[0]||null;
+    var webRow=data.rows.filter(function(r){return r.key===WEB_KEY;})[0]||null;
+    var mergePc=!!(winRow&&webRow);
+    var ZERO={dau:0,rev:0,revAvg:0,pu:0,days:0};
+    function sumStat(a,b){
+      if(!a&&!b) return null;
+      a=a||ZERO; b=b||ZERO;
+      return{dau:a.dau,rev:a.rev+b.rev,revAvg:a.revAvg+b.revAvg,pu:a.pu+b.pu,days:a.days||b.days};
+    }
+    function ocLine_(label,val,chip,share,sub){
+      return'<div class="flex items-center justify-between py-1 '+(sub?'pl-3 ':'')+'border-t border-gray-50 first:border-t-0 first:pt-0">'
+        +'<span class="text-[10px] '+(sub?'text-gray-400':'text-gray-500')+'">'+(sub?'└ ':'')+label+'</span>'
+        +'<span class="flex items-center gap-1.5"><span class="'+(sub?'font-semibold text-xs text-gray-700':'font-bold text-sm text-gray-900')+'">'+val+'</span>'+chip+(share!=null?'<span class="text-[9px] text-gray-400">비중 '+share.toFixed(0)+'%</span>':'')+'</span></div>';
+    }
+    var cardRows=data.rows.filter(function(r){ return !(mergePc&&r.key===WEB_KEY); });
+    var cards=cardRows.map(function(r,i){
+      var isWin=mergePc&&r.key==='Windows';
+      var c=isWin?sumStat(r[w],webRow[w]):(r[w]||ZERO), p=isWin?sumStat(r[pw],webRow[pw]):(r[pw]||null);
       var clr=OC_COLORS[r.key]||OC_PALETTE[i%OC_PALETTE.length];
-      function line(label,val,chip,share){
-        return'<div class="flex items-center justify-between py-1 border-t border-gray-50 first:border-t-0 first:pt-0">'
-          +'<span class="text-[10px] text-gray-500">'+label+'</span>'
-          +'<span class="flex items-center gap-1.5"><span class="font-bold text-sm text-gray-900">'+val+'</span>'+chip+(share!=null?'<span class="text-[9px] text-gray-400">비중 '+share.toFixed(0)+'%</span>':'')+'</span></div>';
+      var sub='';
+      if(isWin){
+        var a=r[w]||ZERO, ap=r[pw]||null, b=webRow[w]||ZERO, bp=webRow[pw]||null;
+        sub=ocLine_('구글PC 매출',fmtNum(a.rev),ocChip_(a.revAvg,ap&&ap.revAvg),tot.rev?a.rev/tot.rev*100:null,true)
+           +ocLine_('웹상점 매출',fmtNum(b.rev),ocChip_(b.revAvg,bp&&bp.revAvg),tot.rev?b.rev/tot.rev*100:null,true);
       }
       return'<div class="kpi-card" style="padding:14px 16px;border-top:3px solid '+clr+'">'
         +'<div class="kpi-label mb-1" style="display:flex;align-items:center;gap:5px"><i class="ti '+(OC_ICON[r.key]||'ti-device-desktop')+'" style="color:'+clr+'"></i>'+esc(r.key)+'</div>'
         // 웹상점처럼 접속(DAU)이 없는 구분은 0 대신 "-"로 표시한다
-        +(!hasDau?'':c.dau>0?line('DAU 일평균',ocInt_(c.dau),ocChip_(c.dau,p&&p.dau),tot.dau?c.dau/tot.dau*100:null):line('DAU 일평균','-','',null))
-        +line('매출 합계',fmtNum(c.rev),ocChip_(c.revAvg,p&&p.revAvg),tot.rev?c.rev/tot.rev*100:null)
-        +(hasPu?line('PU 일평균',ocInt_(c.pu),ocChip_(c.pu,p&&p.pu),tot.pu?c.pu/tot.pu*100:null):'')
+        +(!hasDau?'':c.dau>0?ocLine_('DAU 일평균',ocInt_(c.dau),ocChip_(c.dau,p&&p.dau),tot.dau?c.dau/tot.dau*100:null):ocLine_('DAU 일평균','-','',null))
+        +ocLine_(isWin?'매출 합계 <span class="text-gray-400">(구글PC+웹상점)</span>':'매출 합계',fmtNum(c.rev),ocChip_(c.revAvg,p&&p.revAvg),tot.rev?c.rev/tot.rev*100:null)
+        +sub
+        +(hasPu?ocLine_('PU 일평균',ocInt_(c.pu),ocChip_(c.pu,p&&p.pu),tot.pu?c.pu/tot.pu*100:null):'')
         +'</div>';
     }).join('');
     var totCard='<div class="text-[11px] text-gray-500 mt-2">전체(합계) '
@@ -3184,7 +3208,7 @@ function renderOsCountry(){
       +'매출 '+fmtNum(tot.rev)+' '+ocChip_(tot.revAvg,totPrev&&totPrev.revAvg)
       +(hasPu?' · PU '+ocInt_(tot.pu)+' '+ocChip_(tot.pu,totPrev&&totPrev.pu):'')+'</div>';
     var labels=ocWeekLabels_(data);
-    function ser(idx,mode){ return data.rows.map(function(r,i){ return{name:r.key,color:OC_COLORS[r.key]||OC_PALETTE[i%OC_PALETTE.length],vals:ocWeekly_(r,idx,mode)}; }); }
+    function ser(idx,mode){ return data.rows.map(function(r,i){ var nm=(idx===1&&mergePc)?(r.key==='Windows'?'구글PC':r.key===WEB_KEY?'웹상점':r.key):r.key; return{name:nm,color:OC_COLORS[r.key]||OC_PALETTE[i%OC_PALETTE.length],vals:ocWeekly_(r,idx,mode)}; }); }
     var chartList=[];
     if(hasDau) chartList.push(ocLineChart_('DAU (주간 일평균)',ser(0,'avg').filter(function(s){return s.vals.some(function(v){return v>0;});}),labels,ocInt_));
     chartList.push(ocLineChart_('매출 (주간 합계)',ser(1,'sum'),labels,fmtNum));
@@ -3192,7 +3216,7 @@ function renderOsCountry(){
     chartList=chartList.filter(function(h){return h;});
     var charts=chartList.length?'<div class="grid grid-cols-1 md:grid-cols-'+Math.min(3,chartList.length)+' gap-3 mt-4">'+chartList.join('')+'</div>':'';
     var puNote=hasPu?'':'<div class="text-[10px] text-gray-400 mt-2">※ OS별 PU는 현재 데이터(쿼리)에 없어 표시하지 않습니다</div>';
-    wrap.innerHTML=controls+notes+'<div class="grid grid-cols-1 md:grid-cols-'+Math.min(4,Math.max(1,data.rows.length))+' gap-3">'+cards+'</div>'+totCard+charts+puNote;
+    wrap.innerHTML=controls+notes+'<div class="grid grid-cols-1 md:grid-cols-'+Math.min(4,Math.max(1,cardRows.length))+' gap-3">'+cards+'</div>'+totCard+charts+puNote;
     return;
   }
 
