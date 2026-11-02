@@ -296,6 +296,9 @@ var REGION_LABEL={global:'🌐 글로벌',tw:'🇹🇼 대만',jp:'🇯🇵 일�
 // 배포 준비할 때마다 맨 위에 새 버전을 추가한다(최신이 위) — 버전이 바뀌면
 // 로그인 직후 자동으로 패치노트 팝업이 한 번 뜬다.
 var PATCH_NOTES=[
+  {version:'2026.11.02.3', date:'2026-11-02', items:[
+    '전월 월간보고 지표: 시트에 월PU가 비어 있으면 글로벌로우 탭의 월누적PU(월 순 결제 유저 수의 누적) 월말 값으로 채움("계산" 표시, 시트에 값이 입력되면 시트 값 우선) — 앞서 "월PU는 계산 불가"로 안내한 것을 바로잡음 (kpi-api.gs 재배포 필요)'
+  ]},
   {version:'2026.11.02.2', date:'2026-11-02', items:[
     '전월 월간보고 지표: 시트에 PUR(일평균)이 비어 있으면 일별 로우데이터로 계산해 "계산" 표시와 함께 채움(일평균 PU ÷ 일평균 DAU, 시트에 값이 입력되면 시트 값 우선). 월PU는 월 순 결제 유저 수라 일별 데이터로 계산할 수 없어 "-"로 두고 안내 문구 추가'
   ]},
@@ -1463,7 +1466,8 @@ function pmReportVal_(mr,k){
 }
 // 시트에 PUR이 비어 있으면 일별 로우데이터(글로벌로우)로 계산한다: 일평균 PU ÷ 일평균 DAU (= 월 PU 합 ÷ DAU 합).
 // 2026-09 일별 데이터로 계산하면 1.578% — 시트의 9월 PUR 1.58%와 같다. 그 달 일별 데이터가 전부 있을 때만 계산한다.
-// (월PU는 "그 달 한 번이라도 결제한 순 유저 수"라 일별 PU를 합산하면 중복이 생겨 계산할 수 없다 — 9월: 일별 합 11,308 vs 시트 3,641)
+// 월PU는 "그 달 한 번이라도 결제한 순 유저 수"라 일별 PU를 합산하면 중복이 생긴다(9월: 일별 합 11,308 vs 시트 3,641).
+// 대신 글로벌로우 탭의 "월누적PU"(순 유저 누적) 월말 값을 서버가 monthlyReport.puRaw로 내려준다 — 시트 값이 비었을 때만 쓴다.
 function pmCalcPur_(period){
   var m=String(period||'').match(/^(\d{4})-(\d{2})$/); if(!m) return'';
   var by={};
@@ -1474,8 +1478,9 @@ function pmCalcPur_(period){
   return(pu>0&&dau>0)?(pu/dau*100).toFixed(2)+'%':'';
 }
 function pmReportVals_(mr){
-  var o={purCalc:false};
+  var o={purCalc:false,puCalc:false};
   PM_REPORT_COLS_.forEach(function(c){ o[c.k]=pmReportVal_(mr,c.k); });
+  if(o.pu===''&&Number(mr.puRaw)>0){ o.pu=Number(mr.puRaw); o.puCalc=true; }
   if(o.pur===''){ var cp=pmCalcPur_(mr.period); if(cp){ o.pur=cp; o.purCalc=true; } }
   return o;
 }
@@ -1502,10 +1507,11 @@ function buildPrevMonthReport_(){
     var v=vals[c.k], blank=(v==='');
     if(blank) blanks++;
     // 계산값(PUR)은 시트에 비교 기준이 없어 전월 대비를 붙이지 않는다
-    var p=(blank||(c.k==='pur'&&vals.purCalc))?null:parseChange(ch[c.k]);
-    var calcTag=(c.k==='pur'&&vals.purCalc)?'<span class="text-[9px] text-amber-600 font-semibold ml-0.5" title="시트에 값이 없어 일별 로우데이터로 계산한 값입니다">계산</span>':'';
+    var isCalc=(c.k==='pur'&&vals.purCalc)||(c.k==='pu'&&vals.puCalc);
+    var p=(blank||isCalc)?null:parseChange(ch[c.k]);
+    var calcTag=isCalc?'<span class="text-[9px] text-amber-600 font-semibold ml-0.5" title="'+(c.k==='pu'?'시트에 값이 없어 글로벌로우 탭의 월누적PU(월말 값)로 채운 값입니다':'시트에 값이 없어 일별 로우데이터로 계산한 값입니다')+'">계산</span>':'';
     return{
-      val:'<td class="p-2 text-center font-bold text-gray-800 whitespace-nowrap">'+(blank?'<span class="text-gray-300">-</span>':c.k==='pur'?esc(v)+calcTag:v.toLocaleString('ko-KR'))+'</td>',
+      val:'<td class="p-2 text-center font-bold text-gray-800 whitespace-nowrap">'+(blank?'<span class="text-gray-300">-</span>':c.k==='pur'?esc(v)+calcTag:v.toLocaleString('ko-KR')+calcTag)+'</td>',
       chg:'<td class="p-1.5 text-center text-[11px] font-bold whitespace-nowrap">'+((!p||p.dir==='neutral')?'<span class="text-gray-300">-</span>':'<span class="'+changeTextClass_(p.text)+'">'+p.text+'</span>')+'</td>'
     };
   });
@@ -1513,7 +1519,8 @@ function buildPrevMonthReport_(){
   var note='';
   if(!isPrev) note+='<div class="text-[10px] text-amber-600 font-bold mt-1.5">※ 시트에 입력된 가장 최근 월이 '+y+'년 '+mo+'월입니다(전월이 아직 입력되지 않았을 수 있습니다)</div>';
   if(vals.purCalc) note+='<div class="text-[10px] text-gray-400 mt-1.5">※ PUR(일평균)은 시트에 값이 없어 일별 로우데이터로 계산했습니다(일평균 PU ÷ 일평균 DAU) — 시트에 값이 입력되면 시트 값으로 바뀝니다</div>';
-  if(blanks) note+='<div class="text-[10px] text-gray-400 mt-1.5">※ "-"는 시트(글로벌 탭 월별 표)에 아직 값이 없는 항목입니다'+(vals.pu===''?' — 월PU(월 순 결제 유저 수)는 일별 데이터로 계산할 수 없어 시트에 입력되어야 표시됩니다':' — 입력되면 자동으로 채워집니다')+'</div>';
+  if(vals.puCalc) note+='<div class="text-[10px] text-gray-400 mt-1.5">※ 월PU는 시트에 값이 없어 글로벌로우 탭의 월누적PU(월말 값)로 채웠습니다 — 시트에 값이 입력되면 시트 값으로 바뀝니다</div>';
+  if(blanks) note+='<div class="text-[10px] text-gray-400 mt-1.5">※ "-"는 시트(글로벌 탭 월별 표)에 아직 값이 없는 항목입니다 — 입력되면 자동으로 채워집니다</div>';
   return'<div class="card mt-3" style="padding:12px 14px">'
     +'<div class="flex items-center justify-between flex-wrap gap-2 mb-2"><span class="text-xs font-bold text-gray-700"><i class="ti ti-report-analytics text-gray-400"></i> '+(isPrev?'전월':'최근 확정월')+' 월간보고 지표 <span class="text-gray-400 font-semibold">'+y+'년 '+mo+'월</span>'
     +'<span class="text-[10px] font-bold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded ml-1" title="권역 선택과 무관하게 글로벌 기준입니다">🌐 글로벌</span></span>'
