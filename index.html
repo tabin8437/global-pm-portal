@@ -296,6 +296,9 @@ var REGION_LABEL={global:'🌐 글로벌',tw:'🇹🇼 대만',jp:'🇯🇵 일�
 // 배포 준비할 때마다 맨 위에 새 버전을 추가한다(최신이 위) — 버전이 바뀌면
 // 로그인 직후 자동으로 패치노트 팝업이 한 번 뜬다.
 var PATCH_NOTES=[
+  {version:'2026.11.02', date:'2026-11-02', items:[
+    '대시보드 > 월간 지표 아래에 "전월 월간보고 지표" 표 추가 — MAU·평균 DAU·NRU·복귀 유저·매출금액·월PU·PUR(일평균)·ARPPU(일평균)을 줄임표기 없이 전체 숫자로, 전월 대비와 함께 표시(시트 글로벌 탭 월별 표의 최근 월). 시트에 값이 없는 항목은 "-", [표 복사] 버튼으로 엑셀·시트에 바로 붙여넣기 가능'
+  ]},
   {version:'2026.10.28.8', date:'2026-10-28', items:[
     '상세지표 > OS별: 상단에 "최근 30일 평균 비중" 추가 — DAU(일평균)·매출(합계) 기준 OS별 비중을 막대와 숫자로 표시(Windows 매출은 구글PC·웹상점 각각), 7일/30일 선택과 무관하게 고정. 30일치가 안 쌓였으면 쌓인 일수 기준으로 표시'
   ]},
@@ -1444,6 +1447,59 @@ function dashDisplayMonth_(now){
   now=now||new Date();
   return{year:now.getFullYear(),month:now.getMonth()+1,isPrev:false};
 }
+// 월간보고용 — 시트 글로벌 탭 월별 표에서 가장 최근 월(= 전월 확정) 8개 지표를 "8.4만" 같은 줄임표기 없이 전체 숫자로 보여준다.
+// 시트에서 빈 칸인 값(예: 월PU·PUR 미입력)은 0 / ▼100%로 보이지 않게 "-"로 둔다. 권역 필터와 무관하게 글로벌 값이다.
+var PM_REPORT_COLS_=[
+  {k:'mau',l:'MAU'},{k:'dau',l:'평균 DAU'},{k:'nru',l:'NRU'},{k:'returning',l:'복귀 유저'},
+  {k:'revenue',l:'매출금액'},{k:'pu',l:'월PU'},{k:'pur',l:'PUR(일평균)'},{k:'arppu',l:'ARPPU(일평균)'}
+];
+function pmReportVal_(mr,k){
+  var v=mr?mr[k]:null;
+  if(k==='pur'){ var s=String(v==null?'':v).trim(); return(s&&parseFloat(s))?s:''; }
+  return(v&&isFinite(v))?Number(v):'';
+}
+function pmReportCopy_(btn){
+  var mr=window._monthlyReportCache; if(!mr) return;
+  var line=PM_REPORT_COLS_.map(function(c){ return String(pmReportVal_(mr,c.k)); }).join('\t');
+  function done(){ var o=btn.innerHTML; btn.innerHTML='<i class="ti ti-check"></i> 복사됨'; setTimeout(function(){btn.innerHTML=o;},1500); }
+  function fallback(){
+    var ta=document.createElement('textarea'); ta.value=line; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');done();}catch(e){} document.body.removeChild(ta);
+  }
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(line).then(done,fallback); else fallback();
+}
+function buildPrevMonthReport_(){
+  var mr=window._monthlyReportCache;
+  var m=mr&&String(mr.period||'').match(/^(\d{4})-(\d{2})/);
+  if(!m) return'';
+  var y=+m[1], mo=+m[2], baseMo=mo===1?12:mo-1;
+  var now=new Date(), prevY=now.getMonth()===0?now.getFullYear()-1:now.getFullYear(), prevMo=now.getMonth()===0?12:now.getMonth();
+  var isPrev=(y===prevY&&mo===prevMo);
+  var ch=mr.change||{}, blanks=0;
+  var cells=PM_REPORT_COLS_.map(function(c){
+    var v=pmReportVal_(mr,c.k), blank=(v==='');
+    if(blank) blanks++;
+    var p=blank?null:parseChange(ch[c.k]);
+    return{
+      val:'<td class="p-2 text-center font-bold text-gray-800 whitespace-nowrap">'+(blank?'<span class="text-gray-300">-</span>':c.k==='pur'?esc(v):v.toLocaleString('ko-KR'))+'</td>',
+      chg:'<td class="p-1.5 text-center text-[11px] font-bold whitespace-nowrap">'+((!p||p.dir==='neutral')?'<span class="text-gray-300">-</span>':'<span class="'+changeTextClass_(p.text)+'">'+p.text+'</span>')+'</td>'
+    };
+  });
+  var th='p-2 text-center font-bold border-b border-r';
+  var note='';
+  if(!isPrev) note+='<div class="text-[10px] text-amber-600 font-bold mt-1.5">※ 시트에 입력된 가장 최근 월이 '+y+'년 '+mo+'월입니다(전월이 아직 입력되지 않았을 수 있습니다)</div>';
+  if(blanks) note+='<div class="text-[10px] text-gray-400 mt-1.5">※ "-"는 시트(글로벌 탭 월별 표)에 아직 값이 없는 항목입니다 — 입력되면 자동으로 채워집니다</div>';
+  return'<div class="card mt-3" style="padding:12px 14px">'
+    +'<div class="flex items-center justify-between flex-wrap gap-2 mb-2"><span class="text-xs font-bold text-gray-700"><i class="ti ti-report-analytics text-gray-400"></i> '+(isPrev?'전월':'최근 확정월')+' 월간보고 지표 <span class="text-gray-400 font-semibold">'+y+'년 '+mo+'월</span>'
+    +'<span class="text-[10px] font-bold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded ml-1" title="권역 선택과 무관하게 글로벌 기준입니다">🌐 글로벌</span></span>'
+    +'<button class="btn btn-sm" onclick="pmReportCopy_(this)" title="시트 열 순서(MAU~ARPPU)대로 탭으로 구분해 복사합니다 — 엑셀·시트에 바로 붙여넣기"><i class="ti ti-copy"></i> 표 복사</button></div>'
+    +'<div style="overflow-x:auto"><table class="w-full text-xs border rounded" style="min-width:760px;border-collapse:collapse">'
+    +'<thead><tr><th class="'+th+' bg-gray-100"></th><th colspan="4" class="'+th+' bg-gray-100">이용자</th><th colspan="4" class="'+th+' bg-gray-100">매출</th></tr>'
+    +'<tr><th class="'+th+'" style="background:#fffbeb"></th>'+PM_REPORT_COLS_.map(function(c){ return'<th class="'+th+'" style="background:#fffbeb;color:#92400e">'+c.l+'</th>'; }).join('')+'</tr></thead>'
+    +'<tbody><tr><td class="p-2 text-center text-gray-500 font-semibold whitespace-nowrap border-r">'+String(mo).padStart(2,'0')+'/'+y+'</td>'+cells.map(function(x){return x.val;}).join('')+'</tr>'
+    +'<tr class="bg-gray-50"><td class="p-1.5 text-center text-[10px] text-gray-500 font-semibold whitespace-nowrap border-r">'+baseMo+'월 대비</td>'+cells.map(function(x){return x.chg;}).join('')+'</tr></tbody></table></div>'
+    +note+'</div>';
+}
 function renderDashboard(){
   var c=document.getElementById('content-area');
   // 월간 누적 — 첫째주 토요일 이전(월~금)은 전월 누적 표시
@@ -1526,6 +1582,7 @@ function renderDashboard(){
     +'<div class="card-header mb-1" style="padding:0"><span class="card-title text-sm" style="cursor:pointer" onclick="navToDailyGlobal_()" title="전권역 매출 추이의 글로벌 일별 추이로 이동"><i class="ti ti-list-details text-gray-400"></i> 월간 지표 '+heroRegionBadge_()+'</span><button class="btn btn-sm" onclick="toggleDashMoreStats(this)">'+(window.innerWidth<768?'<i class="ti ti-chevron-down"></i> 펼치기':'<i class="ti ti-chevron-up"></i> 접기')+'</button></div>'
     +'<div id="dash-more-stats" class="mb-5"'+(window.innerWidth<768?' style="display:none"':'')+'>'
     +'<div class="flex items-center gap-2 flex-wrap text-[11px] text-gray-400 font-semibold mb-1.5">'+monthLabel+monthTargetHtml+'</div><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">'+monthlyCards+'</div>'
+    +buildPrevMonthReport_()
     +'</div>'
     +buildRegionMiniRow_()
     +buildRegionMiniRowMonthly_()
@@ -4577,6 +4634,8 @@ function applyKpiData(d){
   if(d.dailyGlobalLastYear) window._dailyLastYearCache=d.dailyGlobalLastYear;
   if(d.dailyCompare) window._dailyCompareCache=d.dailyCompare;
   if(d.monthly) window._monthlyRawCache=d.monthly;
+  // 전월 월간보고 표 — 값이 없으면 이전 값을 남기지 않고 비운다
+  window._monthlyReportCache=(d.monthlyReport&&d.monthlyReport.period)?d.monthlyReport:null;
   if(d.dailyTargetPerDay) window._dailyTargetPerDay=d.dailyTargetPerDay;
   if(d.dailyTargetDays) window._dailyTargetDays=d.dailyTargetDays;
   if(d.dailyTargetCurve) window._dailyTargetCurve=d.dailyTargetCurve;
