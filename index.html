@@ -296,6 +296,9 @@ var REGION_LABEL={global:'🌐 글로벌',tw:'🇹🇼 대만',jp:'🇯🇵 일�
 // 배포 준비할 때마다 맨 위에 새 버전을 추가한다(최신이 위) — 버전이 바뀌면
 // 로그인 직후 자동으로 패치노트 팝업이 한 번 뜬다.
 var PATCH_NOTES=[
+  {version:'2026.11.02.4', date:'2026-11-02', items:[
+    '전월 월간보고 지표 표에 [접기/펼치기] 버튼 추가 — 이 표만 따로 접을 수 있고(월간 지표 전체를 접는 버튼과 별개), 선택한 상태는 이 브라우저에 기억됩니다'
+  ]},
   {version:'2026.11.02.3', date:'2026-11-02', items:[
     '전월 월간보고 지표: 시트에 월PU가 비어 있으면 글로벌로우 탭의 월누적PU(월 순 결제 유저 수의 누적) 월말 값으로 채움("계산" 표시, 시트에 값이 입력되면 시트 값 우선) — 앞서 "월PU는 계산 불가"로 안내한 것을 바로잡음 (kpi-api.gs 재배포 필요)'
   ]},
@@ -1495,6 +1498,15 @@ function pmReportCopy_(btn){
   }
   if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(line).then(done,fallback); else fallback();
 }
+// 전월 표만 따로 접고 펼친다(월간 지표 전체를 접는 버튼과 별개). 선택은 브라우저에 기억해 데이터가 다시 그려져도 유지된다.
+function pmReportCollapsed_(){ try{ return localStorage.getItem('pm_report_collapsed')==='1'; }catch(e){ return false; } }
+function pmReportToggle_(btn){
+  var box=document.getElementById('pm-report-body'); if(!box) return;
+  var collapse=box.style.display!=='none';
+  box.style.display=collapse?'none':'block';
+  btn.innerHTML=collapse?'<i class="ti ti-chevron-down"></i> 펼치기':'<i class="ti ti-chevron-up"></i> 접기';
+  try{ localStorage.setItem('pm_report_collapsed',collapse?'1':'0'); }catch(e){}
+}
 function buildPrevMonthReport_(){
   var mr=window._monthlyReportCache;
   var m=mr&&String(mr.period||'').match(/^(\d{4})-(\d{2})/);
@@ -1521,16 +1533,19 @@ function buildPrevMonthReport_(){
   if(vals.purCalc) note+='<div class="text-[10px] text-gray-400 mt-1.5">※ PUR(일평균)은 시트에 값이 없어 일별 로우데이터로 계산했습니다(일평균 PU ÷ 일평균 DAU) — 시트에 값이 입력되면 시트 값으로 바뀝니다</div>';
   if(vals.puCalc) note+='<div class="text-[10px] text-gray-400 mt-1.5">※ 월PU는 시트에 값이 없어 글로벌로우 탭의 월누적PU(월말 값)로 채웠습니다 — 시트에 값이 입력되면 시트 값으로 바뀝니다</div>';
   if(blanks) note+='<div class="text-[10px] text-gray-400 mt-1.5">※ "-"는 시트(글로벌 탭 월별 표)에 아직 값이 없는 항목입니다 — 입력되면 자동으로 채워집니다</div>';
+  var collapsed=pmReportCollapsed_();
   return'<div class="card mt-3" style="padding:12px 14px">'
-    +'<div class="flex items-center justify-between flex-wrap gap-2 mb-2"><span class="text-xs font-bold text-gray-700"><i class="ti ti-report-analytics text-gray-400"></i> '+(isPrev?'전월':'최근 확정월')+' 월간보고 지표 <span class="text-gray-400 font-semibold">'+y+'년 '+mo+'월</span>'
+    +'<div class="flex items-center justify-between flex-wrap gap-2"><span class="text-xs font-bold text-gray-700"><i class="ti ti-report-analytics text-gray-400"></i> '+(isPrev?'전월':'최근 확정월')+' 월간보고 지표 <span class="text-gray-400 font-semibold">'+y+'년 '+mo+'월</span>'
     +'<span class="text-[10px] font-bold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded ml-1" title="권역 선택과 무관하게 글로벌 기준입니다">🌐 글로벌</span></span>'
-    +'<button class="btn btn-sm" onclick="pmReportCopy_(this)" title="시트 열 순서(MAU~ARPPU)대로 탭으로 구분해 복사합니다 — 엑셀·시트에 바로 붙여넣기"><i class="ti ti-copy"></i> 표 복사</button></div>'
+    +'<div class="flex items-center gap-1.5"><button class="btn btn-sm" onclick="pmReportCopy_(this)" title="시트 열 순서(MAU~ARPPU)대로 탭으로 구분해 복사합니다 — 엑셀·시트에 바로 붙여넣기"><i class="ti ti-copy"></i> 표 복사</button>'
+    +'<button class="btn btn-sm" onclick="pmReportToggle_(this)" title="이 표만 접거나 펼칩니다">'+(collapsed?'<i class="ti ti-chevron-down"></i> 펼치기':'<i class="ti ti-chevron-up"></i> 접기')+'</button></div></div>'
+    +'<div id="pm-report-body" style="margin-top:8px'+(collapsed?';display:none':'')+'">'
     +'<div style="overflow-x:auto"><table class="w-full text-xs border rounded" style="min-width:760px;border-collapse:collapse">'
     +'<thead><tr><th class="'+th+' bg-gray-100"></th><th colspan="4" class="'+th+' bg-gray-100">이용자</th><th colspan="4" class="'+th+' bg-gray-100">매출</th></tr>'
     +'<tr><th class="'+th+'" style="background:#fffbeb"></th>'+PM_REPORT_COLS_.map(function(c){ return'<th class="'+th+'" style="background:#fffbeb;color:#92400e">'+c.l+'</th>'; }).join('')+'</tr></thead>'
     +'<tbody><tr><td class="p-2 text-center text-gray-500 font-semibold whitespace-nowrap border-r">'+String(mo).padStart(2,'0')+'/'+y+'</td>'+cells.map(function(x){return x.val;}).join('')+'</tr>'
     +'<tr class="bg-gray-50"><td class="p-1.5 text-center text-[10px] text-gray-500 font-semibold whitespace-nowrap border-r">'+baseMo+'월 대비</td>'+cells.map(function(x){return x.chg;}).join('')+'</tr></tbody></table></div>'
-    +note+'</div>';
+    +note+'</div></div>';
 }
 function renderDashboard(){
   var c=document.getElementById('content-area');
