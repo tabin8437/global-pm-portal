@@ -296,6 +296,9 @@ var REGION_LABEL={global:'🌐 글로벌',tw:'🇹🇼 대만',jp:'🇯🇵 일�
 // 배포 준비할 때마다 맨 위에 새 버전을 추가한다(최신이 위) — 버전이 바뀌면
 // 로그인 직후 자동으로 패치노트 팝업이 한 번 뜬다.
 var PATCH_NOTES=[
+  {version:'2026.11.05', date:'2026-11-05', items:[
+    '상세지표 > OS별 휴대폰 화면 보완 — 일별 수치 표를 옆으로 밀어도 날짜 열이 고정되고, 카드가 좁을 때(휴대폰 등) 라벨·추이선·숫자가 겹치던 문제를 숫자가 다음 줄로 내려가도록 수정'
+  ]},
   {version:'2026.11.04.3', date:'2026-11-04', items:[
     '상세지표 > 국가별 TOP10: 순위표 아래에 "일별 수치" 표 추가 — 국가(상위 10개국 + 기타 + 합계)별 날짜 값을 최신 날짜가 왼쪽으로 표시, 매출/DAU/PU 지표를 따로 선택(기본은 위 순위 기준), 7일/30일 선택을 따르고 국가 열은 고정(30일은 가로 스크롤), 주말 열은 회색 배경'
   ]},
@@ -3333,11 +3336,12 @@ function renderOsCountry(){
       return{dau:a.dau,rev:a.rev+b.rev,revAvg:a.revAvg+b.revAvg,pu:a.pu+b.pu,days:a.days||b.days};
     }
     function ocLine_(label,val,chip,share,sub,spark){
-      return'<div class="flex items-center justify-between gap-2 py-1 '+(sub?'pl-3 ':'')+'border-t border-gray-50 first:border-t-0 first:pt-0">'
-        +'<span class="text-[10px] '+(sub?'text-gray-400':'text-gray-500')+'">'+(sub?'└ ':'')+label+'</span>'
-        +(spark?'<span class="flex-1 min-w-0 flex justify-end">'+spark+'</span>':'')
+      // 카드가 좁으면(휴대폰 등) 라벨·추이선이 숫자와 겹치지 않도록 숫자 묶음이 다음 줄로 내려가게 flex-wrap
+      return'<div class="flex items-center justify-between gap-x-2 gap-y-0.5 flex-wrap py-1 '+(sub?'pl-3 ':'')+'border-t border-gray-50 first:border-t-0 first:pt-0">'
+        +'<span class="text-[10px] '+(sub?'text-gray-400':'text-gray-500')+'" style="flex:1 1 auto">'+(sub?'└ ':'')+label+'</span>'
+        +(spark?'<span class="flex-none flex justify-end">'+spark+'</span>':'')
         // 값·증감·비중 폭을 고정해 줄마다 스파크라인과 숫자 위치가 세로로 맞도록 한다
-        +'<span class="flex items-center gap-1.5 flex-none whitespace-nowrap"><span class="inline-block text-right '+(sub?'font-semibold text-xs text-gray-700':'font-bold text-sm text-gray-900')+'" style="min-width:58px">'+val+'</span>'
+        +'<span class="flex items-center gap-1.5 flex-none whitespace-nowrap" style="margin-left:auto"><span class="inline-block text-right '+(sub?'font-semibold text-xs text-gray-700':'font-bold text-sm text-gray-900')+'" style="min-width:58px">'+val+'</span>'
         +'<span class="inline-block text-right" style="min-width:44px">'+chip+'</span>'
         +'<span class="inline-block text-right text-[9px] text-gray-400" style="min-width:36px">'+(share!=null?'비중 '+share.toFixed(0)+'%':'')+'</span></span></div>';
     }
@@ -3386,7 +3390,8 @@ function renderOsCountry(){
       groups.push({name:'매출',k:'rev',fmt:fmtNum,tot:colSum('rev')});
       if(hasPu) groups.push({name:'PU',k:'pu',fmt:ocInt_,tot:colSum('pu')});
       var thB='p-2 font-bold text-gray-700 border-b ';
-      var head1='<tr><th rowspan="2" class="'+thB+'border-r text-left whitespace-nowrap">날짜</th>'
+      // 휴대폰에서 옆으로 넘겨도 날짜가 보이도록 날짜 열은 고정
+      var head1='<tr><th rowspan="2" class="'+thB+'border-r text-left whitespace-nowrap" style="position:sticky;left:0;z-index:2;background:#f3f4f6">날짜</th>'
         +groups.map(function(g,gi){ return'<th colspan="'+(cols.length+1)+'" class="'+thB+(gi<groups.length-1?'border-r ':'')+'text-center">'+g.name+(g.k==='dau'?' <span class="font-normal text-gray-400">(일 값)</span>':g.k==='rev'?' <span class="font-normal text-gray-400">(일 합계)</span>':'')+'</th>'; }).join('')+'</tr>';
       var head2='<tr>'+groups.map(function(g,gi){
         return cols.map(function(c){
@@ -3395,8 +3400,8 @@ function renderOsCountry(){
       }).join('')+'</tr>';
       var body='';
       for(var i=ds.length-1;i>=from;i--){
-        var wk=ocWd_(ds[i]);
-        body+='<tr'+((wk==='일'||wk==='토')?' class="bg-gray-50"':'')+'><td class="p-2 border-r font-bold text-gray-700 whitespace-nowrap">'+ocMd_(ds[i])+' <span class="font-normal text-gray-400">('+wk+')</span></td>'
+        var wk=ocWd_(ds[i]), wend=(wk==='일'||wk==='토');
+        body+='<tr'+(wend?' class="bg-gray-50"':'')+'><td class="p-2 border-r font-bold text-gray-700 whitespace-nowrap" style="position:sticky;left:0;z-index:1;background:'+(wend?'#f9fafb':'#fff')+'">'+ocMd_(ds[i])+' <span class="font-normal text-gray-400">('+wk+')</span></td>'
           +groups.map(function(g,gi){
             var cells=cols.map(function(c){
               var v=c[g.k][i], none=!c[g.k].some(function(x){return x>0;});
@@ -3409,7 +3414,7 @@ function renderOsCountry(){
       var note=(show<need?'<span class="text-amber-600 font-bold">쌓인 '+show+'일</span> · ':'')+'최신순 · 합계 칸의 증감은 전일 대비';
       return'<div class="mt-4"><div class="text-[11px] font-bold text-gray-700 mb-1.5">일별 수치 <span class="font-normal text-gray-400">(최근 '+show+'일 · '+note+')</span></div>'
         +'<div class="overflow-x-auto border rounded-xl"><table class="w-full text-left border-collapse text-xs" style="min-width:'+(hasDau?680:420)+'px"><thead class="bg-gray-100">'+head1+head2+'</thead><tbody class="divide-y">'+body+'</tbody></table></div>'
-        +(mergePc?'<div class="text-[10px] text-gray-400 mt-1.5">※ Windows 매출은 구글PC+웹상점 합산, DAU는 구글PC 기준입니다. 매출 칸에 마우스를 올리면 전체 금액이 보입니다.</div>':'')+'</div>';
+        +(mergePc?'<div class="text-[10px] text-gray-400 mt-1.5">※ Windows 매출은 구글PC+웹상점 합산, DAU는 구글PC 기준입니다. PC에서는 매출 칸에 마우스를 올리면 전체 금액이 보입니다. 표는 옆으로 밀어 볼 수 있습니다.</div>':'')+'</div>';
     }
     // 최근 30일 평균 비중 — 7일/30일 선택과 무관하게 상단에 한 줄씩 고정 (DAU·PU는 일평균, 매출은 합계 기준)
     var d30=((data.total||{}).w30||{}).days||0;
@@ -3542,7 +3547,7 @@ function renderOsCountry(){
       +'<div class="text-[11px] font-bold text-gray-700">일별 '+{rev:'매출',dau:'DAU',pu:'PU'}[dm]+' <span class="font-normal text-gray-400">(국가 순서는 위 표와 같음 · 최근 '+show+'일'+(show<need?' <span class="text-amber-600 font-bold">쌓인 '+show+'일</span>':'')+' · 최신 날짜가 왼쪽 · '+(isRev?'일 매출 합계':'일별 값')+')</span></div>'
       +segBtns('ocSetDailyMetric',dmOpts,dm)+'</div>'
       +'<div class="overflow-x-auto border rounded-xl"><table class="w-full text-left border-collapse text-xs"><thead class="bg-gray-100">'+head+'</thead><tbody class="divide-y">'+lines.map(line).join('')+totRow+'</tbody></table></div>'
-      +(isRev?'<div class="text-[10px] text-gray-400 mt-1.5">※ 칸에 마우스를 올리면 전체 금액이 보입니다.</div>':'')+'</div>';
+      +'<div class="text-[10px] text-gray-400 mt-1.5">※ 표는 옆으로 밀어 볼 수 있습니다(국가 열은 고정)'+(isRev?'. PC에서는 칸에 마우스를 올리면 전체 금액이 보입니다':'')+'.</div></div>';
   }
   wrap.innerHTML=controls+notes
     +'<div class="text-[11px] font-bold text-gray-700 mb-1.5">'+rankLabel+' 상위 '+ranked.length+'개국 <span class="font-normal text-gray-400">(집계 대상 '+(data.keyCount||0)+'개국'+(etcRow?' + 기타':'')+' · 최근 '+per+'일 기준)</span></div>'
