@@ -296,6 +296,9 @@ var REGION_LABEL={global:'🌐 글로벌',tw:'🇹🇼 대만',jp:'🇯🇵 일�
 // 배포 준비할 때마다 맨 위에 새 버전을 추가한다(최신이 위) — 버전이 바뀌면
 // 로그인 직후 자동으로 패치노트 팝업이 한 번 뜬다.
 var PATCH_NOTES=[
+  {version:'2026.11.04.2', date:'2026-11-04', items:[
+    '상세지표 > OS별: 카드 아래에 "일별 수치" 표 추가 — 날짜별 Android·iOS·Windows DAU와 매출(Windows는 구글PC+웹상점 합산)과 합계를 최신순으로 표시, 합계 칸에 전일 대비 증감, 7일/30일 선택을 따름(주말 행은 회색 배경, 매출 칸에 마우스를 올리면 전체 금액)'
+  ]},
   {version:'2026.11.04', date:'2026-11-04', items:[
     '상세지표 > 전투력별 DAU: "8만 이상" 그룹을 "8만~9만"과 "9만 이상"으로 분리 (총 8개 그룹, 라인차트·요약표 모두 반영)'
   ]},
@@ -3360,6 +3363,49 @@ function renderOsCountry(){
       +(hasDau?'DAU '+ocInt_(tot.dau)+' '+ocChip_(tot.dau,totPrev&&totPrev.dau)+' · ':'')
       +'매출 '+fmtNum(tot.rev)+' '+ocChip_(tot.revAvg,totPrev&&totPrev.revAvg)
       +(hasPu?' · PU '+ocInt_(tot.pu)+' '+ocChip_(tot.pu,totPrev&&totPrev.pu):'')+'</div>';
+    // 일별 수치 표 — 카드와 같은 구분(Windows 매출은 구글PC+웹상점 합산)으로 날짜별 값을 보여준다.
+    // 7일/30일 선택을 따르고, 최신 날짜가 맨 위. 합계 칸에는 전일 대비 증감을 붙인다.
+    var WDAY_=['일','월','화','수','목','금','토'];
+    function dailyTableHtml_(){
+      var ds=data.dates||[];
+      if(!ds.length) return'';
+      var show=Math.min(need,ds.length), from=ds.length-show;
+      var cols=cardRows.map(function(r,i){
+        var isWin=mergePc&&r.key==='Windows';
+        return{key:r.key,color:OC_COLORS[r.key]||OC_PALETTE[i%OC_PALETTE.length],
+          dau:dser(r,0),rev:isWin?dsum(dser(r,1),dser(webRow,1)):dser(r,1),pu:dser(r,2)};
+      });
+      function colSum(k){ return ds.map(function(_,i){ return cols.reduce(function(a,c){return a+(c[k][i]||0);},0); }); }
+      var groups=[];
+      if(hasDau) groups.push({name:'DAU',k:'dau',fmt:ocInt_,tot:colSum('dau')});
+      groups.push({name:'매출',k:'rev',fmt:fmtNum,tot:colSum('rev')});
+      if(hasPu) groups.push({name:'PU',k:'pu',fmt:ocInt_,tot:colSum('pu')});
+      var thB='p-2 font-bold text-gray-700 border-b ';
+      var head1='<tr><th rowspan="2" class="'+thB+'border-r text-left whitespace-nowrap">날짜</th>'
+        +groups.map(function(g,gi){ return'<th colspan="'+(cols.length+1)+'" class="'+thB+(gi<groups.length-1?'border-r ':'')+'text-center">'+g.name+(g.k==='dau'?' <span class="font-normal text-gray-400">(일 값)</span>':g.k==='rev'?' <span class="font-normal text-gray-400">(일 합계)</span>':'')+'</th>'; }).join('')+'</tr>';
+      var head2='<tr>'+groups.map(function(g,gi){
+        return cols.map(function(c){
+          return'<th class="p-1.5 text-[11px] font-bold text-gray-600 border-b text-right whitespace-nowrap"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:'+c.color+';margin-right:4px"></span>'+esc(c.key)+'</th>';
+        }).join('')+'<th class="p-1.5 text-[11px] font-bold text-gray-800 border-b text-right whitespace-nowrap bg-gray-50'+(gi<groups.length-1?' border-r':'')+'">합계</th>';
+      }).join('')+'</tr>';
+      var body='';
+      for(var i=ds.length-1;i>=from;i--){
+        var p=ds[i].split('-'), wd=new Date(+p[0],+p[1]-1,+p[2]).getDay();
+        body+='<tr'+((wd===0||wd===6)?' class="bg-gray-50"':'')+'><td class="p-2 border-r font-bold text-gray-700 whitespace-nowrap">'+ocMd_(ds[i])+' <span class="font-normal text-gray-400">('+WDAY_[wd]+')</span></td>'
+          +groups.map(function(g,gi){
+            var cells=cols.map(function(c){
+              var v=c[g.k][i], none=!c[g.k].some(function(x){return x>0;});
+              return'<td class="p-2 text-right whitespace-nowrap"'+(g.k==='rev'&&v?' title="'+ocInt_(v)+'"':'')+'>'+((v==null||none)?'<span class="text-gray-300">-</span>':g.fmt(v))+'</td>';
+            }).join('');
+            var tv=g.tot[i];
+            return cells+'<td class="p-2 text-right whitespace-nowrap font-bold bg-gray-50'+(gi<groups.length-1?' border-r':'')+'"'+(g.k==='rev'&&tv?' title="'+ocInt_(tv)+'"':'')+'>'+g.fmt(tv)+(i>0?' '+ocChip_(tv,g.tot[i-1]):'')+'</td>';
+          }).join('')+'</tr>';
+      }
+      var note=(show<need?'<span class="text-amber-600 font-bold">쌓인 '+show+'일</span> · ':'')+'최신순 · 합계 칸의 증감은 전일 대비';
+      return'<div class="mt-4"><div class="text-[11px] font-bold text-gray-700 mb-1.5">일별 수치 <span class="font-normal text-gray-400">(최근 '+show+'일 · '+note+')</span></div>'
+        +'<div class="overflow-x-auto border rounded-xl"><table class="w-full text-left border-collapse text-xs" style="min-width:'+(hasDau?680:420)+'px"><thead class="bg-gray-100">'+head1+head2+'</thead><tbody class="divide-y">'+body+'</tbody></table></div>'
+        +(mergePc?'<div class="text-[10px] text-gray-400 mt-1.5">※ Windows 매출은 구글PC+웹상점 합산, DAU는 구글PC 기준입니다. 매출 칸에 마우스를 올리면 전체 금액이 보입니다.</div>':'')+'</div>';
+    }
     // 최근 30일 평균 비중 — 7일/30일 선택과 무관하게 상단에 한 줄씩 고정 (DAU·PU는 일평균, 매출은 합계 기준)
     var d30=((data.total||{}).w30||{}).days||0;
     function shareRow_(title,groups){
@@ -3408,7 +3454,7 @@ function renderOsCountry(){
     chartList=chartList.filter(function(h){return h;});
     var charts=chartList.length?'<div class="grid grid-cols-1 md:grid-cols-'+Math.min(3,chartList.length)+' gap-3 mt-4">'+chartList.join('')+'</div>':'';
     var puNote=hasPu?'':'<div class="text-[10px] text-gray-400 mt-2">※ OS별 PU는 현재 데이터(쿼리)에 없어 표시하지 않습니다</div>';
-    wrap.innerHTML=controls+strip+notes+'<div class="grid grid-cols-1 xl:grid-cols-'+Math.min(4,Math.max(1,cardRows.length))+' gap-3">'+cards+'</div>'+totCard+charts+puNote;
+    wrap.innerHTML=controls+strip+notes+'<div class="grid grid-cols-1 xl:grid-cols-'+Math.min(4,Math.max(1,cardRows.length))+' gap-3">'+cards+'</div>'+totCard+dailyTableHtml_()+charts+puNote;
     return;
   }
 
