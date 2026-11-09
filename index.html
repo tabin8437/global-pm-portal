@@ -296,6 +296,10 @@ var REGION_LABEL={global:'🌐 글로벌',tw:'🇹🇼 대만',jp:'🇯🇵 일�
 // 배포 준비할 때마다 맨 위에 새 버전을 추가한다(최신이 위) — 버전이 바뀌면
 // 로그인 직후 자동으로 패치노트 팝업이 한 번 뜬다.
 var PATCH_NOTES=[
+  {version:'2026.11.09', date:'2026-11-09', items:[
+    '전권역 매출 추이(권역 카드) > 연간 "누적매출" 수정 — 시트의 연간누적매출 셀이 "확정" 처리된 달과 당월 누적만 더하는 수식이라 한국·대만·일본은 6~10월이 빠져 크게 낮게 표시되던 것을(예: 한국 374.3억) 월별 매출 추이(로우데이터 합계)와 같은 소스로 계산하도록 변경하고, 비율도 연간 계획 대비로 다시 계산(글로벌 비율 88.0%는 시트 기준이 달라 80.9%로 바로잡힘). 칸에 마우스를 올리면 시트 셀 값이 보입니다',
+    'WAU가 시트에 비어 있는 주(전 권역 0)는 "0 / -100%" 대신 "-"로 표시 (핵심현황 카드·권역 카드)'
+  ]},
   {version:'2026.11.05', date:'2026-11-05', items:[
     '상세지표 > OS별 휴대폰 화면 보완 — 일별 수치 표를 옆으로 밀어도 날짜 열이 고정되고, 카드가 좁을 때(휴대폰 등) 라벨·추이선·숫자가 겹치던 문제를 숫자가 다음 줄로 내려가도록 수정'
   ]},
@@ -1308,6 +1312,8 @@ function buildHeroRow_(){
     } else {
       value=base.value; change=base.change;
     }
+    // WAU가 비어 있으면(0) "0 / -100%"가 아니라 "-"로 — 0명이 아니라 아직 값이 없는 것
+    if(key==='wau'&&regionData&&regionData[key]!=null&&!(Number(regionData.wau)>0)){ value='-'; change='-'; }
     // 지표마다 다른 색을 쓰면 화면이 알록달록해져 산만하다 — 숫자는 중립색으로 통일하고,
     // 강조는 등락 배지(빨강/파랑)와 이상 신호(NRU 카드의 빨간 테두리)에만 남긴다.
     var spark=miniSparkline_(heroSparkVals_(key,f.region,f.periodWeeks),'#94a3b8');
@@ -2839,6 +2845,25 @@ function renderDailyGlobal(){
 }
 
 /* ── AI ── */
+// 권역 카드의 "연간 누적매출"(원). 시트의 "연간누적매출" 셀은 '확정'으로 표시된 달 + 당월 누적만 더하는 수식이라,
+// 지난 달이 아직 '(추정)'으로 남아 있는 권역은 실제보다 크게 낮게 나온다(2026-11-09 확인: 한국 시트값 374.3억 =
+// 1~5월 확정 353.5억 + 11월 당월누적 20.8억과 정확히 일치, 월별 실적 합계는 854.1억). 월별 매출 추이(로우데이터
+// 합계, monthlyTrendByRegion)와 같은 소스로 직접 더한다. 이번 달은 카드의 '당월 누적'을 써서 한 카드 안에서
+// 숫자가 어긋나지 않게 한다. 월별 추이가 없으면 null(→ 시트 값으로 폴백).
+function regionYtdWon_(key,reg){
+  var arr=((window._monthTrendCache||{})[key]||[]).slice().sort(function(a,b){return String(a.period).localeCompare(String(b.period));});
+  if(!arr.length) return null;
+  var last=arr[arr.length-1], yr=String(last.period).slice(0,4);
+  var now=new Date(), curKey=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  var cur=reg&&reg.monthly&&reg.monthly.revenue, sum=0;
+  arr.forEach(function(t,i){
+    if(String(t.period).slice(0,4)!==yr) return;
+    var v=Number(t.revenue)||0;
+    if(i===arr.length-1&&t.period===curKey&&cur>0) v=cur;
+    sum+=v;
+  });
+  return sum>0?sum:null;
+}
 function renderKpiPage(){
   var c=document.getElementById('content-area');
   var regions=window._regionsCache||{};
@@ -2878,7 +2903,10 @@ function renderKpiPage(){
     var d=regions[def.key];
     if(!d||!d.weekly||!d.weekly.dau) return'<div class="card border-'+def.color+'-200"><div class="font-bold text-sm text-'+def.color+'-700 mb-3">'+def.label+'</div><p class="text-xs text-gray-400 text-center py-4">데이터 로딩 중</p></div>';
     var w=d.weekly,ch=w.change||{},m=d.monthly||{};
-    var weeklyHtml=mk('DAU',w.dau,ch.dau)+mk('NRU',w.nru,ch.nru)+mk('WAU',w.wau,ch.wau)+mk('매출',w.revenue,ch.revenue)+mk('PU',w.pu,ch.pu)+mk('ARPPU',w.arppu,ch.arppu);
+    // WAU가 시트에 비어 있으면(0) "0 / -100%"로 보이지 않게 "-"로 표시한다 — 0명이 아니라 아직 값이 없는 것
+    var wauHtml=Number(w.wau)>0?mk('WAU',w.wau,ch.wau)
+      :'<div class="py-1 flex items-center justify-between"><span class="text-[11px] text-gray-500">WAU</span><span class="text-xs font-bold text-gray-300" title="시트에 이번 주 WAU 값이 없거나 0입니다">-</span></div>';
+    var weeklyHtml=mk('DAU',w.dau,ch.dau)+mk('NRU',w.nru,ch.nru)+wauHtml+mk('매출',w.revenue,ch.revenue)+mk('PU',w.pu,ch.pu)+mk('ARPPU',w.arppu,ch.arppu);
     var tgt=d.target||{},ann=d.annual||{};
     // 목표 블록 순서: 계획/추정 → 추정/계획 → (구분선) → 당월 누적 → 계획 대비 → 추정 대비
     // 누적 실적을 달성률 바로 위에 두어 "얼마 벌어서 몇 %"가 한눈에 읽히게 한다.
@@ -2898,7 +2926,15 @@ function renderKpiPage(){
       var bN=parseFloat(String(ann.achieve||'').replace(/[^0-9.]/g,''))||0;
       var bC=bN>=95?'emerald':bN>=80?'blue':bN>=60?'amber':'red';
       annualHtml2='<div class="mt-2.5 pt-2.5 border-t border-'+def.color+'-100"><div class="text-[10px] font-bold text-'+def.color+'-400 mb-1">📅 연간</div><div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">계획/추정</span><span class="text-[10px] font-bold text-gray-700">'+fmtNum(ann.plan*1000000)+' / '+fmtNum(ann.estimate*1000000)+'</span></div><div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">달성률</span><span class="text-[10px] font-bold text-'+bC+'-600">'+ann.achieve+'</span></div>'
-        +(ann.cumulative?'<div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">누적매출</span><span class="text-[10px] font-bold text-gray-700">'+fmtNum(ann.cumulative*1000000)+(ann.cumulativePct?' <span class="text-[9px] font-bold text-'+bC+'-600">'+ann.cumulativePct+'</span>':'')+'</span></div>':'')
+        +(function(){
+          var ytd=regionYtdWon_(def.key,d);
+          var cumWon=ytd!=null?ytd:(ann.cumulative?ann.cumulative*1000000:0);
+          if(!cumWon) return'';
+          // 월별 합계로 계산했을 땐 비율도 같은 기준(연간 계획 대비)으로 다시 계산 — 시트 비율은 시트 누적값 기준이라 함께 어긋난다
+          var cumPct=ytd!=null?(ann.plan?(ytd/(ann.plan*1000000)*100).toFixed(1)+'%':''):(ann.cumulativePct||'');
+          var tip=ytd!=null?'월별 매출 추이(로우데이터 합계) 기준 · 연간 계획 대비'+(ann.cumulative?' · 시트의 연간누적매출 셀 값: '+fmtNum(ann.cumulative*1000000):''):'시트의 연간누적매출 셀 값';
+          return'<div class="flex items-center justify-between py-0.5"><span class="text-[10px] text-gray-500">누적매출</span><span class="text-[10px] font-bold text-gray-700" title="'+esc(tip)+'">'+fmtNum(cumWon)+(cumPct?' <span class="text-[9px] font-bold text-'+bC+'-600">'+cumPct+'</span>':'')+'</span></div>';
+        })()
         +'</div>';
     }
     return'<div class="card border-'+def.color+'-200 hover:shadow-md transition-all"><div class="flex items-center justify-between mb-2"><span class="font-bold text-sm text-'+def.color+'-700">'+def.label+'</span><span class="text-[10px] font-bold bg-'+def.color+'-50 text-'+def.color+'-600 px-2 py-0.5 rounded">전주비</span></div><div class="divide-y divide-gray-50">'+weeklyHtml+'</div>'+targetHtml2+monthlyHtml+annualHtml2+'</div>';
@@ -4763,7 +4799,8 @@ function applyKpiData(d){
     KPI_DATA=[
       {label:'일평균 DAU',value:fmtNum(w.dau),change:parseChange(c.dau).text,dir:parseChange(c.dau).dir,color:'#10b981',trend:[]},
       {label:'누적 NRU',value:fmtNum(w.nru),change:parseChange(c.nru).text,dir:parseChange(c.nru).dir,color:'#ef4444',trend:[],alert:parseChange(c.nru).dir==='up'&&parseFloat(String(c.nru||'').replace(/[^0-9.]/g,''))>50},
-      {label:'주간 WAU',value:fmtNum(w.wau),change:parseChange(c.wau).text,dir:parseChange(c.wau).dir,color:'#3b82f6',trend:[]},
+      // WAU가 비어 있으면(0) "0 / -100%" 대신 "-" (0명이 아니라 아직 값이 없는 것)
+      {label:'주간 WAU',value:Number(w.wau)>0?fmtNum(w.wau):'-',change:Number(w.wau)>0?parseChange(c.wau).text:'-',dir:Number(w.wau)>0?parseChange(c.wau).dir:'neutral',color:'#3b82f6',trend:[]},
       {label:'일평균 PU',value:fmtNum(w.pu),change:parseChange(c.pu).text,dir:parseChange(c.pu).dir,color:'#14b8a6',trend:[]},
       {label:'주간 매출',value:fmtNum(w.revenue),change:parseChange(c.revenue).text,dir:parseChange(c.revenue).dir,color:'#8b5cf6',trend:[]}
     ];
